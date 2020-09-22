@@ -14,4 +14,3 @@ classdef OfcAccMouse < Mouse
         end
     end
 end
-

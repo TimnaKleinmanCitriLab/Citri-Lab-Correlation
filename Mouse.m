@@ -3,19 +3,22 @@ classdef Mouse < handle
     %   Detailed explanation goes here
     
     properties (Constant)
-        FOLDER_DELIMITER = "\";
-        FILE_DIRECTORY = "\\132.64.59.21\Citri_Lab\gala\Phys data\New Rig";
+        CONST_FOLDER_DELIMITER = "\";
+        CONST_FILE_DIRECTORY = "\\132.64.59.21\Citri_Lab\gala\Phys data\New Rig";
         
-        DATA_BY_CLOUD = "CueInCloud_comb_cloud.mat";
-        DATA_BY_CUE = "CueInCloud_comb_cue.mat";
-        DATA_BY_LICK = "CueInCloud_comb_lick.mat";
-        DATA_BY_MOVEMENT = "CueInCloud_comb_movement.mat";
-        DATA_BY_ONSET = "CueInCloud_comb_t_onset.mat";
+        CONST_DATA_BY_CLOUD = "CueInCloud_comb_cloud.mat";
+        CONST_DATA_BY_CUE = "CueInCloud_comb_cue.mat";
+        CONST_DATA_BY_LICK = "CueInCloud_comb_lick.mat";
+        CONST_DATA_BY_MOVEMENT = "CueInCloud_comb_movement.mat";
+        CONST_DATA_BY_ONSET = "CueInCloud_comb_t_onset.mat";
     end
     
     properties
         Name
         GcampJrGecoReversed
+        MatFile
+        Info
+        StraightenedData
     end
     
     methods
@@ -24,11 +27,110 @@ classdef Mouse < handle
             %   Detailed explanation goes here
             obj.Name = name;
             obj.GcampJrGecoReversed = gcampJrGecoReversed;
+            
+            obj.createMatFiles();
+            obj.createTrialsInfo();
+            obj.straightenData();
+            
+        end
+        
+        function createMatFiles(obj)
+            % Create matFiles
+            fileBeg = obj.CONST_FILE_DIRECTORY + obj.CONST_FOLDER_DELIMITER + obj.Name + obj.CONST_FOLDER_DELIMITER;
+            obj.MatFile.onset = matfile(fileBeg + obj.CONST_DATA_BY_ONSET);
+            % obj.MatFile.cloud = matfile(fileBeg + obj.CONST_DATA_BY_CLOUD);
+            obj.MatFile.cue = matfile(fileBeg + obj.CONST_DATA_BY_CUE);
+            obj.MatFile.lick = matfile(fileBeg + obj.CONST_DATA_BY_LICK);
+            % obj.MatFile.movement = matfile(fileBeg + obj.CONST_DATA_BY_MOVEMENT);
+        end
+        
+        function createTrialsInfo(obj)
+            % Create Trials Info (by cue, cloud, ..)
+            tInfo = obj.MatFile.onset.t_info;
+            obj.Info.onset = tInfo;
+            % obj.Info.cloud = % TODO!
+            obj.Info.cue = tInfo((tInfo.plot_result ~= -1), :); % All trials that are not premature
+            obj.Info.lick = tInfo((~isnan(tInfo.first_lick)), :); % All trials that had a lick (including omissions that had a lick)
+            % obj.Info.movement = % TODO!
+            
+            % Add day to info
+            tInfo = obj.MatFile.onset.t_info;
+            sessionBreaks = find(tInfo.trial_number == 1);
+            sessionBreaks = [sessionBreaks; size(tInfo, 1) + 1];
+            
+            recordingDays = [];
+            
+            for indx = 1:(length(sessionBreaks) - 1)
+                recordingDays(sessionBreaks(indx):sessionBreaks(indx + 1) - 1) = indx;      % Tags each recording day
+            end
+            
+            recordingDays = categorical(recordingDays');
+            
+            obj.Info.onset.day = double(recordingDays);
+            % obj.Info.cloud.day = % TODO!
+            obj.Info.cue.day = double(recordingDays(tInfo.plot_result ~= -1));
+            obj.Info.lick.day = double(recordingDays(~isnan(tInfo.first_lick)));
+            % obj.Info.movement.day = % TODO!
+        end
+        
+        function straightenData(obj)
+            % Normalizes / straightens the data of each day so it has same
+            % baseline (calculated by correct licks)
+            dayDifferences = obj.getDayDifferences();
+            [gcampDifference, jrgecoDifference] = dayDifferences{:};
+            
+            fields = fieldnames(obj.Info);
+            
+            for fieldIndex = 1:numel(fields)
+                fieldName = fields{fieldIndex};
+                info = obj.Info.(fieldName);
+                
+                gcampTrials = obj.MatFile.(fieldName).all_trials;
+                jrgecoTrials = obj.MatFile.(fieldName).af_trials;
+                
+                normGcampData = gcampTrials - gcampDifference(1); % subtract intercept (1st day / correct)
+                normJrgecoData = jrgecoTrials - jrgecoDifference(1); % subtract intercept (1st day / correct)
+                
+                for indx = 2:length(unique(info.day))
+                    normGcampData(info.day == indx, :) = normGcampData(info.day == indx, :) - gcampDifference(indx); % remove each days' intercept
+                    normJrgecoData(info.day == indx, :) = normJrgecoData(info.day == indx, :) - jrgecoDifference(indx); % remove each days' intercept
+                end
+                
+                obj.StraightenedData.(fieldName).gcamp = normGcampData;
+                obj.StraightenedData.(fieldName).jrgeco = normJrgecoData;
+                
+            end
+        end
+        
+        function differences = getDayDifferences(obj)
+            % Creates for each day how much need to add in order to have
+            % same baseline (calculated by correct licks)
+            gTrials = obj.MatFile.onset.all_trials;
+            jTrials = obj.MatFile.onset.af_trials;
+            
+            recordingDays = categorical(obj.Info.onset.day);
+            recordingOutcome = categorical(obj.Info.onset.trial_result);
+            
+            % Gcamp!!!
+            gRecordingBase = double(mean(gTrials(:, 1000:5000), 2));  % From 1 to 5 seconds
+            gRecordingSet = table(gRecordingBase, recordingDays, recordingOutcome, 'VariableNames', {'baseline', 'day', 'outcome'});
+            G = fitlme(gRecordingSet, 'baseline ~ outcome + day'); %also can use fitglm: especially if want to do interaction Keep in mind to fit to a random effect (1|day).
+            gcampDifference = G.Coefficients.Estimate;
+            
+            % Geco
+            jRecordingBase = double(mean(jTrials(:, 1000:5000), 2));  % From 1 to 5 seconds
+            jRecordingSet = table(jRecordingBase, recordingDays, recordingOutcome, 'VariableNames', {'baseline', 'day', 'outcome'});
+            J = fitlme(jRecordingSet, 'baseline ~ outcome + day'); %also can use fitglm: especially if want to do interaction Keep in mind to fit to a random effect (1|day).
+            jrgecoDifference = J.Coefficients.Estimate;
+            
+            % NOTE - 3 last indexes of differences aren't relavent
+            differences = {gcampDifference, jrgecoDifference};
         end
         
         function plotMouseCrossCorrelations(obj, subPlots, timeVector)
             [plotByCloud, plotByCue, plotByLick, plotByMove, plotByOnset] = subPlots{:};
             
+            % TODO - use for on Matfile - for idx = numel(Matfile) ... MatFile{idx}
             obj.plotGeneralCrossCorrelation(plotByCloud, timeVector, obj.DATA_BY_CLOUD);
             obj.plotGeneralCrossCorrelation(plotByCue, timeVector, obj.DATA_BY_CUE);
             obj.plotGeneralCrossCorrelation(plotByLick, timeVector, obj.DATA_BY_LICK);
@@ -37,18 +139,18 @@ classdef Mouse < handle
             
         end
         
-        function plotGeneralCrossCorrelation(obj, ax, timeVector, dataFileName)
-            dataFile = matfile(obj.FILE_DIRECTORY + obj.FOLDER_DELIMITER + obj.Name + obj.FOLDER_DELIMITER + dataFileName);
+        function plotGeneralCrossCorrelation(obj, ax, timeVector, dataBy)
+            dataFile = matfile(obj.FILE_DIRECTORY + obj.FOLDER_DELIMITER + obj.Name + obj.FOLDER_DELIMITER + dataBy);
             if obj.GcampJrGecoReversed
-                gcampLowered = dataFile.af_trials;
-                jrgecoLowered = dataFile.all_trials;
+                gcampLowered = zscore(dataFile.af_trials')';
+                jrgecoLowered = zscore(dataFile.all_trials')';
             else
-                gcampLowered = dataFile.all_trials;
+                % gcampLowered = dataFile.all_trials;
                 % gcampLowered = dataFile.all_trials - mean(dataFile.all_trials);% Needs to be lowered so upwards won't give too much weight
-                % gcampLowered = zscore(dataFile.all_trials')';   % Another option
-                jrgecoLowered = dataFile.af_trials;
+                gcampLowered = zscore(dataFile.all_trials')';   % Another option
+                % jrgecoLowered = dataFile.af_trials;
                 % jrgecoLowered = dataFile.af_trials - mean(dataFile.af_trials); % Needs to be lowered so upwards won't give too much weight
-                %jrgecoLowered = zscore(dataFile.af_trials')';   % Another option
+                jrgecoLowered = zscore(dataFile.af_trials')';   % Another option
             end
             
             rows = size(gcampLowered,1);
