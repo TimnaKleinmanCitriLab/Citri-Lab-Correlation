@@ -8,10 +8,10 @@ classdef AccInAccOutMouse < Mouse
     end
     
     methods
-        function obj = AccInAccOutMouse(name, gcampJrGecoReversed)
+        function obj = AccInAccOutMouse(name, gcampJrGecoReversed, saveLocation)
             %ACCINACCOUTMOUSE Construct an instance of this class
             %   Detailed explanation goes here
-            obj@Mouse(name, gcampJrGecoReversed);
+            obj@Mouse(name, gcampJrGecoReversed, saveLocation);
         end
     end
 end

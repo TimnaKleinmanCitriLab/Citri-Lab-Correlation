@@ -9,10 +9,10 @@ classdef AudAccMouse < Mouse
     
     
     methods
-        function obj = AudAccMouse(name, gcampJrGecoReversed)
+        function obj = AudAccMouse(name, gcampJrGecoReversed, saveLocation)
             %ACCAUDMOUSE Construct an instance of this class
             %   Detailed explanation goes here
-            obj@Mouse(name, gcampJrGecoReversed);
+            obj@Mouse(name, gcampJrGecoReversed, saveLocation);
         end
     end
 end

@@ -4,7 +4,7 @@ classdef Mouse < handle
     
     properties (Constant)
         CONST_FOLDER_DELIMITER = "\";
-        CONST_FILE_DIRECTORY = "\\132.64.59.21\Citri_Lab\gala\Phys data\New Rig";
+        CONST_RAW_FILE_DIRECTORY = "\\132.64.59.21\Citri_Lab\gala\Phys data\New Rig";
         
         CONST_DATA_BY_CLOUD = "CueInCloud_comb_cloud.mat";
         CONST_DATA_BY_CUE = "CueInCloud_comb_cue.mat";
@@ -22,7 +22,7 @@ classdef Mouse < handle
     end
     
     methods
-        function obj = Mouse(name, gcampJrGecoReversed)
+        function obj = Mouse(name, gcampJrGecoReversed, saveLocation)
             %MOUSE Construct an instance of this class
             %   Detailed explanation goes here
             obj.Name = name;
@@ -32,11 +32,12 @@ classdef Mouse < handle
             obj.createTrialsInfo();
             obj.straightenData();
             
+            save(saveLocation + obj.CONST_FOLDER_DELIMITER + name + ".mat", "obj");
         end
         
         function createMatFiles(obj)
             % Create matFiles
-            fileBeg = obj.CONST_FILE_DIRECTORY + obj.CONST_FOLDER_DELIMITER + obj.Name + obj.CONST_FOLDER_DELIMITER;
+            fileBeg = obj.CONST_RAW_FILE_DIRECTORY + obj.CONST_FOLDER_DELIMITER + obj.Name + obj.CONST_FOLDER_DELIMITER;
             obj.MatFile.onset = matfile(fileBeg + obj.CONST_DATA_BY_ONSET);
             % obj.MatFile.cloud = matfile(fileBeg + obj.CONST_DATA_BY_CLOUD);
             obj.MatFile.cue = matfile(fileBeg + obj.CONST_DATA_BY_CUE);

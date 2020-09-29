@@ -8,10 +8,10 @@ classdef AudInAccOutMouse < Mouse
     end
     
     methods
-        function obj = AudInAccOutMouse(name, gcampJrGecoReversed)
+        function obj = AudInAccOutMouse(name, gcampJrGecoReversed, saveLocation)
             %AUDINACCOUTMOUSE Construct an instance of this class
             %   Detailed explanation goes here
-            obj@Mouse(name, gcampJrGecoReversed);
+            obj@Mouse(name, gcampJrGecoReversed, saveLocation);
         end
     end
 end

@@ -1,21 +1,24 @@
 % SET PARAMETERS
 clear
 close all
+
+SAVE_MOUSE_LOCATION = "W:\shared\Timna\Gal Projects\Mice";
+
 TIME_WINDOW = 20;                                                          % ASK - should it not be a const?
 AMOUN_OF_SAMPELS = 20346;                                                  % ASK - should it not be a const
 TIME_VECTOR = linspace(-TIME_WINDOW, TIME_WINDOW, AMOUN_OF_SAMPELS * 2 - 1);
 TIME_WINDOW_GRAPH = [-3, 3];
 
-% CREATE MICE LISTS
-ofcAccMice = [OfcAccMouse("1_from406", false), OfcAccMouse("2_from406", false), OfcAccMouse("3_from406", true), OfcAccMouse("6_from406", false)];
-audAccMice = [AudAccMouse("3_from410", false), AudAccMouse("4_from410", false), AudAccMouse("4_from410L", false)];
-audOfcMice = [AudOfcMouse("2_from430", false), AudOfcMouse("3_from430", false), AudOfcMouse("4_from430", false)];
-accInAccOutMice = [AccInAccOutMouse("1_from500", false), AccInAccOutMouse("2_from500", false), AccInAccOutMouse("3_from500", false)];
-audInAccOutMice = [AudInAccOutMouse("1_from440", false), AudInAccOutMouse("2_from440", false), AudInAccOutMouse("3_from440", false)];
-audInAudOutMice = [AudInAudOutMouse("4_from440", false)];
 
 % Other
 set(groot, 'DefaultLegendInterpreter', 'none')
+
+%% 1 - CREATE MOUSE LISTS ANE SAVE
+ofcAccMice = [OfcAccMouse("1_from406", false,  SAVE_MOUSE_LOCATION), OfcAccMouse("2_from406", false,  SAVE_MOUSE_LOCATION), OfcAccMouse("3_from406", true,  SAVE_MOUSE_LOCATION), OfcAccMouse("6_from406", false,  SAVE_MOUSE_LOCATION), OfcAccMouse("2_from430", false,  SAVE_MOUSE_LOCATION)];
+audAccMice = [AudAccMouse("3_from410", false,  SAVE_MOUSE_LOCATION), AudAccMouse("4_from410", false,  SAVE_MOUSE_LOCATION), AudAccMouse("4_from410L", false,  SAVE_MOUSE_LOCATION), AudAccMouse("3_from430", false,  SAVE_MOUSE_LOCATION), AudAccMouse("4_from430", false,  SAVE_MOUSE_LOCATION)];
+accInAccOutMice = [AccInAccOutMouse("1_from500", false,  SAVE_MOUSE_LOCATION), AccInAccOutMouse("2_from500", false,  SAVE_MOUSE_LOCATION), AccInAccOutMouse("3_from500", false,  SAVE_MOUSE_LOCATION)];
+audInAccOutMice = [AudInAccOutMouse("1_from440", false,  SAVE_MOUSE_LOCATION), AudInAccOutMouse("2_from440", false,  SAVE_MOUSE_LOCATION), AudInAccOutMouse("3_from440", false,  SAVE_MOUSE_LOCATION)];
+audInAudOutMice = [AudInAudOutMouse("4_from440", false,  SAVE_MOUSE_LOCATION)];
 
 %% MAIN
 % Single Mouse
