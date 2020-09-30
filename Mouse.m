@@ -134,22 +134,182 @@ classdef Mouse < handle
             differences = {gcampDifference, jrgecoDifference};
         end
         
-         function addToList(obj, listType)
-             listFullPath = MouseList.CONST_LIST_SAVE_PATH + obj.CONST_FOLDER_DELIMITER + listType + ".mat";
-             
-             if ~ isfile(listFullPath)
-                 mouseList = MouseList(listType);
-             else
-                 mouseList = load(listFullPath).obj;
-             end
-             
-             mouseList.add(obj);
+        function addToList(obj, listType)
+            listFullPath = MouseList.CONST_LIST_SAVE_PATH + obj.CONST_FOLDER_DELIMITER + listType + ".mat";
+            
+            if ~ isfile(listFullPath)
+                mouseList = MouseList(listType);
+            else
+                mouseList = load(listFullPath).obj;
+            end
+            
+            mouseList.add(obj);
         end
         
         % Other
-        function plotAllSessions(obj, timeWindow)
-%             f = figure("Name", "Signal from all sessions of mouse " + obj.Name, "NumberTitle", "off");
+        function plotAllSessions(obj, trialLength, downSampleFactor)
+            figure("Name", "Signal from all sessions of mouse " + obj.Name, "NumberTitle", "off");
+            ax = gca;
+            numTrials = size(obj.StraightenedData.onset.gcamp, 1);
             
+            gcampSignal = obj.downSampleAndReshape(obj.StraightenedData.onset.gcamp, downSampleFactor);
+            jrGecoSignal = obj.downSampleAndReshape(obj.StraightenedData.onset.jrgeco, downSampleFactor);
+            
+            jrGecoSignal = jrGecoSignal + 4;                               % So one can see both on the same figure
+            
+            timeVector = linspace(0, numTrials * trialLength, length(gcampSignal));
+            
+            plot(ax, timeVector, gcampSignal, 'LineWidth', 2, 'Color', '#009999');
+            hold on;
+            plot(ax, timeVector, jrGecoSignal, 'LineWidth', 2, 'Color', '#990099');
+            hold off;
+            
+            title("Signal from all sessions of mouse " + obj.Name, 'Interpreter', 'none', 'FontSize', 14)
+            
+            if obj.GcampJrGecoReversed
+                gcampType = obj.JRGECO;
+                jrgecoType = obj.GCAMP;
+            else
+                gcampType = obj.GCAMP;
+                jrgecoType = obj.JRGECO;
+            end
+            legend(gcampType + " (gcamp)", jrgecoType + " (jrGeco)", 'Location', 'best', 'Interpreter', 'none')
+            xlabel("Time (sec)", 'FontSize', 14)
+            ylabel("zscored \DeltaF/F", 'FontSize', 14)
+            xlim([0 100])
+            
+        end
+        
+        function plotCorrelationOverTime(obj, trialLength, downSampleFactor)
+            fig = figure("Name", "Signal from all sessions of mouse " + obj.Name, "NumberTitle", "off");
+            correlationPlot = subplot(3, 1, 1);
+            gcampPlot = subplot(3, 1, 2);
+            jrGecoPlot = subplot(3, 1, 3);
+            
+            
+            
+            numTrials = size(obj.StraightenedData.onset.gcamp, 1);
+            gcampSignal = obj.downSampleAndReshape(obj.StraightenedData.onset.gcamp, downSampleFactor);
+            jrGecoSignal = obj.downSampleAndReshape(obj.StraightenedData.onset.jrgeco, downSampleFactor);
+            
+            timeVector = linspace(0, numTrials * trialLength, length(gcampSignal));doc circshift
+            
+            plot(gcampPlot, timeVector, gcampSignal, 'LineWidth', 2, 'Color', '#009999');
+            xlim(gcampPlot, [0 100])
+            plot(jrGecoPlot, timeVector, jrGecoSignal, 'LineWidth', 2, 'Color', '#990099');
+            xlim(jrGecoPlot, [0 100])
+        end
+        
+        % Helpers
+        function correlationVector = createCorrelation(obj, trialLength, downSampleFactor, timeWindow, movementTime)
+%             gcampSignal = obj.downSampleAndReshape(obj.StraightenedData.onset.gcamp, downSampleFactor);
+%             jrGecoSignal = obj.downSampleAndReshape(obj.StraightenedData.onset.jrgeco, downSampleFactor);
+%             
+%             fs = length(obj.StraightenedData.onset.gcamp) / trialLength;
+
+            gcampSignal = 1:15;
+            jrGecoSignal = 1:15;
+            fs = 1;
+            
+            
+            SamplesInTimeWindow = round(fs * timeWindow);
+            SamplesInMovement = round(fs * movementTime);
+            amountOfLoops = ceil((length(gcampSignal) - SamplesInTimeWindow + 1) / SamplesInMovement);
+            
+%             gcampVector = gcampSignal(1:SamplesInTimeWindow);
+%             jrGecoVector = jrGecoSignal(1:SamplesInTimeWindow);
+            
+            
+            correlationVector = zeros(1, amountOfLoops);
+            
+            movementIndexVector = 1:SamplesInMovement:length(gcampSignal) - SamplesInTimeWindow + 1;
+            % movementIndexVector = movementIndexVector + SamplesInTimeWindow - SamplesInMovement;
+            % Same as:
+            % movementIndexVector = SamplesInTimeWindow - SamplesInMovement + 1:SamplesInMovement:length(gcampSignal) - SamplesInMovement + 1
+            
+            for loopIndex = 1:length(movementIndexVector)
+                
+                startIndex = movementIndexVector(loopIndex);
+                
+                gcampVector = gcampSignal(startIndex : startIndex + SamplesInTimeWindow - 1);
+                jrGecoVector = jrGecoSignal(startIndex : startIndex + SamplesInTimeWindow - 1);
+                
+                correlation = corr(gcampVector', jrGecoVector');
+                correlationVector(loopIndex) = correlation;
+                
+%                 gcampVector = circshift(gcampVector, -movementTime);
+%                 jrGecoVector = circshift(jrGecoVector, -movementTime);
+            end
+            
+            
+%             for index = SamplesInTimeWindow : length(gcampSignal)
+%
+%                 gcampVector(length(gcampVector)) = gcampSignal(index);
+%                 jrGecoVector(length(jrGecoVector)) = jrGecoSignal(index);
+%
+%                 correlation = corr(gcampVector', jrGecoVector');
+%                 correlationVector(index - SamplesInTimeWindow + 1) = correlation;
+%
+%                 gcampVector = circshift(gcampVector, -movementTime);
+%                 jrGecoVector = circshift(jrGecoVector, -movementTime);
+%             end
+        end
+        
+        % Old
+        function oddPlotAllSessions(obj, timeWindow, downSampleFactor)
+            figure("Name", "Signal from all sessions of mouse " + obj.Name, "NumberTitle", "off");
+            ax = gca;
+            numTrials = size(obj.StraightenedData.onset.gcamp, 1);
+            
+            gcampSignal = downsample(obj.StraightenedData.onset.gcamp', downSampleFactor)'; % TODO - think if downSampling should be done after reshaping or not
+            %             jrGecoSignal = downsample(obj.StraightenedData.onset.jrgeco', downSampleFactor)'; % TODO - think if downSampling should be done after reshaping or not
+            
+            gcampSignal = reshape(gcampSignal, 1, []);
+            %             jrGecoSignal = reshape(jrGecoSignal, 1, []);
+            
+            timeVector = linspace(0, numTrials * timeWindow, length(gcampSignal));
+            
+            plot(ax, timeVector, gcampSignal, 'LineWidth', 1);
+            %             hold on;
+            %             plot(timeVector, jrGecoSignal, 'LineWidth', 1);
+            %             hold off;
+            xlim([0 200])
+            
+            
+            figure("Name", "2 - " + "Signal from all sessions of mouse " + obj.Name, "NumberTitle", "off");
+            ax2 = gca;
+            numTrials = size(obj.StraightenedData.onset.gcamp, 1);
+            
+            gcampSignal2 = reshape(obj.StraightenedData.onset.gcamp', 1, []);
+            %             jrGecoSignal2 = reshape(obj.StraightenedData.onset.jrgeco', 1, []);
+            
+            gcampSignal2 = downsample(gcampSignal2, downSampleFactor);
+            %             jrGecoSignal2 = downsample(jrGecoSignal2, downSampleFactor);
+            
+            timeVector2 = linspace(0, numTrials * timeWindow, length(gcampSignal2));
+            
+            plot(ax2, timeVector2, gcampSignal2, 'LineWidth', 1);
+            %             hold on;
+            %             plot(ax2, timeVector2, jrGecoSignal2, 'LineWidth', 1);
+            %             hold off;
+            xlim([0 200])
+            
+            
+            figure("Name", "Raw", "NumberTitle", "off");
+            ax3 = gca;
+            numTrials = size(obj.StraightenedData.onset.gcamp, 1);
+            
+            gcampSignal3 = reshape(obj.StraightenedData.onset.gcamp', 1, []);
+            
+            timeVector3 = linspace(0, numTrials * timeWindow, length(gcampSignal3));
+            
+            plot(ax3, timeVector3, gcampSignal3, 'LineWidth', 1);
+            xlim([0 200])
+        end
+        
+        function oldPlotAllSessions(obj, timeWindow)
+            figure("Name", "Signal from all sessions of mouse " + obj.Name, "NumberTitle", "off");
+            ax = gca;
             [numTrials, trialLen] = size(obj.StraightenedData.onset.gcamp);
             
             timeVector = linspace(0, numTrials * timeWindow, numTrials * trialLen);
@@ -157,11 +317,11 @@ classdef Mouse < handle
             gcampSignal = reshape(obj.StraightenedData.onset.gcamp', 1, []);
             jrGecoSignal = reshape(obj.StraightenedData.onset.jrgeco', 1, []);
             
-            plot(timeVector, gcampSignal, 'LineWidth', 1);
+            plot(ax, timeVector, gcampSignal, 'LineWidth', 1);
             hold on;
             plot(timeVector, jrGecoSignal, 'LineWidth', 1);
             hold off;
-            xlim([0 200])
+            xlim([0 100])
             
         end
         
@@ -202,6 +362,14 @@ classdef Mouse < handle
             plot(ax, timeVector, gcampXjrgeco)
         end
         
+    end
+    
+    methods (Static)
+        % Helpers
+        function finalSignal = downSampleAndReshape(rawSignal, downSampleFactor)
+            finalSignal = reshape(rawSignal', 1, []);
+            finalSignal = downsample(finalSignal, downSampleFactor);
+        end
     end
 end
 
