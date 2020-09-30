@@ -8,9 +8,9 @@ classdef OfcAccMouse < Mouse
      end
     
     methods
-        function obj = OfcAccMouse(name, gcampJrGecoReversed, saveLocation)
+        function obj = OfcAccMouse(name, gcampJrGecoReversed)
             %MOUSE Construct an instance of this class
-            obj@Mouse(name, gcampJrGecoReversed, saveLocation);
+            obj@Mouse(name, gcampJrGecoReversed, "OfcAccMice");
         end
     end
 end

@@ -4,7 +4,9 @@ classdef Mouse < handle
     
     properties (Constant)
         CONST_FOLDER_DELIMITER = "\";
-        CONST_RAW_FILE_DIRECTORY = "\\132.64.59.21\Citri_Lab\gala\Phys data\New Rig";
+        
+        CONST_MOUSE_SAVE_PATH = "W:\shared\Timna\Gal Projects\Mice";
+        CONST_RAW_FILE_PATH = "\\132.64.59.21\Citri_Lab\gala\Phys data\New Rig";
         
         CONST_DATA_BY_CLOUD = "CueInCloud_comb_cloud.mat";
         CONST_DATA_BY_CUE = "CueInCloud_comb_cue.mat";
@@ -16,38 +18,42 @@ classdef Mouse < handle
     properties
         Name
         GcampJrGecoReversed
-        MatFile
+        RawMatFile
         Info
         StraightenedData
+        ObjectPath
     end
     
     methods
-        function obj = Mouse(name, gcampJrGecoReversed, saveLocation)
+        % Constructor Functions
+        function obj = Mouse(name, gcampJrGecoReversed, listType)
             %MOUSE Construct an instance of this class
             %   Detailed explanation goes here
             obj.Name = name;
             obj.GcampJrGecoReversed = gcampJrGecoReversed;
+            obj.ObjectPath = obj.CONST_MOUSE_SAVE_PATH + obj.CONST_FOLDER_DELIMITER + name + ".mat" ;
             
             obj.createMatFiles();
             obj.createTrialsInfo();
             obj.straightenData();
             
-            save(saveLocation + obj.CONST_FOLDER_DELIMITER + name + ".mat", "obj");
+            save(obj.ObjectPath, "obj");
+            obj.addToList(listType);
         end
         
         function createMatFiles(obj)
             % Create matFiles
-            fileBeg = obj.CONST_RAW_FILE_DIRECTORY + obj.CONST_FOLDER_DELIMITER + obj.Name + obj.CONST_FOLDER_DELIMITER;
-            obj.MatFile.onset = matfile(fileBeg + obj.CONST_DATA_BY_ONSET);
-            % obj.MatFile.cloud = matfile(fileBeg + obj.CONST_DATA_BY_CLOUD);
-            obj.MatFile.cue = matfile(fileBeg + obj.CONST_DATA_BY_CUE);
-            obj.MatFile.lick = matfile(fileBeg + obj.CONST_DATA_BY_LICK);
-            % obj.MatFile.movement = matfile(fileBeg + obj.CONST_DATA_BY_MOVEMENT);
+            fileBeg = obj.CONST_RAW_FILE_PATH + obj.CONST_FOLDER_DELIMITER + obj.Name + obj.CONST_FOLDER_DELIMITER;
+            obj.RawMatFile.onset = matfile(fileBeg + obj.CONST_DATA_BY_ONSET);
+            % obj.RawMatFile.cloud = matfile(fileBeg + obj.CONST_DATA_BY_CLOUD);
+            obj.RawMatFile.cue = matfile(fileBeg + obj.CONST_DATA_BY_CUE);
+            obj.RawMatFile.lick = matfile(fileBeg + obj.CONST_DATA_BY_LICK);
+            % obj.RawMatFile.movement = matfile(fileBeg + obj.CONST_DATA_BY_MOVEMENT);
         end
         
         function createTrialsInfo(obj)
             % Create Trials Info (by cue, cloud, ..)
-            tInfo = obj.MatFile.onset.t_info;
+            tInfo = obj.RawMatFile.onset.t_info;
             obj.Info.onset = tInfo;
             % obj.Info.cloud = % TODO!
             obj.Info.cue = tInfo((tInfo.plot_result ~= -1), :); % All trials that are not premature
@@ -55,7 +61,7 @@ classdef Mouse < handle
             % obj.Info.movement = % TODO!
             
             % Add day to info
-            tInfo = obj.MatFile.onset.t_info;
+            tInfo = obj.RawMatFile.onset.t_info;
             sessionBreaks = find(tInfo.trial_number == 1);
             sessionBreaks = [sessionBreaks; size(tInfo, 1) + 1];
             
@@ -86,8 +92,8 @@ classdef Mouse < handle
                 fieldName = fields{fieldIndex};
                 info = obj.Info.(fieldName);
                 
-                gcampTrials = obj.MatFile.(fieldName).all_trials;
-                jrgecoTrials = obj.MatFile.(fieldName).af_trials;
+                gcampTrials = obj.RawMatFile.(fieldName).all_trials;
+                jrgecoTrials = obj.RawMatFile.(fieldName).af_trials;
                 
                 normGcampData = gcampTrials - gcampDifference(1); % subtract intercept (1st day / correct)
                 normJrgecoData = jrgecoTrials - jrgecoDifference(1); % subtract intercept (1st day / correct)
@@ -106,8 +112,8 @@ classdef Mouse < handle
         function differences = getDayDifferences(obj)
             % Creates for each day how much need to add in order to have
             % same baseline (calculated by correct licks)
-            gTrials = obj.MatFile.onset.all_trials;
-            jTrials = obj.MatFile.onset.af_trials;
+            gTrials = obj.RawMatFile.onset.all_trials;
+            jTrials = obj.RawMatFile.onset.af_trials;
             
             recordingDays = categorical(obj.Info.onset.day);
             recordingOutcome = categorical(obj.Info.onset.trial_result);
@@ -126,6 +132,37 @@ classdef Mouse < handle
             
             % NOTE - 3 last indexes of differences aren't relavent
             differences = {gcampDifference, jrgecoDifference};
+        end
+        
+         function addToList(obj, listType)
+             listFullPath = MouseList.CONST_LIST_SAVE_PATH + obj.CONST_FOLDER_DELIMITER + listType + ".mat";
+             
+             if ~ isfile(listFullPath)
+                 mouseList = MouseList(listType);
+             else
+                 mouseList = load(listFullPath).obj;
+             end
+             
+             mouseList.add(obj);
+        end
+        
+        % Other
+        function plotAllSessions(obj, timeWindow)
+%             f = figure("Name", "Signal from all sessions of mouse " + obj.Name, "NumberTitle", "off");
+            
+            [numTrials, trialLen] = size(obj.StraightenedData.onset.gcamp);
+            
+            timeVector = linspace(0, numTrials * timeWindow, numTrials * trialLen);
+            
+            gcampSignal = reshape(obj.StraightenedData.onset.gcamp', 1, []);
+            jrGecoSignal = reshape(obj.StraightenedData.onset.jrgeco', 1, []);
+            
+            plot(timeVector, gcampSignal, 'LineWidth', 1);
+            hold on;
+            plot(timeVector, jrGecoSignal, 'LineWidth', 1);
+            hold off;
+            xlim([0 200])
+            
         end
         
         function plotMouseCrossCorrelations(obj, subPlots, timeVector)
