@@ -1,4 +1,4 @@
-classdef MouseList
+classdef MouseList < handle
     %MouseList Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -40,9 +40,10 @@ classdef MouseList
             save(obj.ObjectPath, "obj");
         end
         
-        function loadMice(obj)
+        function obj = loadMice(obj)
             for mouseStruct = obj.MousePathList
-                obj.LoadedMouseList = [obj.LoadedMouseList, load(mouseStruct.Path)];
+                curMouse = load(mouseStruct.Path).obj;
+                obj.LoadedMouseList = [obj.LoadedMouseList, curMouse];
             end
         end
     end
