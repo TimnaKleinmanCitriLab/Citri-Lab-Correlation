@@ -2,7 +2,7 @@
 clear
 close all
 
-TRIAL_LENGTH = 20;                                                         % ASK - should it not be a const?
+                                                         % ASK - should it not be a const?
 AMOUN_OF_SAMPELS = 20346;                                                  % ASK - should it not be a const
 TIME_VECTOR = linspace(-TRIAL_LENGTH, TRIAL_LENGTH, AMOUN_OF_SAMPELS * 2 - 1);
 TIME_WINDOW_GRAPH = [-3, 3];
