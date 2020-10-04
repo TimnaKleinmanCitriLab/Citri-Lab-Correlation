@@ -201,7 +201,7 @@ classdef Mouse < handle
             signalTimeVector = linspace(0, totalTime, length(gcampSignal));
             
             % Plot
-            obj.plotSlidingCorrelationHelper(gcampSignal, jrGecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift)
+            obj.helperPlotSlidingCorrelation(gcampSignal, jrGecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift)
         end
         
         function plotComparisonCorrelation(obj)
@@ -246,7 +246,7 @@ classdef Mouse < handle
             end
         end
         
-        function plotSlidingCorrelationHelper(obj, gcampSignal, jrGecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift)
+        function helperPlotSlidingCorrelation(obj, gcampSignal, jrGecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift)
             fig = figure("Name", "Signal from all sessions of mouse " + obj.Name, "NumberTitle", "off");
             correlationPlot = subplot(2, 1, 1);
             signalPlot = subplot(2, 1, 2);
@@ -332,7 +332,7 @@ classdef Mouse < handle
         
         function ComparisonCorrelationScatterPlot(obj, correlationTable)
             % Plot scatter plot of comaprison correlation
-            fig = figure("Name", "Comparing correlations of mouse " + obj.Name, "NumberTitle", "off");
+            fig = figure("Name", "Comparing correlations of mouse " + obj.Name, "NumberTitle", "off", "Position", [211,137,1569,362]);
             amount = size(correlationTable, 1);
             
             [gcampType, jrgecoType] = obj.findGcampJrGecoType();
@@ -349,6 +349,7 @@ classdef Mouse < handle
                 
                 scatter(curPlot, gcampDownSampled, jrGecoDownSampled, 10,'filled');
                 
+                % Best fit line
                 coefficients = polyfit(curGcampSignal,  curJrGecoSignal, 1);
                 fitted = polyval(coefficients, curGcampSignal);
                 line(curPlot, curGcampSignal, fitted, 'Color', 'black', 'LineStyle', '--')
@@ -367,7 +368,19 @@ classdef Mouse < handle
             categories = categorical(correlationTable.kind);
             bar(ax, categories, correlationTable.correlation);
             set(ax,'TickLabelInterpreter','none')
-            ylim(ax, [0 1])                                                % TODO - decide / check if should be from -1 or from 0
+            title(ax, "Resultst of comparing correlations of mouse " + obj.Name, 'Interpreter', 'none')
+            xlabel("Correlation")
+            
+            minY = min(correlationTable.correlation);
+            maxY = max(correlationTable.correlation);
+            
+            if (minY < 0) && (0 < maxY)
+                ylim(ax, [-1, 1])
+            elseif (0 < maxY)                                              % for sure 0 <= minY
+                ylim(ax, [0, 1])
+            else
+                ylim(ax, [-1, 0])
+            end
         end
         
         % ================ Old ================
@@ -440,6 +453,7 @@ classdef Mouse < handle
             endTime = (lastIndex - 1)/ fs;                                 % Index start from 1, time from 0
             
             timeVector = linspace(0, endTime, length(correlationVector));
+            timeVector = timeVector + (timeWindow / 2);                    % Correlation will show in the middle of time window and not on beginning
         end
         
     end
