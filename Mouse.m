@@ -33,8 +33,7 @@ classdef Mouse < handle
     methods
         %========== Constructor Functions ==========
         function obj = Mouse(name, gcampJrGecoReversed, listType)
-            %MOUSE Construct an instance of this class
-            %   Detailed explanation goes here
+            % MOUSE Construct an instance of this class
             obj.Name = name;
             obj.GcampJrGecoReversed = gcampJrGecoReversed;
             obj.ObjectPath = obj.CONST_MOUSE_SAVE_PATH + obj.CONST_FOLDER_DELIMITER + name + ".mat" ;
@@ -49,6 +48,9 @@ classdef Mouse < handle
         end
         
         function createMatFiles(obj)
+            % Stores the mat files for the raw data - both for the task
+            % and for the passive parts - as a Mouse property.
+            
             % Task
             fileBeg = obj.CONST_RAW_FILE_PATH + obj.CONST_FOLDER_DELIMITER + obj.Name + obj.CONST_FOLDER_DELIMITER;
             obj.RawMatFile.Task.onset = matfile(fileBeg + obj.CONST_DATA_BY_ONSET);
@@ -62,13 +64,18 @@ classdef Mouse < handle
         end
         
         function createTaskInfo(obj)
+            % Creates and stores as a mouse property the info of the task
+            % and passive trials.
+            
             % Create Task Info (by cue, cloud, ..)
             tInfo = obj.RawMatFile.Task.onset.t_info;
             obj.Info.Task.onset = tInfo;
-            % obj.Info.Task.cloud = % TODO!
-            obj.Info.Task.cue = tInfo((tInfo.plot_result ~= -1), :);            % All trials that are not premature
-            obj.Info.Task.lick = tInfo((~isnan(tInfo.first_lick)), :);          % All trials that had a lick (including omissions that had a lick)
-            % obj.Info.Task.movement = % TODO!
+            % obj.Info.Task.cloud =                   % TODO!
+            obj.Info.Task.cue = tInfo((tInfo.plot_result ~= -1), :);       % All trials that are not premature
+            obj.Info.Task.lick = tInfo((~isnan(tInfo.first_lick)), :);     % All trials that had a lick (including omissions that had a lick)
+            % obj.Info.Task.movement =                % TODO!
+            
+            obj.Info.Passive = obj.RawMatFile.Passive.t_info;
             
             % Add day to info
             tInfo = obj.RawMatFile.Task.onset.t_info;
@@ -91,8 +98,8 @@ classdef Mouse < handle
         end
         
         function straightenTaskData(obj)
-            % Normalizes / straightens the data of each day so it has same
-            % baseline (calculated by correct licks)
+            % Normalizes / straightens the data of each day of tasks so it
+            % has same baseline (calculated by correct licks)
             [gcampDifference, jrgecoDifference] = obj.getDayDifferences();
             
             fields = fieldnames(obj.Info.Task);
@@ -119,8 +126,11 @@ classdef Mouse < handle
         end
         
         function dividePassiveData(obj)
-            tInfo = obj.RawMatFile.Passive.t_info;
-            gcampPassive = obj.RawMatFile.Passive.all_trials; 
+            % This function divides the passive data into it's appropriate
+            % sections (by BBN/FS and pre/post X awake/anesthetized). It
+            % saves the results into the relevant mouse proprety
+            tInfo = obj.Info.Passive;
+            gcampPassive = obj.RawMatFile.Passive.all_trials;
             jrGecoPassive = obj.RawMatFile.Passive.af_trials;
             
             types = unique(tInfo.type);
@@ -141,6 +151,8 @@ classdef Mouse < handle
         end
         
         function addToList(obj, listType)
+            % Adds the mouses path to the given mouse list. If no list is
+            % exists, it creats a new list
             listFullPath = MouseList.CONST_LIST_SAVE_PATH + obj.CONST_FOLDER_DELIMITER + listType + ".mat";
             
             if ~ isfile(listFullPath)
@@ -154,6 +166,9 @@ classdef Mouse < handle
         
         % ================ Plot ================
         function plotAllSessions(obj, descriptionVector, downSampleFactor)
+            % Plots the gcamp + jrgeco signals from all the mouses sessions
+            % (task or passive)
+            
             % Generate Data
             [gcampSignal, jrGecoSignal, trialTime] = obj.getSignals(descriptionVector);
             
@@ -162,7 +177,7 @@ classdef Mouse < handle
             gcampSignal = obj.downSampleAndReshape(gcampSignal, downSampleFactor);
             jrGecoSignal = obj.downSampleAndReshape(jrGecoSignal, downSampleFactor);
             
-%             jrGecoSignal = jrGecoSignal + 4;                               % So one can see both on the same figure
+            %             jrGecoSignal = jrGecoSignal + 4;                               % So one can see both on the same figure
             
             timeVector = linspace(0, numTrials * trialTime, length(gcampSignal));
             
@@ -178,7 +193,7 @@ classdef Mouse < handle
             title("Signal from all " +  descriptionVector(1) + "s of kind " + descriptionVector(2) + " for mouse " + obj.Name, 'Interpreter', 'none', 'FontSize', 12)
             
             [gcampType, jrgecoType] = obj.findGcampJrGecoType();
-
+            
             legend(gcampType + " (gcamp)", jrgecoType + " (jrGeco)", 'Location', 'best', 'Interpreter', 'none')
             xlabel("Time (sec)", 'FontSize', 14)
             ylabel("zscored \DeltaF/F", 'FontSize', 14)
@@ -187,6 +202,10 @@ classdef Mouse < handle
         end
         
         function plotSlidingCorrelation(obj, descriptionVector, timeWindow, timeShift, downSampleFactor)
+            % Plots the gcamp + jrgeco signals from all the mouses sessions
+            % (task or passive) and also plots the sliding window
+            % correlation.
+            
             % Generate Data
             [gcampSignal, jrGecoSignal, trialTime] = obj.getSignals(descriptionVector);
             totalTime = size(gcampSignal, 1) * trialTime;
@@ -201,19 +220,30 @@ classdef Mouse < handle
             signalTimeVector = linspace(0, totalTime, length(gcampSignal));
             
             % Plot
-            obj.helperPlotSlidingCorrelation(gcampSignal, jrGecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift)
+            obj.helperPlotSlidingCorrelation(descriptionVector, gcampSignal, jrGecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift)
         end
         
         function plotComparisonCorrelation(obj)
+            % Plots correlations of the whole signal by all the different
+            % possible categories - plots both each one as a scatter plot,
+            % and then all of them together for comparison.
+            
             correlationTable = obj.createComparisonCorrelationTable();
             
             obj.ComparisonCorrelationScatterPlot(correlationTable)
             obj.ComparisonCorrelationBar(correlationTable)
         end
         
+        function plotComparisonSlidingCorrelationMean(obj, descriptionVector, timeWindow, timeShift, downSampleFactor)
+            % Plots a graph of the mean of the sliding correlation by all
+            % the different possible categories.
+            
+        end
+        
         % ================ Helpers ================
+        % ==== General ====
         function [gcampDifference, jrgecoDifference] = getDayDifferences(obj)
-            % Creates for each day how much need to add in order to have
+            % Creates for each day how much one needs to add in order to have
             % same baseline (calculated by correct licks)
             gTrials = obj.RawMatFile.Task.onset.all_trials;
             jTrials = obj.RawMatFile.Task.onset.af_trials;
@@ -237,6 +267,8 @@ classdef Mouse < handle
         end
         
         function [gcampType, jrgecoType] = findGcampJrGecoType(obj)
+            % Returns the brain area of gcamp and area of geco in this
+            % mouse
             if obj.GcampJrGecoReversed
                 gcampType = obj.JRGECO;
                 jrgecoType = obj.GCAMP;
@@ -244,35 +276,6 @@ classdef Mouse < handle
                 gcampType = obj.GCAMP;
                 jrgecoType = obj.JRGECO;
             end
-        end
-        
-        function helperPlotSlidingCorrelation(obj, gcampSignal, jrGecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift)
-            fig = figure("Name", "Signal from all sessions of mouse " + obj.Name, "NumberTitle", "off");
-            correlationPlot = subplot(2, 1, 1);
-            signalPlot = subplot(2, 1, 2);
-            
-            plot(correlationPlot, correlationTimeVector, correlationVector, 'LineWidth', 2, 'Color', 'Black');
-            xlim(correlationPlot, [0 50])
-            ylim(correlationPlot, [-1 1])
-            line(correlationPlot, [0 correlationTimeVector(length(correlationTimeVector))], [0 0], 'Color', '#C0C0C0')
-            
-            plot(signalPlot, signalTimeVector, gcampSignal, 'LineWidth', 2, 'Color', '#009999');
-            hold on
-            plot(signalPlot, signalTimeVector, jrGecoSignal, 'LineWidth', 2, 'Color', '#990099');
-            hold off
-            xlim(signalPlot, [0 50])
-            
-            title(correlationPlot, "Sliding Window Correlation - Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), 'FontSize', 13)
-            [gcampType, jrgecoType] = obj.findGcampJrGecoType();
-            title(signalPlot, "Signal", 'FontSize', 13)
-            
-            legend(signalPlot, gcampType + " (gcamp)", jrgecoType + " (jrGeco)", 'Location', 'best')
-            
-            xlabel(correlationPlot, "Time (sec)")
-            xlabel(signalPlot, "Time (sec)")
-            ylabel(correlationPlot, "correlation")
-            ylabel(signalPlot, "zscored \DeltaF/F")
-            
         end
         
         function [gcampSignal, jrGecoSignal, trialTime] = getSignals(obj, descriptionVector)
@@ -296,11 +299,42 @@ classdef Mouse < handle
             end
         end
         
+        % == Specific For Plots ==
+        function helperPlotSlidingCorrelation(obj, descriptionVector, gcampSignal, jrGecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift)
+            % Creats the plots for the PlotSlidingCorrelation function
+            
+            fig = figure("Name", "Signal from all sessions of mouse " + obj.Name, "NumberTitle", "off");
+            correlationPlot = subplot(2, 1, 1);
+            signalPlot = subplot(2, 1, 2);
+            
+            plot(correlationPlot, correlationTimeVector, correlationVector, 'LineWidth', 2, 'Color', 'Black');
+            xlim(correlationPlot, [0 50])
+            ylim(correlationPlot, [-1 1])
+            line(correlationPlot, [0 correlationTimeVector(length(correlationTimeVector))], [0 0], 'Color', '#C0C0C0')
+            
+            plot(signalPlot, signalTimeVector, gcampSignal, 'LineWidth', 2, 'Color', '#009999');
+            hold on
+            plot(signalPlot, signalTimeVector, jrGecoSignal, 'LineWidth', 2, 'Color', '#990099');
+            hold off
+            xlim(signalPlot, [0 50])
+            
+            title(correlationPlot, "Sliding Window Correlation - Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), 'FontSize', 13)
+            [gcampType, jrgecoType] = obj.findGcampJrGecoType();
+            title(signalPlot, "Signal from all " +  descriptionVector(1) + "s of kind " + descriptionVector(2) + " for mouse " + obj.Name, 'FontSize', 13)
+            
+            legend(signalPlot, gcampType + " (gcamp)", jrgecoType + " (jrGeco)", 'Location', 'best')
+            
+            xlabel(correlationPlot, "Time (sec)")
+            xlabel(signalPlot, "Time (sec)")
+            ylabel(correlationPlot, "correlation")
+            ylabel(signalPlot, "zscored \DeltaF/F")
+        end
+        
         function correlationTable = createComparisonCorrelationTable(obj)
             % Create data for correlation comparison
             correlationTable = array2table(zeros(0,4));
             correlationTable.Properties.VariableNames = {'kind', 'correlation', 'gcampSignal', 'jrGecoSignal'};
-                
+            
             typeFields = fieldnames(obj.ProcessedRawData.Passive);
             
             for typeIndex = 1:numel(typeFields)
@@ -320,7 +354,7 @@ classdef Mouse < handle
                     correlationTable = [correlationTable; curRow];
                 end
             end
-           
+            
             kind = "Task";
             gcampSignal =  {reshape(obj.ProcessedRawData.Task.onset.gcamp', 1, [])};
             jrGecoSignal = {reshape(obj.ProcessedRawData.Task.onset.jrgeco', 1, [])};
@@ -361,7 +395,8 @@ classdef Mouse < handle
         end
         
         function ComparisonCorrelationBar(obj, correlationTable)
-            % Plot bars of comaprison correlation
+            % Plot bars that represent the comaprison between the 
+            % correlations of all the possible categories.
             
             fig = figure("Name", "Resultst of comparing correlations of mouse " + obj.Name, "NumberTitle", "off");
             ax = gca;
@@ -426,11 +461,18 @@ classdef Mouse < handle
     methods (Static)
         % ================ Helpers ================
         function finalSignal = downSampleAndReshape(rawSignal, downSampleFactor)
+            % Receive a data in a matrix and a down sample factor
+            % Returns a signal that is a vector and is down sampled
             finalSignal = reshape(rawSignal', 1, []);
             finalSignal = downsample(finalSignal, downSampleFactor);
         end
         
         function [correlationVector, timeVector] = createSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrGecoSignal, totalTime)
+            % Creats a vector that represents the sliding correlation
+            % between the given signals, acoording to the given time window
+            % and time shift. It returns both a vector that represents the
+            % sliding correlation, and a time vector that corresponds with
+            % it.
             fs = length(gcampSignal) / totalTime;                          %!!!! TODO - think if this is the right calc vs. timeVector
             
             SamplesInTimeWindow = round(fs * timeWindow);
