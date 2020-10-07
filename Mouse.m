@@ -177,7 +177,7 @@ classdef Mouse < handle
             gcampSignal = obj.downSampleAndReshape(gcampSignal, downSampleFactor);
             jrGecoSignal = obj.downSampleAndReshape(jrGecoSignal, downSampleFactor);
             
-            %             jrGecoSignal = jrGecoSignal + 4;                               % So one can see both on the same figure
+            % jrGecoSignal = jrGecoSignal + 4;                               % So one can see both on the same figure
             
             timeVector = linspace(0, numTrials * trialTime, length(gcampSignal));
             
@@ -234,9 +234,58 @@ classdef Mouse < handle
             obj.ComparisonCorrelationBar(correlationTable)
         end
         
-        function plotComparisonSlidingCorrelationMean(obj, descriptionVector, timeWindow, timeShift, downSampleFactor)
-            % Plots a graph of the mean of the sliding correlation by all
-            % the different possible categories.
+        function plotComparisonSlidingCorrelation(obj, timeWindow, timeShift)
+            % Plots a graph of means of sliding correlation by all the
+            % different possible categories.
+            
+%             f = figure();
+%             ax = gca;
+            histogramMatrix = [];
+            types = [];
+            histogramEdges = linspace(-1, 1, 101);                          % Creates x - 1 bins
+            yLabel = linspace(1, -1, length(histogramEdges) - 1);
+            
+            typeFields = fieldnames(obj.ProcessedRawData.Passive);
+            
+            for typeIndex = 1:numel(typeFields)
+                curType = typeFields{typeIndex};
+                
+                conditionFields = fieldnames(obj.ProcessedRawData.Passive.(curType));
+                
+                for conditionIndex = 1:numel(conditionFields)
+                    curCondition = conditionFields{conditionIndex};
+                    
+                    [gcampSignal, jrGecoSignal, trialTime] = getSignals(obj, ["Passive", (curType), (curCondition)]);
+                    totalTime = size(gcampSignal, 1) * trialTime;
+                    gcampSignal = reshape(gcampSignal', 1, []);
+                    jrGecoSignal = reshape(jrGecoSignal', 1, []);
+                    
+                    [correlationVector, ~] = obj.createSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrGecoSignal, totalTime);
+                    [binCount,~] = histcounts(correlationVector, histogramEdges, 'Normalization', 'probability');
+%                     histogram(ax, correlationVector, histogramEdges, 'Normalization', 'probability');
+%                     hold on
+                    histogramMatrix = [histogramMatrix, flip(binCount')];
+                    type = "Passive " + (curType) + " " + (curCondition);
+                    types = [types, type];
+                    
+                end
+            end
+            
+            [gcampSignal, jrGecoSignal, trialTime] = getSignals(obj, ["Task", "onset"]);
+            totalTime = size(gcampSignal, 1) * trialTime;
+            gcampSignal = reshape(gcampSignal', 1, []);
+            jrGecoSignal = reshape(jrGecoSignal', 1, []);
+
+            [correlationVector, ~] = obj.createSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrGecoSignal, totalTime);
+            [binCount,~] = histcounts(correlationVector, histogramEdges, 'Normalization', 'probability');
+            histogramMatrix = [histogramMatrix, flip(binCount')];
+            type = "Task";
+            types = [types, type];
+%             histogram(ax, correlationVector, histogramEdges, 'Normalization', 'probability');
+%             hold off
+            
+            fig = figure();
+            heatmap(fig, types, yLabel, histogramMatrix);
             
         end
         
@@ -290,12 +339,16 @@ classdef Mouse < handle
                 gcampSignal = obj.ProcessedRawData.Task.(cutBy).gcamp;
                 jrGecoSignal = obj.ProcessedRawData.Task.(cutBy).jrgeco;
                 trialTime = obj.CONST_TASK_TRIAL_TIME;
-            else                                                           % Passive
+            elseif descriptionVector(1) == "Passive"                       % Passive
                 soundType = descriptionVector(2);
                 condition = descriptionVector(3);
                 gcampSignal = obj.ProcessedRawData.Passive.(soundType).(condition).gcamp;
                 jrGecoSignal = obj.ProcessedRawData.Passive.(soundType).(condition).jrgeco;
                 trialTime = obj.CONST_PASSIVE_TRIAL_TIME;
+            elseif descriptionVector(1) == "Free"                          % Free
+                %%%%%%% TODO %%%%%%
+            else                                 
+                disp("Problem with given description vector");
             end
         end
         
@@ -318,9 +371,9 @@ classdef Mouse < handle
             hold off
             xlim(signalPlot, [0 50])
             
-            title(correlationPlot, "Sliding Window Correlation - Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), 'FontSize', 13)
+            title(correlationPlot, "Sliding Window Correlation - Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), 'FontSize', 13, 'Interpreter', 'none')
             [gcampType, jrgecoType] = obj.findGcampJrGecoType();
-            title(signalPlot, "Signal from all " +  descriptionVector(1) + "s of kind " + descriptionVector(2) + " for mouse " + obj.Name, 'FontSize', 13)
+            title(signalPlot, "Signal from all " +  descriptionVector(1) + "s of kind " + descriptionVector(2) + " for mouse " + obj.Name, 'FontSize', 13, 'Interpreter', 'none')
             
             legend(signalPlot, gcampType + " (gcamp)", jrgecoType + " (jrGeco)", 'Location', 'best')
             
@@ -398,13 +451,13 @@ classdef Mouse < handle
             % Plot bars that represent the comaprison between the 
             % correlations of all the possible categories.
             
-            fig = figure("Name", "Resultst of comparing correlations of mouse " + obj.Name, "NumberTitle", "off");
+            fig = figure("Name", "Results of comparing correlations of mouse " + obj.Name, "NumberTitle", "off");
             ax = gca;
             categories = categorical(correlationTable.kind);
             bar(ax, categories, correlationTable.correlation);
             set(ax,'TickLabelInterpreter','none')
-            title(ax, "Resultst of comparing correlations of mouse " + obj.Name, 'Interpreter', 'none')
-            xlabel("Correlation")
+            title(ax, "Results of comparing correlations of mouse " + obj.Name, 'Interpreter', 'none')
+            ylabel("Correlation")
             
             minY = min(correlationTable.correlation);
             maxY = max(correlationTable.correlation);
@@ -456,6 +509,24 @@ classdef Mouse < handle
             plot(ax, timeVector, gcampXjrgeco)
         end
         
+        function plotCrossCorrelation(obj, descriptionVector)
+            [gcampSignal, jrGecoSignal, trialTime] = getSignals(obj, descriptionVector);
+            % DELETE! 
+            gcampSignal = gcampSignal - min(gcampSignal, [], 'all');
+            
+            
+            
+            timeVector = linspace(-trialTime, trialTime, length(gcampSignal) * 2 - 1);
+            rows = size(gcampSignal,1);
+            cols = size(gcampSignal, 2);
+            gcampXjrgeco = zeros(rows, cols * 2 - 1);
+            
+            for index = 1:rows
+                gcampXjrgeco(index,:) = xcorr(gcampSignal(index,:), jrGecoSignal(index,:), 'normalized');  %TODO - think if should be normalized here or at the end
+            end
+            gcampXjrgeco = sum(gcampXjrgeco) / rows;
+            plot(timeVector, gcampXjrgeco)
+        end
     end
     
     methods (Static)
