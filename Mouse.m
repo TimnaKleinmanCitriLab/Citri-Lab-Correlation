@@ -179,7 +179,7 @@ classdef Mouse < handle
             
             % jrGecoSignal = jrGecoSignal + 4;                               % So one can see both on the same figure
             
-            timeVector = linspace(0, numTrials * trialTime, length(gcampSignal));
+            timeVector = linspace(0, numTrials * trialTime, size(gcampSignal, 2));
             
             % Plot
             figure("Name", "Signal from all sessions of mouse " + obj.Name, "NumberTitle", "off");
@@ -201,6 +201,17 @@ classdef Mouse < handle
             
         end
         
+        function plotComparisonCorrelation(obj)
+            % Plots correlations of the whole signal by all the different
+            % possible categories - plots both each one as a scatter plot,
+            % and then all of them together for comparison.
+            
+            correlationTable = obj.createComparisonCorrelationTable();
+            
+            obj.ComparisonCorrelationScatterPlot(correlationTable)
+            obj.ComparisonCorrelationBar(correlationTable)
+        end
+        
         function plotSlidingCorrelation(obj, descriptionVector, timeWindow, timeShift, downSampleFactor)
             % Plots the gcamp + jrgeco signals from all the mouses sessions
             % (task or passive) and also plots the sliding window
@@ -217,33 +228,19 @@ classdef Mouse < handle
             
             gcampSignal = downsample(gcampSignal, downSampleFactor);
             jrGecoSignal = downsample(jrGecoSignal, downSampleFactor);
-            signalTimeVector = linspace(0, totalTime, length(gcampSignal));
+            signalTimeVector = linspace(0, totalTime, size(gcampSignal, 2));
             
             % Plot
             obj.helperPlotSlidingCorrelation(descriptionVector, gcampSignal, jrGecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift)
         end
         
-        function plotComparisonCorrelation(obj)
-            % Plots correlations of the whole signal by all the different
-            % possible categories - plots both each one as a scatter plot,
-            % and then all of them together for comparison.
-            
-            correlationTable = obj.createComparisonCorrelationTable();
-            
-            obj.ComparisonCorrelationScatterPlot(correlationTable)
-            obj.ComparisonCorrelationBar(correlationTable)
-        end
-        
         function plotComparisonSlidingCorrelation(obj, timeWindow, timeShift)
-            % Plots a graph of means of sliding correlation by all the
-            % different possible categories.
+            % Plots a comparison of sliding window histogram for all
+            % different categories.
             
-%             f = figure();
-%             ax = gca;
             histogramMatrix = [];
-            types = [];
+            types = [''];
             histogramEdges = linspace(-1, 1, 101);                          % Creates x - 1 bins
-            yLabel = linspace(1, -1, length(histogramEdges) - 1);
             
             typeFields = fieldnames(obj.ProcessedRawData.Passive);
             
@@ -262,11 +259,9 @@ classdef Mouse < handle
                     
                     [correlationVector, ~] = obj.createSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrGecoSignal, totalTime);
                     [binCount,~] = histcounts(correlationVector, histogramEdges, 'Normalization', 'probability');
-%                     histogram(ax, correlationVector, histogramEdges, 'Normalization', 'probability');
-%                     hold on
-                    histogramMatrix = [histogramMatrix, flip(binCount')];
-                    type = "Passive " + (curType) + " " + (curCondition);
-                    types = [types, type];
+                    histogramMatrix = [histogramMatrix, binCount'];
+                    type = (curType) + " " + (curCondition);
+                    types = [types, type, ''];
                     
                 end
             end
@@ -278,15 +273,24 @@ classdef Mouse < handle
 
             [correlationVector, ~] = obj.createSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrGecoSignal, totalTime);
             [binCount,~] = histcounts(correlationVector, histogramEdges, 'Normalization', 'probability');
-            histogramMatrix = [histogramMatrix, flip(binCount')];
+            histogramMatrix = [histogramMatrix, binCount'];
             type = "Task";
             types = [types, type];
-%             histogram(ax, correlationVector, histogramEdges, 'Normalization', 'probability');
-%             hold off
             
-            fig = figure();
-            heatmap(fig, types, yLabel, histogramMatrix);
+            % Plot
+            fig = figure("Name", "Comparison Sliding Window Correlation of mouse " + obj.Name, "NumberTitle", "off");
+            ax = axes;
             
+            ax.YLabel.String = 'correlation';
+            imagesc(ax, [0, size(histogramMatrix, 2)-1], [1, -1], histogramMatrix) % Limits are 1 to -1 so 1 will be up and -1 down, need to change ticks too
+            colorbar
+%             ax.YTick = -1:-0.2:1;
+            ax.YTickLabel = 1:-0.2:-1;                                     % TODO - Fix!
+            ax.XTickLabel = types;
+            ax.TickLabelInterpreter = 'none';
+            xtickangle(ax,-30)
+            title(ax, {"Comparison Sliding Window Correlation for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, 'Interpreter', 'none')
+            line(ax, [-0.5, size(types, 2)], [0, 0], 'Color', 'black')
         end
         
         % ================ Helpers ================
@@ -363,7 +367,7 @@ classdef Mouse < handle
             plot(correlationPlot, correlationTimeVector, correlationVector, 'LineWidth', 2, 'Color', 'Black');
             xlim(correlationPlot, [0 50])
             ylim(correlationPlot, [-1 1])
-            line(correlationPlot, [0 correlationTimeVector(length(correlationTimeVector))], [0 0], 'Color', '#C0C0C0')
+            line(correlationPlot, [0 correlationTimeVector(size(correlationTimeVector, 2))], [0 0], 'Color', '#C0C0C0')
             
             plot(signalPlot, signalTimeVector, gcampSignal, 'LineWidth', 2, 'Color', '#009999');
             hold on
@@ -371,7 +375,7 @@ classdef Mouse < handle
             hold off
             xlim(signalPlot, [0 50])
             
-            title(correlationPlot, "Sliding Window Correlation - Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), 'FontSize', 13, 'Interpreter', 'none')
+            title(correlationPlot, {"Sliding Window Correlation -",  "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, 'FontSize', 13, 'Interpreter', 'none')
             [gcampType, jrgecoType] = obj.findGcampJrGecoType();
             title(signalPlot, "Signal from all " +  descriptionVector(1) + "s of kind " + descriptionVector(2) + " for mouse " + obj.Name, 'FontSize', 13, 'Interpreter', 'none')
             
@@ -424,6 +428,9 @@ classdef Mouse < handle
             
             [gcampType, jrgecoType] = obj.findGcampJrGecoType();
             
+            minTick = 0;
+            maxTick = 0;
+            
             for index = 1:amount
                 curPlot = subplot(1, amount, index);
                 
@@ -444,6 +451,19 @@ classdef Mouse < handle
                 title(curPlot, correlationTable.kind(index), 'Interpreter', 'none')
                 xlabel(gcampType + " (gcamp)")
                 ylabel(jrgecoType + " (jrGeco)")
+                
+                % Find axes limits
+                yLimits = ylim(curPlot);
+                xLimits = xlim(curPlot);
+                
+                minTick = min([minTick, xLimits(1), yLimits(1)]);
+                maxTick = max([maxTick, xLimits(2), yLimits(2)]);
+            end
+            
+            for index = 1:amount
+                curPlot = subplot(1, amount, index);
+                xlim(curPlot, [minTick, maxTick])
+                ylim(curPlot, [minTick, maxTick])
             end
         end
         
@@ -511,14 +531,10 @@ classdef Mouse < handle
         
         function plotCrossCorrelation(obj, descriptionVector)
             [gcampSignal, jrGecoSignal, trialTime] = getSignals(obj, descriptionVector);
-            % DELETE! 
-            gcampSignal = gcampSignal - min(gcampSignal, [], 'all');
-            
-            
-            
-            timeVector = linspace(-trialTime, trialTime, length(gcampSignal) * 2 - 1);
+
             rows = size(gcampSignal,1);
             cols = size(gcampSignal, 2);
+            timeVector = linspace(-trialTime, trialTime, size(gcampSignal, 2) * 2 - 1);
             gcampXjrgeco = zeros(rows, cols * 2 - 1);
             
             for index = 1:rows
@@ -544,15 +560,15 @@ classdef Mouse < handle
             % and time shift. It returns both a vector that represents the
             % sliding correlation, and a time vector that corresponds with
             % it.
-            fs = length(gcampSignal) / totalTime;                          %!!!! TODO - think if this is the right calc vs. timeVector
+            fs = size(gcampSignal, 2) / totalTime;                          %!!!! TODO - think if this is the right calc vs. timeVector
             
             SamplesInTimeWindow = round(fs * timeWindow);
             SamplesInMovement = round(fs * timeShift);
             
-            startWindowIndexVector = 1:SamplesInMovement:length(gcampSignal) - SamplesInTimeWindow + 1;
-            correlationVector = zeros(1, length(startWindowIndexVector));
+            startWindowIndexVector = 1:SamplesInMovement:size(gcampSignal, 2) - SamplesInTimeWindow + 1;
+            correlationVector = zeros(1, size(startWindowIndexVector, 2));
             
-            for loopIndex = 1:length(startWindowIndexVector)
+            for loopIndex = 1:size(startWindowIndexVector, 2)
                 
                 startIndex = startWindowIndexVector(loopIndex);
                 lastIndex = startIndex + SamplesInTimeWindow - 1;
@@ -565,7 +581,7 @@ classdef Mouse < handle
             end
             endTime = (lastIndex - 1)/ fs;                                 % Index start from 1, time from 0
             
-            timeVector = linspace(0, endTime, length(correlationVector));
+            timeVector = linspace(0, endTime, size(correlationVector, 2));
             timeVector = timeVector + (timeWindow / 2);                    % Correlation will show in the middle of time window and not on beginning
         end
         
