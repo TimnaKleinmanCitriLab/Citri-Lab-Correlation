@@ -177,7 +177,7 @@ classdef Mouse < handle
             gcampSignal = obj.downSampleAndReshape(gcampSignal, downSampleFactor);
             jrGecoSignal = obj.downSampleAndReshape(jrGecoSignal, downSampleFactor);
             
-            % jrGecoSignal = jrGecoSignal + 4;                               % So one can see both on the same figure
+            % jrGecoSignal = jrGecoSignal + 4;                             % So one can see both on the same figure
             
             timeVector = linspace(0, numTrials * trialTime, size(gcampSignal, 2));
             
@@ -190,7 +190,7 @@ classdef Mouse < handle
             plot(ax, timeVector, jrGecoSignal, 'LineWidth', 2, 'Color', '#990099');
             hold off;
             
-            title("Signal from all " +  descriptionVector(1) + "s of kind " + descriptionVector(2) + " for mouse " + obj.Name, 'Interpreter', 'none', 'FontSize', 12)
+            title("Signal from all " +  descriptionVector(1) + "s of kind " + descriptionVector(end) + " for mouse " + obj.Name, 'Interpreter', 'none', 'FontSize', 12) % TODO - Fix
             
             [gcampType, jrgecoType] = obj.findGcampJrGecoType();
             
@@ -423,13 +423,10 @@ classdef Mouse < handle
         
         function ComparisonCorrelationScatterPlot(obj, correlationTable)
             % Plot scatter plot of comaprison correlation
-            fig = figure("Name", "Comparing correlations of mouse " + obj.Name, "NumberTitle", "off", "Position", [211,137,1569,362]);
+            fig = figure("Name", "Comparing correlations of mouse " + obj.Name, "NumberTitle", "off", "Position", [49,146,1798,298]);
             amount = size(correlationTable, 1);
             
             [gcampType, jrgecoType] = obj.findGcampJrGecoType();
-            
-            minTick = 0;
-            maxTick = 0;
             
             for index = 1:amount
                 curPlot = subplot(1, amount, index);
@@ -456,12 +453,8 @@ classdef Mouse < handle
                 yLimits = ylim(curPlot);
                 xLimits = xlim(curPlot);
                 
-                minTick = min([minTick, xLimits(1), yLimits(1)]);
-                maxTick = max([maxTick, xLimits(2), yLimits(2)]);
-            end
-            
-            for index = 1:amount
-                curPlot = subplot(1, amount, index);
+                minTick = min([xLimits(1), yLimits(1)]);
+                maxTick = max([xLimits(2), yLimits(2)]);
                 xlim(curPlot, [minTick, maxTick])
                 ylim(curPlot, [minTick, maxTick])
             end
@@ -543,6 +536,7 @@ classdef Mouse < handle
             gcampXjrgeco = sum(gcampXjrgeco) / rows;
             plot(timeVector, gcampXjrgeco)
         end
+        
     end
     
     methods (Static)
