@@ -28,6 +28,9 @@ classdef Mouse < handle
     
     properties
         Name
+        Number
+        Cage
+        RawName
         GcampJrgecoReversed
         ObjectPath
         
@@ -40,7 +43,8 @@ classdef Mouse < handle
         %========== Constructor Functions ==========
         function obj = Mouse(name, gcampJrgecoReversed, listType)
             % MOUSE Construct an instance of this class
-            obj.Name = name;
+            obj.RawName = name;
+            obj.organizeMouseName(name);
             obj.GcampJrgecoReversed = gcampJrgecoReversed;
             obj.ObjectPath = obj.CONST_MOUSE_SAVE_PATH + "\" + name + ".mat" ;
             
@@ -57,12 +61,20 @@ classdef Mouse < handle
             obj.addToList(listType);
         end
         
+        function organizeMouseName(obj, name)
+            [obj.Number, remain] = strtok(name, '_');
+            
+            obj.Cage = extractAfter(remain, 5);                            % 5 because of _from
+            
+            obj.Name = obj.Number + " from " + obj.Cage;
+        end
+        
         function createMatFiles(obj)
             % Both for Task and for Passive - stores the mat files for the
             % raw data as a Mouse property.
             
             % Task
-            fileBeg = obj.CONST_RAW_FILE_PATH + "\" + obj.Name + "\";
+            fileBeg = obj.CONST_RAW_FILE_PATH + "\" + obj.RawName + "\";
             obj.RawMatFile.Task.onset = matfile(fileBeg + obj.CONST_DATA_BY_ONSET);
             % obj.RawMatFile.Task.cloud = matfile(fileBeg + obj.CONST_DATA_BY_CLOUD);
             obj.RawMatFile.Task.cue = matfile(fileBeg + obj.CONST_DATA_BY_CUE);
@@ -480,7 +492,7 @@ classdef Mouse < handle
                 gcampDownSampled = obj.downSampleAndReshape(gcampSignal, 100);
                 jrgecoDownSampled = obj.downSampleAndReshape(jrgecoSignal, 100);
                 
-                scatter(curPlot, gcampDownSampled, jrgecoDownSampled, 10,'filled');
+                scatter(curPlot, gcampDownSampled, jrgecoDownSampled, 5,'filled');
                 
                 % Best fit line
                 coefficients = polyfit(gcampSignal,  jrgecoSignal, 1);
@@ -505,9 +517,6 @@ classdef Mouse < handle
             % Plot bars that represent the comaprison between the
             % correlations of all the possible categories.
             
-            fig = figure("Name", "Results of comparing correlations of mouse " + obj.Name, "NumberTitle", "off");
-            ax = axes;
-            
             correlations = [];
             xLabels = [];
             
@@ -525,12 +534,15 @@ classdef Mouse < handle
                 end
             end
             
+            % Task
             descriptionVector = ["Task", "onset"];
             curCorrelation = obj.getWholeSignalCorrelation(descriptionVector);
             correlations = [correlations, curCorrelation];
             xLabels = [xLabels, "Task"];
             
-            % Create Plot
+            % Plot
+            fig = figure("Name", "Results of comparing correlations of mouse " + obj.Name, "NumberTitle", "off");
+            ax = axes;
             categories = categorical(xLabels);
             categories = reordercats(categories,xLabels);
             bar(ax, categories, correlations);
