@@ -737,22 +737,21 @@ classdef Mouse < handle
             plot(timeVector, gcampXjrgeco)
         end
         
-        function plotAllSessionsSmooth(obj, descriptionVector)
+        function plotAllSessionsSmooth(obj, descriptionVector, smoothFactor)
             % Plots the gcamp + jrgeco signals from all the mouses sessions
             % (task or passive)
             
             % Generate Data
-            [gcampSignal, jrgecoSignal, trialTime, ~] = obj.getSignals(descriptionVector);
+            [gcampSignal, jrgecoSignal, trialTime, signalTitle] = obj.getSignals(descriptionVector);
             
             numTrials = size(gcampSignal, 1);
             
             
             gcampSignal = reshape(gcampSignal', 1, []);
             jrgecoSignal = reshape(jrgecoSignal', 1, []);
-            gcampSignal = smooth(gcampSignal', 500)';
-            jrgecoSignal = smooth(jrgecoSignal', 500)';
             
-            % jrgecoSignal = jrgecoSignal + 4;                               % So one can see both on the same figure
+            gcampSignal = smooth(gcampSignal', smoothFactor)';
+            jrgecoSignal = smooth(jrgecoSignal', smoothFactor)';
             
             timeVector = linspace(0, numTrials * trialTime, size(gcampSignal, 2));
             
@@ -765,7 +764,7 @@ classdef Mouse < handle
             plot(ax, timeVector, jrgecoSignal, 'LineWidth', 2, 'Color', '#990099');
             hold off;
             
-            title("Signal from all " +  descriptionVector(1) + "s of kind " + descriptionVector(end) + " for mouse " + obj.Name, 'Interpreter', 'none', 'FontSize', 12) % TODO - Fix
+            title({"Signal From: " +  signalTitle, "Mouse: " + obj.Name, "Smoothed by " + smoothFactor}, 'Interpreter', 'none', 'FontSize', 12) % TODO - Fix
             
             [gcampType, jrgecoType] = obj.findGcampJrgecoType();
             
