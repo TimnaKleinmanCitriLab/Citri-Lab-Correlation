@@ -192,6 +192,7 @@ classdef Mouse < handle
         end
         
         % ================ Plot ================
+        % ==== General ====
         function plotAllSessions(obj, descriptionVector, downSampleFactor)
             % Plots the gcamp + jrgeco signals from all the mouses sessions
             % (task or passive)
@@ -228,15 +229,96 @@ classdef Mouse < handle
             
         end
         
+        % ==== Correlation ====
         function plotComparisonCorrelation(obj)
             % Plots correlations of the whole signal by all the different
             % possible categories - plots both each one as a scatter plot,
             % and then all of them together for comparison.
             % correlationTable = obj.createComparisonCorrelationTable();
             
-            obj.ComparisonCorrelationScatterPlot()
-            obj.ComparisonCorrelationBar()
+            obj.plotCorrelationScatterPlot()
+            obj.plotCorrelationBar()
         end
+        
+        function plotCorrelationScatterPlot(obj)
+            % Plot scatter plot of comaprison correlation
+            fig = figure("Name", "Comparing correlations of mouse " + obj.Name, "NumberTitle", "off", "position", [498,113,1069,767]);
+            passiveAmount = (size(obj.CONST_PASSIVE_STATES, 2) * size(obj.CONST_PASSIVE_SOUND_TYPES, 2) * size(obj.CONST_PASSIVE_TIMES, 2));
+            index = 1;
+            
+            % Passive
+            for time = obj.CONST_PASSIVE_TIMES
+                for state = obj.CONST_PASSIVE_STATES
+                    for soundType = obj.CONST_PASSIVE_SOUND_TYPES
+                        curPlot = subplot(3, passiveAmount / 2, index);
+                        descriptionVector = ["Passive", (state), (soundType), (time)];
+                        
+                        obj.drawScatterPlot(curPlot, descriptionVector);
+                        title(curPlot, (time) + " " + (state) + " " + (soundType), 'Interpreter', 'none')
+                        
+                        index = index + 1;
+                    end
+                end
+            end
+            
+            % Task
+            curPlot = subplot(3, passiveAmount / 2, index);
+            descriptionVector = ["Task", "onset"];
+            
+            obj.drawScatterPlot(curPlot, descriptionVector);
+            title(curPlot, "Task" , 'Interpreter', 'none')
+        end
+        
+        function plotCorrelationBar(obj)
+            % Plot bars that represent the comaprison between the
+            % correlations of all the possible categories.
+            
+            correlations = [];
+            xLabels = [];
+            
+            % Passive
+            for state = obj.CONST_PASSIVE_STATES
+                for soundType = obj.CONST_PASSIVE_SOUND_TYPES
+                    for time = obj.CONST_PASSIVE_TIMES
+                        
+                        descriptionVector = ["Passive", (state), (soundType), (time)];
+                        curCorrelation = obj.getWholeSignalCorrelation(descriptionVector);
+                        
+                        correlations = [correlations, curCorrelation];
+                        xLabels = [xLabels, (time) + ' ' + (state) + ' ' + (soundType)];
+                    end
+                end
+            end
+            
+            % Task
+            descriptionVector = ["Task", "onset"];
+            curCorrelation = obj.getWholeSignalCorrelation(descriptionVector);
+            correlations = [correlations, curCorrelation];
+            xLabels = [xLabels, "Task"];
+            
+            % Plot
+            fig = figure("Name", "Results of comparing correlations of mouse " + obj.Name, "NumberTitle", "off");
+            ax = axes;
+            categories = categorical(xLabels);
+            categories = reordercats(categories,xLabels);
+            bar(ax, categories, correlations);
+            set(ax,'TickLabelInterpreter','none')
+            title(ax, "Results of comparing correlations of mouse " + obj.Name, 'Interpreter', 'none')
+            ylabel("Correlation")
+            
+            minY = min(correlations);
+            maxY = max(correlations);
+            
+            if (minY < 0) && (0 < maxY)
+                ylim(ax, [-1, 1])
+            elseif (0 < maxY)                                              % for sure 0 <= minY
+                ylim(ax, [0, 1])
+            else
+                ylim(ax, [-1, 0])
+            end
+        end
+        
+        % == Sliding Correlation ==
         
         function plotSlidingCorrelation(obj, descriptionVector, timeWindow, timeShift, downSampleFactor)
             % Plots the gcamp + jrgeco signals from all the mouses sessions
@@ -244,13 +326,8 @@ classdef Mouse < handle
             % correlation.
             
             % Generate Data
-            [gcampSignal, jrgecoSignal, trialTime, signalTitle] = obj.getSignals(descriptionVector);
-            totalTime = size(gcampSignal, 1) * trialTime;
-            
-            gcampSignal = reshape(gcampSignal', 1, []);
-            jrgecoSignal = reshape(jrgecoSignal', 1, []);
-            
-            [correlationVector, correlationTimeVector] = obj.createSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, totalTime);
+            [gcampSignal, jrgecoSignal, signalTitle, totalTime, fs] = obj.getBasicInfomationAndReshape(descriptionVector);
+            [correlationVector, correlationTimeVector] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
             
             gcampSignal = downsample(gcampSignal, downSampleFactor);
             jrgecoSignal = downsample(jrgecoSignal, downSampleFactor);
@@ -261,62 +338,76 @@ classdef Mouse < handle
         end
         
         function plotComparisonSlidingCorrelation(obj, timeWindow, timeShift)
+           obj.plotSlidingCorrelationHeatmap(timeWindow, timeShift)
+           obj.plotSlidingCorrelationBar(timeWindow, timeShift)
+        end
+        
+        function plotSlidingCorrelationHeatmap(obj, timeWindow, timeShift)
             % Plots a comparison of sliding window histogram for all
             % different categories.
             
-            histogramMatrix = [];
-            types = [''];
-            histogramEdges = linspace(-1, 1, 101);                          % Creates x - 1 bins
-            
-            typeFields = fieldnames(obj.ProcessedRawData.Passive);
-            
-            for typeIndex = 1:numel(typeFields)
-                curType = typeFields{typeIndex};
-                
-                conditionFields = fieldnames(obj.ProcessedRawData.Passive.(curType));
-                
-                for conditionIndex = 1:numel(conditionFields)
-                    curCondition = conditionFields{conditionIndex};
-                    
-                    [gcampSignal, jrgecoSignal, trialTime, signalTitle] = getSignals(obj, ["Passive", (curType), (curCondition)]);
-                    totalTime = size(gcampSignal, 1) * trialTime;
-                    gcampSignal = reshape(gcampSignal', 1, []);
-                    jrgecoSignal = reshape(jrgecoSignal', 1, []);
-                    
-                    [correlationVector, ~] = obj.createSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, totalTime);
-                    [binCount,~] = histcounts(correlationVector, histogramEdges, 'Normalization', 'probability');
-                    histogramMatrix = [histogramMatrix, binCount'];
-                    type = signalTitle;
-                    types = [types, type, ''];
-                    
-                end
-            end
-            
-            [gcampSignal, jrgecoSignal, trialTime, ~] = getSignals(obj, ["Task", "onset"]);
-            totalTime = size(gcampSignal, 1) * trialTime;
-            gcampSignal = reshape(gcampSignal', 1, []);
-            jrgecoSignal = reshape(jrgecoSignal', 1, []);
-            
-            [correlationVector, ~] = obj.createSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, totalTime);
-            [binCount,~] = histcounts(correlationVector, histogramEdges, 'Normalization', 'probability');
-            histogramMatrix = [histogramMatrix, binCount'];
-            type = "Task";
-            types = [types, type];
+            [histogramMatrix, labels] = dataForPlotSlidingCorrelationHeatmap(obj, timeWindow, timeShift);
             
             % Plot
-            fig = figure("Name", "Comparison Sliding Window Correlation of mouse " + obj.Name, "NumberTitle", "off");
+            fig = figure("Name", "Comparison Sliding Window Correlation for mouse " + obj.Name, "NumberTitle", "off");
             ax = axes;
             
             ax.YLabel.String = 'correlation';
             imagesc(ax, [0, size(histogramMatrix, 2)-1], [1, -1], histogramMatrix) % Limits are 1 to -1 so 1 will be up and -1 down, need to change ticks too
-            colorbar
-            %             ax.YTick = -1:-0.2:1;
+            cBar = colorbar;
+            ylabel(cBar, 'Probability', 'Rotation',270)
+            cBar.Label.VerticalAlignment = 'bottom';
+            % ax.YTick = -1:-0.2:1;
             ax.YTickLabel = 1:-0.2:-1;                                     % TODO - Fix!
-            ax.XTickLabel = types;
+            ax.XTickLabel = labels;
             ax.TickLabelInterpreter = 'none';
             xtickangle(ax,-30)
-            title(ax, {"Comparison Sliding Window Correlation for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, 'Interpreter', 'none')
-            line(ax, [-0.5, size(types, 2)], [0, 0], 'Color', 'black')
+            title(ax, {"Sliding Window Heatmap for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, 'Interpreter', 'none')
+            line(ax, [-0.5, size(labels, 2)], [0, 0], 'Color', 'black')
+        end
+        
+        function plotSlidingCorrelationBar(obj, timeWindow, timeShift)
+            [medianSlidingCorrelationVec, meanSlidingCorrelationVec, xLabels] = obj.dataForPlotSlidingCorrelationBar(timeWindow, timeShift);
+            
+            fig = figure("Name", "Results of comparing sliding window correlations for mouse " + obj.Name, "NumberTitle", "off");
+            categories = categorical(xLabels);
+            categories = reordercats(categories, xLabels);
+            
+            medianPlot = subplot(1,2,1);
+            bar(medianPlot, categories, medianSlidingCorrelationVec);
+            set(medianPlot,'TickLabelInterpreter','none')
+            title(medianPlot, "Median", 'Interpreter', 'none')
+            ylabel("Sliding window correlation (median)")
+            
+            minY = min(medianSlidingCorrelationVec);
+            maxY = max(medianSlidingCorrelationVec);
+            
+            if (minY < 0) && (0 < maxY)
+                ylim(medianPlot, [-1, 1])
+            elseif (0 < maxY)                                              % for sure 0 <= minY
+                ylim(medianPlot, [0, 1])
+            else
+                ylim(medianPlot, [-1, 0])
+            end
+            
+            meanPlot = subplot(1,2,2);
+            bar(meanPlot, categories, meanSlidingCorrelationVec);
+            set(meanPlot,'TickLabelInterpreter','none')
+            title(meanPlot, "Mean", 'Interpreter', 'none')
+            ylabel("Sliding window correlation (mean)")
+            
+            minY = min(meanSlidingCorrelationVec);
+            maxY = max(meanSlidingCorrelationVec);
+            
+            if (minY < 0) && (0 < maxY)
+                ylim(meanPlot, [-1, 1])
+            elseif (0 < maxY)                                              % for sure 0 <= minY
+                ylim(meanPlot, [0, 1])
+            else
+                ylim(meanPlot, [-1, 0])
+            end
+            
+            sgtitle({"Results of comparing sliding correlations of mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)})
         end
         
         % ================ Helpers ================
@@ -329,13 +420,13 @@ classdef Mouse < handle
             %         for example ["Passive", "awake", "BBN", "post"]
             if obj.signalExists(descriptionVector)
                 
-                if descriptionVector(1) == "Task"                              % Task
+                if descriptionVector(1) == "Task"                          % Task
                     cutBy = descriptionVector(2);
                     gcampSignal = obj.ProcessedRawData.Task.(cutBy).gcamp;
                     jrgecoSignal = obj.ProcessedRawData.Task.(cutBy).jrgeco;
                     trialTime = obj.CONST_TASK_TRIAL_TIME;
                     signalTitle = "Task cut by " + cutBy;
-                elseif descriptionVector(1) == "Passive"                       % Passive
+                elseif descriptionVector(1) == "Passive"                   % Passive
                     state = descriptionVector(2);
                     soundType = descriptionVector(3);
                     time = descriptionVector(4);
@@ -343,7 +434,7 @@ classdef Mouse < handle
                     jrgecoSignal = obj.ProcessedRawData.Passive.(state).(soundType).(time).jrgeco;
                     trialTime = obj.CONST_PASSIVE_TRIAL_TIME;
                     signalTitle = (time) + " " + (state) + " " + (soundType);
-                elseif descriptionVector(1) == "Free"                          % Free
+                elseif descriptionVector(1) == "Free"                      % Free
                     %%%%%%% TODO %%%%%%
                 end
                 
@@ -397,8 +488,17 @@ classdef Mouse < handle
             end
         end
         
-        % ==== Constructor ====
+        function [gcampSignal, jrgecoSignal, signalTitle, totalTime, fs] = getBasicInfomationAndReshape(obj, descriptionVector)
+            [gcampSignal, jrgecoSignal, trialTime, signalTitle] = obj.getSignals(descriptionVector);
+            
+            fs = size(gcampSignal, 2) / trialTime;
+            totalTime = size(gcampSignal, 1) * trialTime;
+            
+            gcampSignal = reshape(gcampSignal', 1, []);
+            jrgecoSignal = reshape(jrgecoSignal', 1, []);
+        end
         
+        % ==== Constructor ====
         function [gcampDifference, jrgecoDifference] = getDayDifferences(obj)
             % Creates for each day how much one needs to add in order to have
             % same baseline (calculated by correct licks)
@@ -454,35 +554,6 @@ classdef Mouse < handle
             ylabel(signalPlot, "zscored \DeltaF/F")
         end
         
-        function ComparisonCorrelationScatterPlot(obj)
-            % Plot scatter plot of comaprison correlation
-            fig = figure("Name", "Comparing correlations of mouse " + obj.Name, "NumberTitle", "off", "position", [498,113,1069,767]);
-            passiveAmount = (size(obj.CONST_PASSIVE_STATES, 2) * size(obj.CONST_PASSIVE_SOUND_TYPES, 2) * size(obj.CONST_PASSIVE_TIMES, 2));
-            index = 1;
-            
-            % Passive
-            for time = obj.CONST_PASSIVE_TIMES
-                for state = obj.CONST_PASSIVE_STATES
-                    for soundType = obj.CONST_PASSIVE_SOUND_TYPES
-                        curPlot = subplot(3, passiveAmount / 2, index);
-                        descriptionVector = ["Passive", (state), (soundType), (time)];
-                        
-                        obj.drawScatterPlot(curPlot, descriptionVector);
-                        title(curPlot, (time) + " " + (state) + " " + (soundType), 'Interpreter', 'none')
-                        
-                        index = index + 1;
-                    end
-                end
-            end
-            
-            % Task
-            curPlot = subplot(3, passiveAmount / 2, index);
-            descriptionVector = ["Task", "onset"];
-            
-            obj.drawScatterPlot(curPlot, descriptionVector);
-            title(curPlot, "Task" , 'Interpreter', 'none')
-        end
-        
         function drawScatterPlot(obj, curPlot, descriptionVector)
             if obj.signalExists(descriptionVector)
                 [gcampSignal, jrgecoSignal, ~, ~] = obj.getSignals(descriptionVector);
@@ -513,55 +584,6 @@ classdef Mouse < handle
             end
         end
         
-        function ComparisonCorrelationBar(obj)
-            % Plot bars that represent the comaprison between the
-            % correlations of all the possible categories.
-            
-            correlations = [];
-            xLabels = [];
-            
-            % Passive
-            for state = obj.CONST_PASSIVE_STATES
-                for soundType = obj.CONST_PASSIVE_SOUND_TYPES
-                    for time = obj.CONST_PASSIVE_TIMES
-                        
-                        descriptionVector = ["Passive", (state), (soundType), (time)];
-                        curCorrelation = obj.getWholeSignalCorrelation(descriptionVector);
-                        
-                        correlations = [correlations, curCorrelation];
-                        xLabels = [xLabels, (time) + ' ' + (state) + ' ' + (soundType)];
-                    end
-                end
-            end
-            
-            % Task
-            descriptionVector = ["Task", "onset"];
-            curCorrelation = obj.getWholeSignalCorrelation(descriptionVector);
-            correlations = [correlations, curCorrelation];
-            xLabels = [xLabels, "Task"];
-            
-            % Plot
-            fig = figure("Name", "Results of comparing correlations of mouse " + obj.Name, "NumberTitle", "off");
-            ax = axes;
-            categories = categorical(xLabels);
-            categories = reordercats(categories,xLabels);
-            bar(ax, categories, correlations);
-            set(ax,'TickLabelInterpreter','none')
-            title(ax, "Results of comparing correlations of mouse " + obj.Name, 'Interpreter', 'none')
-            ylabel("Correlation")
-            
-            minY = min(correlations);
-            maxY = max(correlations);
-            
-            if (minY < 0) && (0 < maxY)
-                ylim(ax, [-1, 1])
-            elseif (0 < maxY)                                              % for sure 0 <= minY
-                ylim(ax, [0, 1])
-            else
-                ylim(ax, [-1, 0])
-            end
-        end
-        
         function correlation = getWholeSignalCorrelation(obj, descriptionVector)
             % Returns the correlation between gcamp and jrgeco for the
             % given description vector. If no signal exists returns 0.
@@ -573,6 +595,90 @@ classdef Mouse < handle
             else
                 correlation = 0;
             end
+        end
+        
+        function [histogramMatrix, labels] = dataForPlotSlidingCorrelationHeatmap(obj, timeWindow, timeShift)
+            histogramMatrix = [];
+            labels = [];
+            histogramEdges = linspace(-1, 1, 101);                          % Creates x - 1 bins
+            
+            % Passive
+            for state = obj.CONST_PASSIVE_STATES
+                for soundType = obj.CONST_PASSIVE_SOUND_TYPES
+                    for time = obj.CONST_PASSIVE_TIMES
+                        descriptionVector = ["Passive", (state), (soundType), (time)];
+                        
+                        if obj.signalExists(descriptionVector)
+                            [gcampSignal, jrgecoSignal, ~, ~, fs] = obj.getBasicInfomationAndReshape(descriptionVector);
+                            [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
+
+                            [binCount,~] = histcounts(correlationVector, histogramEdges, 'Normalization', 'probability');
+                        else
+                            binCount = zeros(1,100);
+                        end
+                        
+                        histogramMatrix = [histogramMatrix, binCount'];
+                        labels = [labels, (time) + ' ' + (state) + ' ' + (soundType)];
+                    end
+                end
+            end
+            
+            % Task
+            descriptionVector = ["Task", "onset"];
+            if obj.signalExists(descriptionVector)
+                [gcampSignal, jrgecoSignal, ~, ~, fs] = obj.getBasicInfomationAndReshape(descriptionVector);
+                [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
+                
+                [binCount,~] = histcounts(correlationVector, histogramEdges, 'Normalization', 'probability');
+            else
+                binCount = zeros(1,100);
+            end
+            
+            histogramMatrix = [histogramMatrix, binCount'];
+            labels = [labels, "Task"];
+        end
+        
+        function [medianSlidingCorrelationVec, meanSlidingCorrelationVec, xLabels] = dataForPlotSlidingCorrelationBar(obj, timeWindow, timeShift)
+            medianSlidingCorrelationVec = [];
+            meanSlidingCorrelationVec = [];
+            xLabels = [];
+            
+            % Passive
+            for state = obj.CONST_PASSIVE_STATES
+                for soundType = obj.CONST_PASSIVE_SOUND_TYPES
+                    for time = obj.CONST_PASSIVE_TIMES
+                        descriptionVector = ["Passive", (state), (soundType), (time)];
+                        
+                        if obj.signalExists(descriptionVector)
+                            [gcampSignal, jrgecoSignal, ~, ~, fs] = obj.getBasicInfomationAndReshape(descriptionVector);
+                            [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
+                            medianSlidingCorrelationVec = [medianSlidingCorrelationVec, median(correlationVector)];
+                            meanSlidingCorrelationVec = [meanSlidingCorrelationVec, mean(correlationVector)];
+                        else
+                            medianSlidingCorrelationVec = [medianSlidingCorrelationVec, 0];
+                            meanSlidingCorrelationVec = [meanSlidingCorrelationVec, 0];
+                        end
+                        
+                        xLabels = [xLabels, (time) + ' ' + (state) + ' ' + (soundType)];
+                        
+                    end
+                end
+            end
+            
+            % Task
+            descriptionVector = ["Task", "onset"];
+            if obj.signalExists(descriptionVector)
+                [gcampSignal, jrgecoSignal, ~, ~, fs] = obj.getBasicInfomationAndReshape(descriptionVector);
+                [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
+                
+                medianSlidingCorrelationVec = [medianSlidingCorrelationVec, median(correlationVector)];
+                meanSlidingCorrelationVec = [meanSlidingCorrelationVec, mean(correlationVector)];
+            else
+                medianSlidingCorrelationVec = [medianSlidingCorrelationVec, 0];
+                meanSlidingCorrelationVec = [meanSlidingCorrelationVec, 0];
+            end
+            
+            xLabels = [xLabels, "Task"];
         end
         
         % ================ Old ================
@@ -676,13 +782,12 @@ classdef Mouse < handle
             finalSignal = downsample(finalSignal, downSampleFactor);
         end
         
-        function [correlationVector, timeVector] = createSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, totalTime)
+        function [correlationVector, timeVector] = getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs)
             % Creats a vector that represents the sliding correlation
             % between the given signals, acoording to the given time window
             % and time shift. It returns both a vector that represents the
             % sliding correlation, and a time vector that corresponds with
             % it.
-            fs = size(gcampSignal, 2) / totalTime;                          %!!!! TODO - think if this is the right calc vs. timeVector
             
             SamplesInTimeWindow = round(fs * timeWindow);
             SamplesInMovement = round(fs * timeShift);
