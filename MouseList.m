@@ -67,91 +67,111 @@ classdef MouseList < handle
         end
         
         function plotCorrelationBar(obj)
-            [correlations, xLabels, mouseNames] = obj.calculateCorrelations();
+            [correlationMatrix, xLabels, mouseNames] = obj.calculateCorrelations();
             
-            obj.helperPlotCorrelationBarByMouse(correlations, xLabels, mouseNames);
-            obj.helperPlotCorrelationBarSummary(correlations, xLabels);
+            obj.helperPlotCorrelationBarByMouse(correlationMatrix, xLabels, mouseNames, "Whole signal correlations by mouse");
+            obj.helperPlotCorrelationBarSummary(correlationMatrix, xLabels, "Whole signal correlations summary for all mice");
+        end
+        
+        function plotSlidingCorrelationBar(obj, timeWindow, timeShift)
+            [medianSlidingCorrelationMatrix, meanSlidingCorrelationMatrix, xLabels, mouseNames] = obj.calculateSlidingWindow(timeWindow, timeShift);
+            
+            obj.helperPlotCorrelationBarByMouse(medianSlidingCorrelationMatrix, xLabels, mouseNames, {"Median - Sliding window correlation by mouse", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)});
+            obj.helperPlotCorrelationBarSummary(medianSlidingCorrelationMatrix, xLabels, {"Median - Sliding window correlation summary for all mice", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)});
+            
+            obj.helperPlotCorrelationBarByMouse(meanSlidingCorrelationMatrix, xLabels, mouseNames, {"Mean - Sliding window correlation by mouse", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)});
+            obj.helperPlotCorrelationBarSummary(meanSlidingCorrelationMatrix, xLabels, {"Mean - Sliding window correlation summary for all mice", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)});
+            
         end
         
         % ================ Helpers ================
         % ==== Plots ====
-        function [correlations, xLabels, mouseNames] = calculateCorrelations(obj)
-            currentCorrelations = [];
-            finalCorrelations = [];
-            currentXLabels = [];
+        function [correlationMatrix, finalXLabels, mouseNames] = calculateCorrelations(obj)
+            correlationMatrix = [];
             finalXLabels = [];
             mouseNames = [];
             
             for mouse = obj.LoadedMouseList
-                % Passive
-                for state = Mouse.CONST_PASSIVE_STATES
-                    for soundType = Mouse.CONST_PASSIVE_SOUND_TYPES
-                        for time = Mouse.CONST_PASSIVE_TIMES
-                            currentXLabels = [currentXLabels; (time) + ' ' + (state) + ' ' + (soundType)];
-                            
-                            descriptionVector = ["Passive", (state), (soundType), (time)];
-                            mouseCorrelation = mouse.getWholeSignalCorrelation(descriptionVector);
-                            
-                            currentCorrelations = [currentCorrelations; mouseCorrelation];
-                        end
-                    end
-                end
+                [correlationVec, currentXLabels] = mouse.dataForPlotCorrelationBar();
                 
-                % Task
-                currentXLabels = [currentXLabels; "Task"];
-                
-                descriptionVector = ["Task", "onset"];
-                mouseCorrelation = mouse.getWholeSignalCorrelation(descriptionVector);
-                
-                currentCorrelations = [currentCorrelations; mouseCorrelation];
-                
-                % Add to all
-                finalXLabels = [finalXLabels, currentXLabels];
-                finalCorrelations = [finalCorrelations, currentCorrelations];
+                correlationMatrix = [correlationMatrix, correlationVec'];
+                finalXLabels = [finalXLabels, currentXLabels'];
                 mouseNames = [mouseNames, mouse.Name];
-                
-                % Clean
-                currentXLabels = [];
-                currentCorrelations = [];
             end
-            xLabels = finalXLabels;
-            correlations = finalCorrelations;
         end
         
+        function [medianSlidingCorrelationMatrix, meanSlidingCorrelationMatrix, finalXLabels, mouseNames] = calculateSlidingWindow(obj, timeWindow, timeShift)
+            medianSlidingCorrelationMatrix = [];
+            meanSlidingCorrelationMatrix = [];
+            finalXLabels = [];
+            mouseNames = [];
+            
+            for mouse = obj.LoadedMouseList
+                [medianSlidingCorrelationVec, meanSlidingCorrelationVec, currentXLabels] = mouse.dataForPlotSlidingCorrelationBar(timeWindow, timeShift);
+                
+                % Add to all
+                medianSlidingCorrelationMatrix = [medianSlidingCorrelationMatrix, medianSlidingCorrelationVec'];
+                meanSlidingCorrelationMatrix = [meanSlidingCorrelationMatrix, meanSlidingCorrelationVec'];
+                finalXLabels = [finalXLabels, currentXLabels'];
+                mouseNames = [mouseNames, mouse.Name];
+                
+            end
+        end
     end
     
     methods (Static)
         % ================ Helpers ================
-        function helperPlotCorrelationBarByMouse(correlations, xLabels, mouseNames)
-            fig = figure("Name", "Results of comparing whole signal correlation", "NumberTitle", "off");
+        function helperPlotCorrelationBarByMouse(matrix, xLabels, mouseNames, figureTitle)
+            fig = figure("Name", figureTitle, "NumberTitle", "off");
             ax = axes;
             
             categories = categorical(xLabels);
             categories = reordercats(categories, xLabels(:,1));
             
-            bar(ax, categories, correlations)
+            bar(ax, categories, matrix)
             set(ax,'TickLabelInterpreter','none')
-            title(ax, "Whole signal correlations by mouse", 'Interpreter', 'none')
+            title(ax, figureTitle, 'Interpreter', 'none')
             ylabel("Correlation")
             legend(ax, mouseNames, 'Interpreter', 'none')
-            ylim(ax, [-1, 1])
+            
+            minY = min(min(matrix));
+            maxY = max(max(matrix));
+            
+            if (minY < 0) && (0 < maxY)
+                ylim(ax, [-1, 1])
+            elseif (0 < maxY)                                              % for sure 0 <= minY
+                ylim(ax, [0, 1])
+            else
+                ylim(ax, [-1, 0])
+            end
         end
         
-        function helperPlotCorrelationBarSummary(correlations, xLabels)
-            fig = figure("Name", "Results of comparing whole signal correlation", "NumberTitle", "off");
+        function helperPlotCorrelationBarSummary(matrix, xLabels, figureTitle)
+            fig = figure("Name", figureTitle, "NumberTitle", "off");
             ax = axes;
             
-            correlationMean = mean(correlations, 2);
+%             correlationMean = mean(matrix, 2);
+            correlationMean = sum(matrix,2) ./ sum(matrix~=0,2);
             
             categories = categorical(xLabels(:,1));
             categories = reordercats(categories, xLabels(:,1));
             
             bar(ax, categories, correlationMean)
             set(ax,'TickLabelInterpreter','none')
-            title(ax, "Whole signal correlations summary for all mice", 'Interpreter', 'none')
+            title(ax, figureTitle, 'Interpreter', 'none')
             ylabel(["Correlation", "(mean of all mice)"])
-            ylim(ax, [-1, 1])
-        end
+            
+            minY = min(min(correlationMean));
+            maxY = max(max(correlationMean));
+            
+            if (minY < 0) && (0 < maxY)
+                ylim(ax, [-1, 1])
+            elseif (0 < maxY)                                              % for sure 0 <= minY
+                ylim(ax, [0, 1])
+            else
+                ylim(ax, [-1, 0])
+            end
+        end %%% FIX!!!
     end
 end
 
