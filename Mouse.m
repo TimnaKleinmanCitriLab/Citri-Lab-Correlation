@@ -272,42 +272,20 @@ classdef Mouse < handle
         function plotCorrelationBar(obj)
             % Plot bars that represent the comaprison between the
             % correlations of all the possible categories.
-            
-            correlations = [];
-            xLabels = [];
-            
-            % Passive
-            for state = obj.CONST_PASSIVE_STATES
-                for soundType = obj.CONST_PASSIVE_SOUND_TYPES
-                    for time = obj.CONST_PASSIVE_TIMES
-                        
-                        descriptionVector = ["Passive", (state), (soundType), (time)];
-                        curCorrelation = obj.getWholeSignalCorrelation(descriptionVector);
-                        
-                        correlations = [correlations, curCorrelation];
-                        xLabels = [xLabels, (time) + ' ' + (state) + ' ' + (soundType)];
-                    end
-                end
-            end
-            
-            % Task
-            descriptionVector = ["Task", "onset"];
-            curCorrelation = obj.getWholeSignalCorrelation(descriptionVector);
-            correlations = [correlations, curCorrelation];
-            xLabels = [xLabels, "Task"];
+            [correlationVec, xLabels] = obj.dataForPlotCorrelationBar();
             
             % Plot
             fig = figure("Name", "Results of comparing correlations of mouse " + obj.Name, "NumberTitle", "off");
             ax = axes;
             categories = categorical(xLabels);
             categories = reordercats(categories,xLabels);
-            bar(ax, categories, correlations);
+            bar(ax, categories, correlationVec);
             set(ax,'TickLabelInterpreter','none')
             title(ax, "Results of comparing correlations of mouse " + obj.Name, 'Interpreter', 'none')
             ylabel("Correlation")
             
-            minY = min(correlations);
-            maxY = max(correlations);
+            minY = min(correlationVec);
+            maxY = max(correlationVec);
             
             if (minY < 0) && (0 < maxY)
                 ylim(ax, [-1, 1])
@@ -582,6 +560,31 @@ classdef Mouse < handle
                 xlim(curPlot, [minTick, maxTick])
                 ylim(curPlot, [minTick, maxTick])
             end
+        end
+        
+        function [correlationVec, xLabels] = dataForPlotCorrelationBar(obj)
+            correlationVec = [];
+            xLabels = [];
+            
+            % Passive
+            for state = obj.CONST_PASSIVE_STATES
+                for soundType = obj.CONST_PASSIVE_SOUND_TYPES
+                    for time = obj.CONST_PASSIVE_TIMES
+                        
+                        descriptionVector = ["Passive", (state), (soundType), (time)];
+                        curCorrelation = obj.getWholeSignalCorrelation(descriptionVector);
+                        
+                        correlationVec = [correlationVec, curCorrelation];
+                        xLabels = [xLabels, (time) + ' ' + (state) + ' ' + (soundType)];
+                    end
+                end
+            end
+            
+            % Task
+            descriptionVector = ["Task", "onset"];
+            curCorrelation = obj.getWholeSignalCorrelation(descriptionVector);
+            correlationVec = [correlationVec, curCorrelation];
+            xLabels = [xLabels, "Task"];
         end
         
         function correlation = getWholeSignalCorrelation(obj, descriptionVector)
