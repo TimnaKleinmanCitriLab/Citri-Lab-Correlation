@@ -1,2 +1,6 @@
 
 *.asv
+.idea/Correlation.iml
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
