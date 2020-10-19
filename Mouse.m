@@ -1,9 +1,10 @@
 classdef Mouse < handle
-    %MOUSE Summary of this class goes here
-    %   Detailed explanation goes here
+    %MOUSE class - Not supposed to be used directly but through sub-classes
+    % of mouse type (OfcAccMouse etc.)
     
     properties (Constant)
         
+        % General
         CONST_MOUSE_SAVE_PATH = "W:\shared\Timna\Gal Projects\Mice";
         CONST_RAW_FILE_PATH = "\\132.64.59.21\Citri_Lab\gala\Phys data\New Rig";
         
@@ -27,10 +28,11 @@ classdef Mouse < handle
     end
     
     properties
+        RawName
         Name
         Number
         Cage
-        RawName
+        
         GcampJrgecoReversed
         ObjectPath
         
@@ -40,10 +42,12 @@ classdef Mouse < handle
     end
     
     methods
-        %========== Constructor Functions ==========
+        % ===================== Constructor Functions =====================
+        % ============= Main ============
         function obj = Mouse(name, gcampJrgecoReversed, listType)
-            % MOUSE Construct an instance of this class
-            obj.RawName = name;
+            % Constructs an instance of this class - saves it to the
+            % constant path and adds it to it's relavent MouseList
+            
             obj.organizeMouseName(name);
             obj.GcampJrgecoReversed = gcampJrgecoReversed;
             obj.ObjectPath = obj.CONST_MOUSE_SAVE_PATH + "\" + name + ".mat" ;
@@ -62,9 +66,14 @@ classdef Mouse < handle
         end
         
         function organizeMouseName(obj, name)
+            % Takes the raw mouse name and saves it as a readable, "nice'
+            % name. e.g. rawName = 1_from406 -> number = 1, cage = 406
+            % name = 1 from 406
+            obj.RawName = name;
+            
             [obj.Number, remain] = strtok(name, '_');
             
-            obj.Cage = extractAfter(remain, 5);                            % 5 because of _from
+            obj.Cage = extractAfter(remain, 5);                            % 5 because of '_from'
             
             obj.Name = obj.Number + " from " + obj.Cage;
         end
@@ -76,25 +85,25 @@ classdef Mouse < handle
             % Task
             fileBeg = obj.CONST_RAW_FILE_PATH + "\" + obj.RawName + "\";
             obj.RawMatFile.Task.onset = matfile(fileBeg + obj.CONST_DATA_BY_ONSET);
-            % obj.RawMatFile.Task.cloud = matfile(fileBeg + obj.CONST_DATA_BY_CLOUD);
+            obj.RawMatFile.Task.cloud = matfile(fileBeg + obj.CONST_DATA_BY_CLOUD);
             obj.RawMatFile.Task.cue = matfile(fileBeg + obj.CONST_DATA_BY_CUE);
             obj.RawMatFile.Task.lick = matfile(fileBeg + obj.CONST_DATA_BY_LICK);
-            % obj.RawMatFile.Task.movement = matfile(fileBeg + obj.CONST_DATA_BY_MOVEMENT);
+            obj.RawMatFile.Task.movement = matfile(fileBeg + obj.CONST_DATA_BY_MOVEMENT);
             
             % Passive
             obj.RawMatFile.Passive = matfile(fileBeg + obj.CONST_PASSIVE_DATA);
         end
         
         function createTaskInfo(obj)
-            % Creates info for different task divisions (by cue, cloud,..)
+            % Organizes info for different task divisions (by cue, cloud,..)
             % and adds information about the day of the task.
             
             tInfo = obj.RawMatFile.Task.onset.t_info;
             obj.Info.Task.onset = tInfo;
-            % obj.Info.Task.cloud =                   % TODO!
+            % obj.Info.Task.cloud =                   % TODO - think how to cut by cloud
             obj.Info.Task.cue = tInfo((tInfo.plot_result ~= -1), :);       % All trials that are not premature
             obj.Info.Task.lick = tInfo((~isnan(tInfo.first_lick)), :);     % All trials that had a lick (including omissions that had a lick)
-            % obj.Info.Task.movement =                % TODO!
+            % obj.Info.Task.movement =                % TODO - think how to cut by movement
             
             % Add day to info
             tInfo = obj.RawMatFile.Task.onset.t_info;
@@ -103,23 +112,25 @@ classdef Mouse < handle
             
             recordingDays = [];
             
-            for indx = 1:(length(sessionBreaks) - 1)
-                recordingDays(sessionBreaks(indx):sessionBreaks(indx + 1) - 1) = indx;      % Tags each recording day
+            for index = 1:(length(sessionBreaks) - 1)
+                recordingDays(sessionBreaks(index):sessionBreaks(index + 1) - 1) = index;      % Tags each recording day
             end
             
             recordingDays = categorical(recordingDays');
             
             obj.Info.Task.onset.day = double(recordingDays);
-            % obj.Info.Task.cloud.day = % TODO!
+            % obj.Info.Task.cloud.day =              % TODO - add after adding info
             obj.Info.Task.cue.day = double(recordingDays(tInfo.plot_result ~= -1));
             obj.Info.Task.lick.day = double(recordingDays(~isnan(tInfo.first_lick)));
-            % obj.Info.Task.movement.day = % TODO!
+            % obj.Info.Task.movement.day =           % TODO - add after adding info
         end
         
         function createPassiveDataAndInfo(obj)
             % This function divides the passive data and info into it's
             % appropriate sections (by BBN/FS, pre/post, awake/anesthetized).
             % It then saves the results into the relevant mouse propreties.
+            % It also saves as a mouse property a "exist" table that saves
+            % all the existing passive data names.
             
             tInfo = obj.RawMatFile.Passive.t_info;
             gcampPassive = obj.RawMatFile.Passive.all_trials;
@@ -152,6 +163,8 @@ classdef Mouse < handle
         function createAndStraightenTaskData(obj)
             % Normalizes / straightens the data of each day of tasks so it
             % has same baseline (calculated by correct licks)
+            % The code is taken from Gals MouseSummary class, and
+            % normalize_data function
             [gcampDifference, jrgecoDifference] = obj.getDayDifferences();
             
             fields = fieldnames(obj.Info.Task);
@@ -166,9 +179,9 @@ classdef Mouse < handle
                 normGcampData = gcampTrials - gcampDifference(1);          % subtract intercept (1st day / correct)
                 normJrgecoData = jrgecoTrials - jrgecoDifference(1);       % subtract intercept (1st day / correct)
                 
-                for indx = 2:length(unique(info.day))
-                    normGcampData(info.day == indx, :) = normGcampData(info.day == indx, :) - gcampDifference(indx); % remove each days' intercept
-                    normJrgecoData(info.day == indx, :) = normJrgecoData(info.day == indx, :) - jrgecoDifference(indx); % remove each days' intercept
+                for index = 2:length(unique(info.day))
+                    normGcampData(info.day == index, :) = normGcampData(info.day == index, :) - gcampDifference(index); % remove each days' intercept
+                    normJrgecoData(info.day == index, :) = normJrgecoData(info.day == index, :) - jrgecoDifference(index); % remove each days' intercept
                 end
                 
                 obj.ProcessedRawData.Task.(divideBy).gcamp = normGcampData;
@@ -178,8 +191,8 @@ classdef Mouse < handle
         end
         
         function addToList(obj, listType)
-            % Adds the mouses path to the given mouse list. If no list is
-            % exists, it creats a new list
+            % Adds the mouses' path to the given mouse list. If no list
+            % exists, it creates a new list and then adds it.
             listFullPath = MouseList.CONST_LIST_SAVE_PATH + "\" + listType + ".mat";
             
             if ~ isfile(listFullPath)
@@ -191,58 +204,69 @@ classdef Mouse < handle
             mouseList.add(obj);
         end
         
-        % ================ Plot ================
-        % ==== General ====
-        function plotAllSessions(obj, descriptionVector, downSampleFactor)
-            % Plots the gcamp + jrgeco signals from all the mouses sessions
-            % (task or passive)
+        % ============= Helpers =============
+        function [gcampDifference, jrgecoDifference] = getDayDifferences(obj)
+            % Creates for each day how much one needs to add in order to have
+            % same baseline (calculated by correct licks)
+            % The code is taken from Gals MouseSummary class, and
+            % get_day_difference function
+            gcampTrials = obj.RawMatFile.Task.onset.all_trials;
+            jrgecoTrials = obj.RawMatFile.Task.onset.af_trials;
             
-            % Generate Data
-            [gcampSignal, jrgecoSignal, trialTime, signalTitle] = obj.getSignals(descriptionVector);
+            recordingDays = categorical(obj.Info.Task.onset.day);
+            recordingOutcome = categorical(obj.Info.Task.onset.trial_result);
             
-            numTrials = size(gcampSignal, 1);
+            % Gcamp
+            gRecordingBase = double(mean(gcampTrials(:, 1000:5000), 2));    % From 1 to 5 seconds
+            gRecordingSet = table(gRecordingBase, recordingDays, recordingOutcome, 'VariableNames', {'baseline', 'day', 'outcome'});
+            G = fitlme(gRecordingSet, 'baseline ~ outcome + day');         % also can use fitglm: especially if want to do interaction Keep in mind to fit to a random effect (1|day).
+            gcampDifference = G.Coefficients.Estimate;
             
-            gcampSignal = obj.downSampleAndReshape(gcampSignal, downSampleFactor);
-            jrgecoSignal = obj.downSampleAndReshape(jrgecoSignal, downSampleFactor);
+            % Geco
+            jRecordingBase = double(mean(jrgecoTrials(:, 1000:5000), 2));       % From 1 to 5 seconds
+            jRecordingSet = table(jRecordingBase, recordingDays, recordingOutcome, 'VariableNames', {'baseline', 'day', 'outcome'});
+            J = fitlme(jRecordingSet, 'baseline ~ outcome + day');         % also can use fitglm: especially if want to do interaction Keep in mind to fit to a random effect (1|day).
+            jrgecoDifference = J.Coefficients.Estimate;
             
-            % jrgecoSignal = jrgecoSignal + 4;                             % So one can see both on the same figure
-            
-            timeVector = linspace(0, numTrials * trialTime, size(gcampSignal, 2));
-            
-            % Plot
-            figure("Name", "Signal from all sessions of mouse " + obj.Name, "NumberTitle", "off");
-            ax = gca;
-            
-            plot(ax, timeVector, gcampSignal, 'LineWidth', 2, 'Color', '#009999');
-            hold on;
-            plot(ax, timeVector, jrgecoSignal, 'LineWidth', 2, 'Color', '#990099');
-            hold off;
-            
-            title({"Signal From: " +  signalTitle, "Mouse: " + obj.Name}, 'Interpreter', 'none', 'FontSize', 12) % TODO - Fix
-            
-            [gcampType, jrgecoType] = obj.findGcampJrgecoType();
-            
-            legend(gcampType + " (gcamp)", jrgecoType + " (jrgeco)", 'Location', 'best', 'Interpreter', 'none')
-            xlabel("Time (sec)", 'FontSize', 14)
-            ylabel("zscored \DeltaF/F", 'FontSize', 14)
-            xlim([0 100])
-            
+            % NOTE - 3 last indexes of differences aren't relevant
         end
         
-        % ==== Correlation ====
-        function plotComparisonCorrelation(obj)
+        
+        
+        
+        % ============================= Plot ==============================
+        % ============= General =============
+        function plotAllSessions(obj, descriptionVector, smoothFactor, downsampleFactor)
+            % Plots the gcamp and jrGeco signals from all the mouses'
+            % sessions according to the description vector (see vectors
+            % structure in the function getRawSignals).
+            % The function first smooths the signal, then downsamples it
+            % and at last plots it.
+            
+            [gcampSignal, jrgecoSignal, timeVector, signalTitle] = obj.dataForPlotAllSessions(descriptionVector, smoothFactor, downsampleFactor);
+            obj.drawAllSessions(gcampSignal, jrgecoSignal, timeVector, signalTitle, smoothFactor, downsampleFactor)       
+        end
+        
+        % =========== Correlation ===========
+        function plotComparisonCorrelation(obj, smoothFactor, downsampleFactor)
             % Plots correlations of the whole signal by all the different
-            % possible categories - plots both each one as a scatter plot,
+            % possible categories - plots each one as a scatter plot,
             % and then all of them together for comparison.
-            % correlationTable = obj.createComparisonCorrelationTable();
             
-            obj.plotCorrelationScatterPlot()
-            obj.plotCorrelationBar()
+            obj.plotCorrelationScatterPlot(smoothFactor, downsampleFactor)
+            obj.plotCorrelationBar(smoothFactor, downsampleFactor)
         end
         
-        function plotCorrelationScatterPlot(obj)
-            % Plot scatter plot of comaprison correlation
-            fig = figure("Name", "Comparing correlations of mouse " + obj.Name, "NumberTitle", "off", "position", [498,113,1069,767]);
+        function plotCorrelationScatterPlot(obj, smoothFactor, downsampleFactor)
+            % Plots scatter plot of the whole signal of all the different
+            % possible categories (empty plot for a category that has no
+            % data, eg. a mouse that didnt have a pre-awake-FS recording
+            % session).
+            % It also plots the best fit line for the scatter plot.
+            % The function first smooths the signal, then downsamples it
+            % and at last plots it and finds the best fitting line.
+            
+            fig = figure("Name", "Scatter plot of signals for mouse " + obj.Name, "NumberTitle", "off", "position", [498,113,1069,767]);
             passiveAmount = (size(obj.CONST_PASSIVE_STATES, 2) * size(obj.CONST_PASSIVE_SOUND_TYPES, 2) * size(obj.CONST_PASSIVE_TIMES, 2));
             index = 1;
             
@@ -253,7 +277,7 @@ classdef Mouse < handle
                         curPlot = subplot(3, passiveAmount / 2, index);
                         descriptionVector = ["Passive", (state), (soundType), (time)];
                         
-                        obj.drawScatterPlot(curPlot, descriptionVector);
+                        obj.drawScatterPlot(curPlot, descriptionVector, smoothFactor, downsampleFactor);
                         title(curPlot, (time) + " " + (state) + " " + (soundType), 'Interpreter', 'none')
                         
                         index = index + 1;
@@ -265,23 +289,310 @@ classdef Mouse < handle
             curPlot = subplot(3, passiveAmount / 2, index);
             descriptionVector = ["Task", "onset"];
             
-            obj.drawScatterPlot(curPlot, descriptionVector);
+            obj.drawScatterPlot(curPlot, descriptionVector, smoothFactor, downsampleFactor);
             title(curPlot, "Task" , 'Interpreter', 'none')
+            
+            sgtitle({"Scatter plot of signals for mouse " + obj.Name, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
         end
         
-        function plotCorrelationBar(obj)
-            % Plot bars that represent the comaprison between the
-            % correlations of all the possible categories.
-            [correlationVec, xLabels] = obj.dataForPlotCorrelationBar();
+        function plotCorrelationBar(obj, smoothFactor, downsampleFactor)
+            % Plot bars that represent the comparison between the
+            % correlations of all the possible categories (no bar for a
+            % category that has no data, eg. a mouse that didnt have a 
+            % pre-awake-FS recording session).
+            % The function first smooths the signals, then downsamples them
+            % and at last calculates their correalation and plots it.
             
-            % Plot
+            [correlationVec, xLabels] = obj.dataForPlotCorrelationBar(smoothFactor, downsampleFactor);
+            obj.drawCorrelationBar(correlationVec, xLabels, smoothFactor, downsampleFactor)
+        end
+        
+        % ======= Sliding Correlation =======
+        function plotSlidingCorrelation(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Plots the gcamp and jrgeco signals from all the mouses'
+            % sessions according to the description vector (see vectors
+            % structure in the function getRawSignals).
+            % It then plots the sliding window correlation.
+            % The function first smooths the signal, then downsamples it
+            % and at last calculats the sliding correlation and plots it.
+            
+            [gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, signalTitle] = obj.dataForPlotSlidingCorrelation(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+            obj.drawSlidingCorrelation(gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift, signalTitle, smoothFactor, downsampleFactor)
+        end
+        
+        function plotComparisonSlidingCorrelation(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Plots summary of the sliding correlations by all the different
+            % possible categories - plots a comparrison heatmap and a
+            % comparison bar of mean / median
+            
+            obj.plotSlidingCorrelationHeatmap(timeWindow, timeShift, smoothFactor, downsampleFactor)
+            obj.plotSlidingCorrelationBar(timeWindow, timeShift, smoothFactor, downsampleFactor)
+        end
+        
+        function plotSlidingCorrelationHeatmap(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Plots heatmap of the histogam of the sliding window
+            % corrrelation values for all possible categories (A histogram of 
+            % zeros for a category that has no data, eg. a mouse that didnt
+            % have a pre-awake-FS recording session).
+            % The function first smooths the signal, then downsamples it
+            % and at last calculates the sliding windows, it's relevant
+            % histogram and plots the heatmap.
+            
+            [histogramMatrix, labels] = dataForPlotSlidingCorrelationHeatmap(obj, timeWindow, timeShift, smoothFactor, downsampleFactor);
+            obj.drawSlidingCorrelationHeatmap(histogramMatrix, labels, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            
+        end
+        
+        function plotSlidingCorrelationBar(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Plot bars that represent the mean / median of the sliding
+            % window values of all the possible categories (no bar for a
+            % category that has no data, eg. a mouse that didnt have a 
+            % pre-awake-FS recording session).
+            % The function first smooths the signals, then downsamples them
+            % then calculates the sliding window, and at last calculates
+            % the mean / medianof it's values.
+            
+            [meanSlidingCorrelationVec, medianSlidingCorrelationVec, xLabels] = obj.dataForPlotSlidingCorrelationBar(timeWindow, timeShift, smoothFactor, downsampleFactor);
+            obj.drawSlidingCorrelationBar(meanSlidingCorrelationVec, medianSlidingCorrelationVec, xLabels, timeWindow, timeShift, smoothFactor, downsampleFactor)
+
+        end
+        
+        % ============= Helpers =============
+        % === get data ===
+        function [gcampSignal, jrgecoSignal, timeVector, signalTitle] = dataForPlotAllSessions(obj, descriptionVector, smoothFactor, downsampleFactor)
+            % Returns the relevant signals smoothed and downsampled and a
+            % fitting time vector to the plotAllSessions function
+            
+            [gcampSignal, jrgecoSignal, signalTitle, totalTime, ~] = obj.getInformationReshapeDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor);
+            
+            timeVector = linspace(0, totalTime, size(gcampSignal, 2));
+        end
+        
+        function [correlationVec, xLabels] = dataForPlotCorrelationBar(obj, smoothFactor, downsampleFactor)
+            % Returns a vector of correlations between the smoothed and
+            % downsampled signals for each possible categorie.
+            % It also returns a matching vector that holds all the
+            % categorie names (xLabels).
+            % This function is a helper for the plotCorrelationBar function
+            
+            correlationVec = [];
+            xLabels = [];
+            
+            % Passive
+            for state = obj.CONST_PASSIVE_STATES
+                for soundType = obj.CONST_PASSIVE_SOUND_TYPES
+                    for time = obj.CONST_PASSIVE_TIMES
+                        
+                        descriptionVector = ["Passive", (state), (soundType), (time)];
+                        curCorrelation = obj.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor);
+                        
+                        correlationVec = [correlationVec, curCorrelation];
+                        xLabels = [xLabels, (time) + ' ' + (state) + ' ' + (soundType)];
+                    end
+                end
+            end
+            
+            % Task
+            descriptionVector = ["Task", "onset"];
+            curCorrelation = obj.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor);
+            correlationVec = [correlationVec, curCorrelation];
+            xLabels = [xLabels, "Task"];
+        end
+        
+        function correlation = getWholeSignalCorrelation(obj, descriptionVector, smoothFactor, downsampleFactor)
+            % Returns the correlation between gcamp and jrgeco for the
+            % given description vector. If no signal exists returns zero.
+            if obj.signalExists(descriptionVector)
+                
+                [gcampSignal, jrgecoSignal, ~, ~, ~] = getInformationReshapeDownsampleAndSmooth(obj, descriptionVector, smoothFactor, downsampleFactor);
+                correlation = corr(gcampSignal', jrgecoSignal');
+                
+            else
+                correlation = 0;
+            end
+        end
+        
+        function [gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, signalTitle] = dataForPlotSlidingCorrelation(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Returns the relevant signals smoothed and downsampled, a 
+            % fitting time vector for the signals, a vector of the sliding
+            % window correlation and a time vector for it.
+            % This function is a helper for the plotSlidingCorrelation func
+            
+            [gcampSignal, jrgecoSignal, signalTitle, totalTime, fs] = obj.getInformationReshapeDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor);
+            [correlationVector, correlationTimeVector] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
+            
+            signalTimeVector = linspace(0, totalTime, size(gcampSignal, 2));
+        end
+        
+        function [histogramMatrix, labels] = dataForPlotSlidingCorrelationHeatmap(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Returns a vector of hitograms (a matrix) of the sliding
+            % correlation values between the smoothed and downsampled
+            % signals for each possible category.
+            % It also returns a matching vector that holds all the
+            % categorie names (labels).
+            % This function is a helper for the
+            % plotSlidingCorrelationHeatmap function
+            
+            histogramMatrix = [];
+            labels = [];
+            
+            % Passive
+            for state = obj.CONST_PASSIVE_STATES
+                for soundType = obj.CONST_PASSIVE_SOUND_TYPES
+                    for time = obj.CONST_PASSIVE_TIMES
+                        descriptionVector = ["Passive", (state), (soundType), (time)];
+                        binCount = obj.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                        
+                        histogramMatrix = [histogramMatrix, binCount'];
+                        labels = [labels, (time) + ' ' + (state) + ' ' + (soundType)];
+                    end
+                end
+            end
+            
+            % Task
+            descriptionVector = ["Task", "onset"];
+            binCount = obj.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+            
+            histogramMatrix = [histogramMatrix, binCount'];
+            labels = [labels, "Task"];
+        end
+        
+        function binCount = getWholeSignalSlidingBincount(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Returns the bin count of the sliding window values. 
+            % If no signal exists returns a vector of zeros.
+            numOfBins = 100;
+            
+            if obj.signalExists(descriptionVector)
+                histogramEdges = linspace(-1, 1, numOfBins + 1);           % Creates x - 1 bins
+                [gcampSignal, jrgecoSignal, ~, ~, fs] = obj.getInformationReshapeDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor);
+                [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
+                
+                [binCount,~] = histcounts(correlationVector, histogramEdges, 'Normalization', 'probability');
+            else
+                binCount = zeros(1, numOfBins);
+            end
+        end
+        
+        function [meanSlidingCorrelationVec, medianSlidingCorrelationVec, xLabels] = dataForPlotSlidingCorrelationBar(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Returns a vector of the means and another of the medians of
+            % the sliding window correlation for each possible categorie.
+            % It also returns a matching vector that holds all the
+            % categorie names (xLabels).
+            % This function is a helper for the
+            % plotSlidingCorrelationBar function
+            
+            medianSlidingCorrelationVec = [];
+            meanSlidingCorrelationVec = [];
+            xLabels = [];
+            
+            % Passive
+            for state = obj.CONST_PASSIVE_STATES
+                for soundType = obj.CONST_PASSIVE_SOUND_TYPES
+                    for time = obj.CONST_PASSIVE_TIMES
+                        descriptionVector = ["Passive", (state), (soundType), (time)];
+                        
+                        [curMeanSlidingCorrelation, curMedianSlidingCorrelation] = obj.getWholeSignalSlidingMeanAndMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                        meanSlidingCorrelationVec = [meanSlidingCorrelationVec, curMeanSlidingCorrelation];
+                        medianSlidingCorrelationVec = [medianSlidingCorrelationVec, curMedianSlidingCorrelation];
+                        
+                        xLabels = [xLabels, (time) + ' ' + (state) + ' ' + (soundType)];
+                        
+                    end
+                end
+            end
+            
+            % Task
+            descriptionVector = ["Task", "onset"];
+            [curMeanSlidingCorrelation, curMedianSlidingCorrelation] = obj.getWholeSignalSlidingMeanAndMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+            meanSlidingCorrelationVec = [meanSlidingCorrelationVec, curMeanSlidingCorrelation];
+            medianSlidingCorrelationVec = [medianSlidingCorrelationVec, curMedianSlidingCorrelation];
+            
+            xLabels = [xLabels, "Task"];
+        end
+        
+        function [meanSlidingCorrelation, medianSlidingCorrelation] = getWholeSignalSlidingMeanAndMedian(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Returns the mean and median of the sliding window correlation
+            % for the given description vector. If no signal exists returns
+            % zero.
+            if obj.signalExists(descriptionVector)
+                [gcampSignal, jrgecoSignal, ~, ~, fs] = obj.getInformationReshapeDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor);
+                
+                [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
+                meanSlidingCorrelation = mean(correlationVector);
+                medianSlidingCorrelation = median(correlationVector);
+                
+            else
+                meanSlidingCorrelation = 0;
+                medianSlidingCorrelation = 0;
+                
+            end
+        end
+        
+        % ==== draw ====
+        function drawAllSessions(obj, gcampSignal, jrgecoSignal, timeVector, signalTitle, smoothFactor, downsampleFactor)
+            % Draws the plot for the plotAllSessions function.
+            
+            figure("Name", "Signal from all sessions of mouse " + obj.Name, "NumberTitle", "off");
+            ax = gca;
+            
+            plot(ax, timeVector, gcampSignal, 'LineWidth', 2, 'Color', '#009999');
+            hold on;
+            plot(ax, timeVector, jrgecoSignal, 'LineWidth', 2, 'Color', '#990099');
+            hold off;
+            
+            title(ax, {"Signal From: " +  signalTitle, "Mouse: " + obj.Name, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}, 'FontSize', 12) % TODO - Fix
+            
+            [gcampType, jrgecoType] = obj.findGcampJrgecoType();
+            
+            legend(gcampType + " (gcamp)", jrgecoType + " (jrgeco)", 'Location', 'best', 'Interpreter', 'none')
+            xlabel("Time (sec)", 'FontSize', 14)
+            ylabel("zscored \DeltaF/F", 'FontSize', 14)
+            xlim([0 100])
+            
+        end
+        
+        function drawScatterPlot(obj, curPlot, descriptionVector, smoothFactor, downsampleFactor)
+            % Draws the scatter plot for the plotCorrelationScatterPlot
+            % function. In order to have all the scatter plots on the same
+            % window (figure) it recieves the plot and doesn't create it
+            % itself.
+            
+            if obj.signalExists(descriptionVector)
+                [gcampSignal, jrgecoSignal, ~, ~, ~] = getInformationReshapeDownsampleAndSmooth(obj, descriptionVector, smoothFactor, downsampleFactor);
+                
+                [gcampType, jrgecoType] = obj.findGcampJrgecoType();
+                
+                scatter(curPlot, gcampSignal, jrgecoSignal, 5,'filled');
+                
+                % Best fit line
+                coefficients = polyfit(gcampSignal,  jrgecoSignal, 1);
+                fitted = polyval(coefficients, gcampSignal);
+                line(curPlot, gcampSignal, fitted, 'Color', 'black', 'LineStyle', '--')
+                
+                xlabel(gcampType + " (gcamp)")
+                ylabel(jrgecoType + " (jrgeco)")
+                
+                % Find axes limits
+                yLimits = ylim(curPlot);
+                xLimits = xlim(curPlot);
+                
+                minTick = min([xLimits(1), yLimits(1)]);
+                maxTick = max([xLimits(2), yLimits(2)]);
+                xlim(curPlot, [minTick, maxTick])
+                ylim(curPlot, [minTick, maxTick])
+            end
+        end
+        
+        function drawCorrelationBar(obj, correlationVec, xLabels, smoothFactor, downsampleFactor)
+            % Draws the bars for the plotCorrelationBar function.
+            
             fig = figure("Name", "Results of comparing correlations of mouse " + obj.Name, "NumberTitle", "off");
             ax = axes;
             categories = categorical(xLabels);
             categories = reordercats(categories,xLabels);
             bar(ax, categories, correlationVec);
             set(ax,'TickLabelInterpreter','none')
-            title(ax, "Results of comparing correlations of mouse " + obj.Name, 'Interpreter', 'none')
+            title(ax, {"Results of comparing correlations of mouse " + obj.Name, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             ylabel("Correlation")
             
             minY = min(correlationVec);
@@ -296,37 +607,41 @@ classdef Mouse < handle
             end
         end
         
-        % == Sliding Correlation ==
-        
-        function plotSlidingCorrelation(obj, descriptionVector, timeWindow, timeShift, downSampleFactor)
-            % Plots the gcamp + jrgeco signals from all the mouses sessions
-            % (task or passive) and also plots the sliding window
-            % correlation.
+        function drawSlidingCorrelation(obj, gcampSignal, jrgecoSignal, signalTimeVector, slidingCorrelation, correlationTimeVector, timeWindow, timeShift, signalTitle, smoothFactor, downsampleFactor)
+            % Draws the plots for the PlotSlidingCorrelation function
             
-            % Generate Data
-            [gcampSignal, jrgecoSignal, signalTitle, totalTime, fs] = obj.getBasicInfomationAndReshape(descriptionVector);
-            [correlationVector, correlationTimeVector] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
+            fig = figure("Name", "Sliding window correlation for all sessions of mouse " + obj.Name, "NumberTitle", "off");
+            correlationPlot = subplot(2, 1, 1);
+            signalPlot = subplot(2, 1, 2);
             
-            gcampSignal = downsample(gcampSignal, downSampleFactor);
-            jrgecoSignal = downsample(jrgecoSignal, downSampleFactor);
-            signalTimeVector = linspace(0, totalTime, size(gcampSignal, 2));
+            plot(correlationPlot, correlationTimeVector, slidingCorrelation, 'LineWidth', 2, 'Color', 'Black');
+            xlim(correlationPlot, [0 50])
+            ylim(correlationPlot, [-1 1])
+            line(correlationPlot, [0 correlationTimeVector(size(correlationTimeVector, 2))], [0 0], 'Color', '#C0C0C0')
             
-            % Plot
-            obj.helperPlotSlidingCorrelation(gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift, signalTitle)
+            plot(signalPlot, signalTimeVector, gcampSignal, 'LineWidth', 2, 'Color', '#009999');
+            hold on
+            plot(signalPlot, signalTimeVector, jrgecoSignal, 'LineWidth', 2, 'Color', '#990099');
+            hold off
+            xlim(signalPlot, [0 50])
+            
+            title(correlationPlot, {"\fontsize{5}", "\fontsize{14}Sliding Window"}, 'FontWeight', 'normal')
+            [gcampType, jrgecoType] = obj.findGcampJrgecoType();
+            title(signalPlot, {"\fontsize{5}", "\fontsize{14}Signals"}, 'FontWeight', 'normal')
+            
+            legend(signalPlot, gcampType + " (gcamp)", jrgecoType + " (jrgeco)", 'Location', 'best')
+            
+            xlabel(correlationPlot, "Time (sec)")
+            xlabel(signalPlot, "Time (sec)")
+            ylabel(correlationPlot, "correlation")
+            ylabel(signalPlot, "zscored \DeltaF/F")
+            
+            sgtitle({"Sliding Window Correlation from " + signalTitle + " for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}, 'FontWeight', 'bold')
         end
         
-        function plotComparisonSlidingCorrelation(obj, timeWindow, timeShift)
-           obj.plotSlidingCorrelationHeatmap(timeWindow, timeShift)
-           obj.plotSlidingCorrelationBar(timeWindow, timeShift)
-        end
-        
-        function plotSlidingCorrelationHeatmap(obj, timeWindow, timeShift)
-            % Plots a comparison of sliding window histogram for all
-            % different categories.
+        function drawSlidingCorrelationHeatmap(obj, histogramMatrix, labels, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Draws the plots for the plotSlidingCorrelationHeatmap function
             
-            [histogramMatrix, labels] = dataForPlotSlidingCorrelationHeatmap(obj, timeWindow, timeShift);
-            
-            % Plot
             fig = figure("Name", "Comparison Sliding Window Correlation for mouse " + obj.Name, "NumberTitle", "off");
             ax = axes;
             
@@ -339,40 +654,24 @@ classdef Mouse < handle
             ax.YTickLabel = 1:-0.2:-1;                                     % TODO - Fix!
             ax.XTickLabel = labels;
             ax.TickLabelInterpreter = 'none';
-            xtickangle(ax,-30)
-            title(ax, {"Sliding Window Heatmap for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, 'Interpreter', 'none')
+            xtickangle(ax, -30)
+            title(ax, {"Sliding Window Heatmap for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             line(ax, [-0.5, size(labels, 2)], [0, 0], 'Color', 'black')
         end
         
-        function plotSlidingCorrelationBar(obj, timeWindow, timeShift)
-            [medianSlidingCorrelationVec, meanSlidingCorrelationVec, xLabels] = obj.dataForPlotSlidingCorrelationBar(timeWindow, timeShift);
+        function drawSlidingCorrelationBar(obj, meanSlidingCorrelationVec, medianSlidingCorrelationVec, xLabels, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Draws the bars for the plotSlidingCorrelationBar function.
             
             fig = figure("Name", "Results of comparing sliding window correlations for mouse " + obj.Name, "NumberTitle", "off");
             categories = categorical(xLabels);
             categories = reordercats(categories, xLabels);
             
-            medianPlot = subplot(1,2,1);
-            bar(medianPlot, categories, medianSlidingCorrelationVec);
-            set(medianPlot,'TickLabelInterpreter','none')
-            title(medianPlot, "Median", 'Interpreter', 'none')
-            ylabel("Sliding window correlation (median)")
-            
-            minY = min(medianSlidingCorrelationVec);
-            maxY = max(medianSlidingCorrelationVec);
-            
-            if (minY < 0) && (0 < maxY)
-                ylim(medianPlot, [-1, 1])
-            elseif (0 < maxY)                                              % for sure 0 <= minY
-                ylim(medianPlot, [0, 1])
-            else
-                ylim(medianPlot, [-1, 0])
-            end
-            
-            meanPlot = subplot(1,2,2);
+            % Mean
+            meanPlot = subplot(1,2,1);
             bar(meanPlot, categories, meanSlidingCorrelationVec);
             set(meanPlot,'TickLabelInterpreter','none')
             title(meanPlot, "Mean", 'Interpreter', 'none')
-            ylabel("Sliding window correlation (mean)")
+            ylabel("Mean of sliding window correlation values")
             
             minY = min(meanSlidingCorrelationVec);
             maxY = max(meanSlidingCorrelationVec);
@@ -385,17 +684,65 @@ classdef Mouse < handle
                 ylim(meanPlot, [-1, 0])
             end
             
-            sgtitle({"Results of comparing sliding correlations of mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)})
+            % Median
+            medianPlot = subplot(1,2,2);
+            bar(medianPlot, categories, medianSlidingCorrelationVec);
+            set(medianPlot,'TickLabelInterpreter','none')
+            title(medianPlot, "Median", 'Interpreter', 'none')
+            ylabel("Median of sliding window correlation values")
+            
+            minY = min(medianSlidingCorrelationVec);
+            maxY = max(medianSlidingCorrelationVec);
+            
+            if (minY < 0) && (0 < maxY)
+                ylim(medianPlot, [-1, 1])
+            elseif (0 < maxY)                                              % for sure 0 <= minY
+                ylim(medianPlot, [0, 1])
+            else
+                ylim(medianPlot, [-1, 0])
+            end
+            
+            % General
+            sgtitle({"Results of comparing sliding correlations of mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}) 
         end
         
-        % ================ Helpers ================
-        % ==== General ====
-        function [gcampSignal, jrgecoSignal, trialTime, signalTitle] = getSignals(obj, descriptionVector)
-            % Recives a vector with information on the wanted signal:
+        function drawBar(obj, vector, xLabels, figureTitle, yLable, smoothFactor, downsampleFactor)
+            % Draws the bars for the plotCorrelationBar function.
+            
+            fig = figure("Name", "Results of mouse " + obj.Name, "NumberTitle", "off");
+            ax = axes;
+            categories = categorical(xLabels);
+            categories = reordercats(categories,xLabels);
+            bar(ax, categories, vector);
+            set(ax,'TickLabelInterpreter','none')
+            title(ax, {figureTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            ylabel(yLable)
+            
+            minY = min(vector);
+            maxY = max(vector);
+            
+            if (minY < 0) && (0 < maxY)
+                ylim(ax, [-1, 1])
+            elseif (0 < maxY)                                              % for sure 0 <= minY
+                ylim(ax, [0, 1])
+            else
+                ylim(ax, [-1, 0])
+            end
+        end
+        
+        % ======================== General Helpers ========================
+        function [gcampSignal, jrgecoSignal, trialTime, fs, signalTitle] = getRawSignals(obj, descriptionVector)
+            % Returns the raw gcamp and jrGeco signals, along with the
+            % relevant time of each trial (each row in of the signal), the
+            % frequency sample (fs) of the signal and a title that explains
+            % the signal. The function returns the data according to the
+            % given description vector:
             % For Task signals ["Task", "divideBy"],
             %      for example ["Task", "lick"]
             % For Passive signals ["Passive", "state", "soundType", "time"],
             %         for example ["Passive", "awake", "BBN", "post"]
+            % If there is no such signal, raises an error.
+            
             if obj.signalExists(descriptionVector)
                 
                 if descriptionVector(1) == "Task"                          % Task
@@ -403,6 +750,7 @@ classdef Mouse < handle
                     gcampSignal = obj.ProcessedRawData.Task.(cutBy).gcamp;
                     jrgecoSignal = obj.ProcessedRawData.Task.(cutBy).jrgeco;
                     trialTime = obj.CONST_TASK_TRIAL_TIME;
+                    fs = size(gcampSignal, 2) / trialTime;
                     signalTitle = "Task cut by " + cutBy;
                 elseif descriptionVector(1) == "Passive"                   % Passive
                     state = descriptionVector(2);
@@ -411,6 +759,7 @@ classdef Mouse < handle
                     gcampSignal = obj.ProcessedRawData.Passive.(state).(soundType).(time).gcamp;
                     jrgecoSignal = obj.ProcessedRawData.Passive.(state).(soundType).(time).jrgeco;
                     trialTime = obj.CONST_PASSIVE_TRIAL_TIME;
+                    fs = size(gcampSignal, 2) / trialTime;
                     signalTitle = (time) + " " + (state) + " " + (soundType);
                 elseif descriptionVector(1) == "Free"                      % Free
                     %%%%%%% TODO %%%%%%
@@ -422,6 +771,11 @@ classdef Mouse < handle
         end
         
         function [exists] = signalExists(obj, descriptionVector)
+            % Returns true if the signal specified in the description
+            % vector exists, and false otherwise.
+            % For an explanation on how the description vector should be
+            % built, look at the description of the function getRawSignals.
+            
             if descriptionVector(1) == "Task"                              % Task
                 divideBy = descriptionVector(2);
                 if divideBy == "onset" || divideBy == "lick" || ...
@@ -455,7 +809,7 @@ classdef Mouse < handle
         end
         
         function [gcampType, jrgecoType] = findGcampJrgecoType(obj)
-            % Returns the brain area of gcamp and area of geco in this
+            % Returns the brain area of gcamp and area of jrGeco in this
             % mouse
             if obj.GcampJrgecoReversed
                 gcampType = obj.JRGECO;
@@ -466,225 +820,32 @@ classdef Mouse < handle
             end
         end
         
-        function [gcampSignal, jrgecoSignal, signalTitle, totalTime, fs] = getBasicInfomationAndReshape(obj, descriptionVector)
-            [gcampSignal, jrgecoSignal, trialTime, signalTitle] = obj.getSignals(descriptionVector);
+        function [gcampSignal, jrgecoSignal, signalTitle, totalTime, fs] = getInformationReshapeDownsampleAndSmooth(obj, descriptionVector, smoothFactor, downsampleFactor)
+            % Returns the signals (according to the description vector) 
+            % after first concantunating each one to a continuous signal
+            % then smoothing them and then downsampling them.
+            % It also returns basic data about the signals - their title,
+            % the total time (of the continuous signal) and the sampling
+            % per second (fs).
+            % If there is no such signal, raises an error
             
-            fs = size(gcampSignal, 2) / trialTime;
+            [gcampSignal, jrgecoSignal, trialTime, fs, signalTitle] = obj.getRawSignals(descriptionVector);
+            
             totalTime = size(gcampSignal, 1) * trialTime;
             
             gcampSignal = reshape(gcampSignal', 1, []);
             jrgecoSignal = reshape(jrgecoSignal', 1, []);
+            
+            gcampSignal = smooth(gcampSignal', smoothFactor)';
+            jrgecoSignal = smooth(jrgecoSignal', smoothFactor)';
+            
+            gcampSignal = downsample(gcampSignal, downsampleFactor);
+            jrgecoSignal = downsample(jrgecoSignal, downsampleFactor);
+            fs = fs / downsampleFactor;
+            
         end
         
-        % ==== Constructor ====
-        function [gcampDifference, jrgecoDifference] = getDayDifferences(obj)
-            % Creates for each day how much one needs to add in order to have
-            % same baseline (calculated by correct licks)
-            gcampTrials = obj.RawMatFile.Task.onset.all_trials;
-            jrgecoTrials = obj.RawMatFile.Task.onset.af_trials;
-            
-            recordingDays = categorical(obj.Info.Task.onset.day);
-            recordingOutcome = categorical(obj.Info.Task.onset.trial_result);
-            
-            % Gcamp
-            gRecordingBase = double(mean(gcampTrials(:, 1000:5000), 2));    % From 1 to 5 seconds
-            gRecordingSet = table(gRecordingBase, recordingDays, recordingOutcome, 'VariableNames', {'baseline', 'day', 'outcome'});
-            G = fitlme(gRecordingSet, 'baseline ~ outcome + day');         % also can use fitglm: especially if want to do interaction Keep in mind to fit to a random effect (1|day).
-            gcampDifference = G.Coefficients.Estimate;
-            
-            % Geco
-            jRecordingBase = double(mean(jrgecoTrials(:, 1000:5000), 2));       % From 1 to 5 seconds
-            jRecordingSet = table(jRecordingBase, recordingDays, recordingOutcome, 'VariableNames', {'baseline', 'day', 'outcome'});
-            J = fitlme(jRecordingSet, 'baseline ~ outcome + day');         % also can use fitglm: especially if want to do interaction Keep in mind to fit to a random effect (1|day).
-            jrgecoDifference = J.Coefficients.Estimate;
-            
-            % NOTE - 3 last indexes of differences aren't relevant
-        end
-        
-        % ==== Plots ====
-        function helperPlotSlidingCorrelation(obj, gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift, signalTitle)
-            % Creats the plots for the PlotSlidingCorrelation function
-            
-            fig = figure("Name", "Signal from all sessions of mouse " + obj.Name, "NumberTitle", "off");
-            correlationPlot = subplot(2, 1, 1);
-            signalPlot = subplot(2, 1, 2);
-            
-            plot(correlationPlot, correlationTimeVector, correlationVector, 'LineWidth', 2, 'Color', 'Black');
-            xlim(correlationPlot, [0 50])
-            ylim(correlationPlot, [-1 1])
-            line(correlationPlot, [0 correlationTimeVector(size(correlationTimeVector, 2))], [0 0], 'Color', '#C0C0C0')
-            
-            plot(signalPlot, signalTimeVector, gcampSignal, 'LineWidth', 2, 'Color', '#009999');
-            hold on
-            plot(signalPlot, signalTimeVector, jrgecoSignal, 'LineWidth', 2, 'Color', '#990099');
-            hold off
-            xlim(signalPlot, [0 50])
-            
-            title(correlationPlot, {"Sliding Window Correlation -",  "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, 'FontSize', 13, 'Interpreter', 'none')
-            [gcampType, jrgecoType] = obj.findGcampJrgecoType();
-            title(signalPlot, "Signal from " +  signalTitle + " for mouse " + obj.Name, 'FontSize', 13, 'Interpreter', 'none')
-            
-            legend(signalPlot, gcampType + " (gcamp)", jrgecoType + " (jrgeco)", 'Location', 'best')
-            
-            xlabel(correlationPlot, "Time (sec)")
-            xlabel(signalPlot, "Time (sec)")
-            ylabel(correlationPlot, "correlation")
-            ylabel(signalPlot, "zscored \DeltaF/F")
-        end
-        
-        function drawScatterPlot(obj, curPlot, descriptionVector)
-            if obj.signalExists(descriptionVector)
-                [gcampSignal, jrgecoSignal, ~, ~] = obj.getSignals(descriptionVector);
-                
-                [gcampType, jrgecoType] = obj.findGcampJrgecoType();
-                
-                gcampDownSampled = obj.downSampleAndReshape(gcampSignal, 100);
-                jrgecoDownSampled = obj.downSampleAndReshape(jrgecoSignal, 100);
-                
-                scatter(curPlot, gcampDownSampled, jrgecoDownSampled, 5,'filled');
-                
-                % Best fit line
-                coefficients = polyfit(gcampSignal,  jrgecoSignal, 1);
-                fitted = polyval(coefficients, gcampSignal);
-                line(curPlot, gcampSignal, fitted, 'Color', 'black', 'LineStyle', '--')
-                
-                xlabel(gcampType + " (gcamp)")
-                ylabel(jrgecoType + " (jrgeco)")
-                
-                % Find axes limits
-                yLimits = ylim(curPlot);
-                xLimits = xlim(curPlot);
-                
-                minTick = min([xLimits(1), yLimits(1)]);
-                maxTick = max([xLimits(2), yLimits(2)]);
-                xlim(curPlot, [minTick, maxTick])
-                ylim(curPlot, [minTick, maxTick])
-            end
-        end
-        
-        function [correlationVec, xLabels] = dataForPlotCorrelationBar(obj)
-            correlationVec = [];
-            xLabels = [];
-            
-            % Passive
-            for state = obj.CONST_PASSIVE_STATES
-                for soundType = obj.CONST_PASSIVE_SOUND_TYPES
-                    for time = obj.CONST_PASSIVE_TIMES
-                        
-                        descriptionVector = ["Passive", (state), (soundType), (time)];
-                        curCorrelation = obj.getWholeSignalCorrelation(descriptionVector);
-                        
-                        correlationVec = [correlationVec, curCorrelation];
-                        xLabels = [xLabels, (time) + ' ' + (state) + ' ' + (soundType)];
-                    end
-                end
-            end
-            
-            % Task
-            descriptionVector = ["Task", "onset"];
-            curCorrelation = obj.getWholeSignalCorrelation(descriptionVector);
-            correlationVec = [correlationVec, curCorrelation];
-            xLabels = [xLabels, "Task"];
-        end
-        
-        function correlation = getWholeSignalCorrelation(obj, descriptionVector)
-            % Returns the correlation between gcamp and jrgeco for the
-            % given description vector. If no signal exists returns 0.
-            if obj.signalExists(descriptionVector)
-                [gcampSignal, jrgecoSignal, ~, ~] = obj.getSignals(descriptionVector);
-                gcampSignal = obj.downSampleAndReshape(gcampSignal, 1);
-                jrgecoSignal = obj.downSampleAndReshape(jrgecoSignal, 1);
-                correlation = corr(gcampSignal', jrgecoSignal');
-            else
-                correlation = 0;
-            end
-        end
-        
-        function [histogramMatrix, labels] = dataForPlotSlidingCorrelationHeatmap(obj, timeWindow, timeShift)
-            histogramMatrix = [];
-            labels = [];
-            histogramEdges = linspace(-1, 1, 101);                          % Creates x - 1 bins
-            
-            % Passive
-            for state = obj.CONST_PASSIVE_STATES
-                for soundType = obj.CONST_PASSIVE_SOUND_TYPES
-                    for time = obj.CONST_PASSIVE_TIMES
-                        descriptionVector = ["Passive", (state), (soundType), (time)];
-                        
-                        if obj.signalExists(descriptionVector)
-                            [gcampSignal, jrgecoSignal, ~, ~, fs] = obj.getBasicInfomationAndReshape(descriptionVector);
-                            [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
-
-                            [binCount,~] = histcounts(correlationVector, histogramEdges, 'Normalization', 'probability');
-                        else
-                            binCount = zeros(1,100);
-                        end
-                        
-                        histogramMatrix = [histogramMatrix, binCount'];
-                        labels = [labels, (time) + ' ' + (state) + ' ' + (soundType)];
-                    end
-                end
-            end
-            
-            % Task
-            descriptionVector = ["Task", "onset"];
-            if obj.signalExists(descriptionVector)
-                [gcampSignal, jrgecoSignal, ~, ~, fs] = obj.getBasicInfomationAndReshape(descriptionVector);
-                [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
-                
-                [binCount,~] = histcounts(correlationVector, histogramEdges, 'Normalization', 'probability');
-            else
-                binCount = zeros(1,100);
-            end
-            
-            histogramMatrix = [histogramMatrix, binCount'];
-            labels = [labels, "Task"];
-        end
-        
-        function [medianSlidingCorrelationVec, meanSlidingCorrelationVec, xLabels] = dataForPlotSlidingCorrelationBar(obj, timeWindow, timeShift)
-            medianSlidingCorrelationVec = [];
-            meanSlidingCorrelationVec = [];
-            xLabels = [];
-            
-            % Passive
-            for state = obj.CONST_PASSIVE_STATES
-                for soundType = obj.CONST_PASSIVE_SOUND_TYPES
-                    for time = obj.CONST_PASSIVE_TIMES
-                        descriptionVector = ["Passive", (state), (soundType), (time)];
-                        
-                        if obj.signalExists(descriptionVector)
-                            [gcampSignal, jrgecoSignal, ~, ~, fs] = obj.getBasicInfomationAndReshape(descriptionVector);
-                            [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
-                            medianSlidingCorrelationVec = [medianSlidingCorrelationVec, median(correlationVector)];
-                            meanSlidingCorrelationVec = [meanSlidingCorrelationVec, mean(correlationVector)];
-                        else
-                            medianSlidingCorrelationVec = [medianSlidingCorrelationVec, 0];
-                            meanSlidingCorrelationVec = [meanSlidingCorrelationVec, 0];
-                        end
-                        
-                        xLabels = [xLabels, (time) + ' ' + (state) + ' ' + (soundType)];
-                        
-                    end
-                end
-            end
-            
-            % Task
-            descriptionVector = ["Task", "onset"];
-            if obj.signalExists(descriptionVector)
-                [gcampSignal, jrgecoSignal, ~, ~, fs] = obj.getBasicInfomationAndReshape(descriptionVector);
-                [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
-                
-                medianSlidingCorrelationVec = [medianSlidingCorrelationVec, median(correlationVector)];
-                meanSlidingCorrelationVec = [meanSlidingCorrelationVec, mean(correlationVector)];
-            else
-                medianSlidingCorrelationVec = [medianSlidingCorrelationVec, 0];
-                meanSlidingCorrelationVec = [meanSlidingCorrelationVec, 0];
-            end
-            
-            xLabels = [xLabels, "Task"];
-        end
-        
-        % ================ Old ================
+        % ============================== Old ==============================
         function plotMouseCrossCorrelations(obj, subPlots, timeVector)
             [plotByCloud, plotByCue, plotByLick, plotByMove, plotByOnset] = subPlots{:};
             
@@ -723,7 +884,7 @@ classdef Mouse < handle
         end
         
         function plotCrossCorrelation(obj, descriptionVector)
-            [gcampSignal, jrgecoSignal, trialTime, ~] = getSignals(obj, descriptionVector);
+            [gcampSignal, jrgecoSignal, trialTime, ~, ~] = getRawSignals(obj, descriptionVector);
             
             rows = size(gcampSignal,1);
             cols = size(gcampSignal, 2);
@@ -738,11 +899,11 @@ classdef Mouse < handle
         end
         
         function plotAllSessionsSmooth(obj, descriptionVector, smoothFactor)
-            % Plots the gcamp + jrgeco signals from all the mouses sessions
+            % Plots the gcamp + jrgeco signals from all the mouses' sessions
             % (task or passive)
             
             % Generate Data
-            [gcampSignal, jrgecoSignal, trialTime, signalTitle] = obj.getSignals(descriptionVector);
+            [gcampSignal, jrgecoSignal, trialTime, ~, signalTitle] = obj.getRawSignals(descriptionVector);
             
             numTrials = size(gcampSignal, 1);
             
@@ -775,18 +936,14 @@ classdef Mouse < handle
         end
     end
     
+    
+    
     methods (Static)
-        % ================ Helpers ================
-        function finalSignal = downSampleAndReshape(rawSignal, downSampleFactor)
-            % Receive a data in a matrix and a down sample factor
-            % Returns a signal that is a vector and is down sampled
-            finalSignal = reshape(rawSignal', 1, []);
-            finalSignal = downsample(finalSignal, downSampleFactor);
-        end
-        
+        % ============================= Plot ==============================
+        % ============= Helpers =============
         function [correlationVector, timeVector] = getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs)
-            % Creats a vector that represents the sliding correlation
-            % between the given signals, acoording to the given time window
+            % Creates a vector that represents the sliding correlation
+            % between the given signals, according to the given time window
             % and time shift. It returns both a vector that represents the
             % sliding correlation, and a time vector that corresponds with
             % it.
