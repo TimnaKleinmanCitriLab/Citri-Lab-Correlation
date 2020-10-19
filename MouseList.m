@@ -29,7 +29,7 @@ classdef MouseList < handle
         
         function add(obj, mouse)
             % Given a mouse, adds it to this list. If a mouse with the same
-            % name exists, it puts the given mouse insted.
+            % name exists, it puts the given mouse instead.
             for index = 1:size(obj.MousePathList, 2)
                 if obj.MousePathList(index).Name == mouse.Name
                     obj.MousePathList(index).Path = mouse.ObjectPath;
@@ -56,13 +56,14 @@ classdef MouseList < handle
         end
         
         % ============================= Plot ==============================
+        % ============= Plot =============
         function plotCorrelationScatterPlot(obj, descriptionVector, smoothFactor, downsampleFactor)
-            % Plots scatter plots for all the mice according to the given 
+            % Plots scatter plots for all the mice according to the given
             % descriptionVector (empty plot for a mouse that has no
-            % data in this category, eg. a mouse that didnt have a 
+            % data in this category, eg. a mouse that didnt have a
             % pre-awake-FS recording session).
             % It also plots the best fit line for the scatter plot.
-            % The function first smooths the signal, then downsamples it
+            % The function first smooths the signal, then down samples it
             % and at last plots it and finds the best fitting line.
             
             miceAmount = size(obj.LoadedMouseList, 2);
@@ -86,25 +87,46 @@ classdef MouseList < handle
         end
         
         function plotCorrelationBar(obj, smoothFactor, downsampleFactor)
-            [correlationMatrix, xLabels, mouseNames] = obj.calculateCorrelations(smoothFactor, downsampleFactor);
+            % Plots two graphs - one is of bars where one can see each of
+            % the mice separately, and the other is a summary one with the
+            % mean of all the mice. The bars are the correlations
+            % and the categories are all the possible categories (no bar
+            % for a category that has no data, eg. a mouse that didnt have
+            % a pre-awake-FS recording session).
+            % The function first smooths the signals, then down samples them
+            % and at last calculates their correlation and plots it.
+            
+            [correlationMatrix, xLabels, mouseNames] = obj.dataForPlotCorrelationBar(smoothFactor, downsampleFactor);
             
             obj.drawBarByMouse(correlationMatrix, xLabels, mouseNames, "Whole signal correlations by mouse", smoothFactor, downsampleFactor);
             obj.drawBarSummary(correlationMatrix, xLabels, "Whole signal correlations summary for all mice", smoothFactor, downsampleFactor);
         end
         
-        function plotSlidingCorrelationBar(obj, timeWindow, timeShift)
-            [medianSlidingCorrelationMatrix, meanSlidingCorrelationMatrix, xLabels, mouseNames] = obj.calculateSlidingWindow(timeWindow, timeShift);
+        function plotSlidingCorrelationBar(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Plots two graphs - one is of bars where one can see each of
+            % the mice separately, and the other is a summary one with the
+            % mean of all the mice. The bars are the mean / median of
+            % the sliding window values and the categories are all the
+            % possible categories (no bar for a category that has no data,
+            % eg. a mouse that didnt have a pre-awake-FS recording session).
+            % The function first smooths the signals, then down samples them
+            % then calculates the sliding window, and at last calculates
+            % the mean / median of it's values.
             
-            obj.helperPlotCorrelationBarByMouse(medianSlidingCorrelationMatrix, xLabels, mouseNames, {"Median - Sliding window correlation by mouse", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)});
-            obj.helperPlotCorrelationBarSummary(medianSlidingCorrelationMatrix, xLabels, {"Median - Sliding window correlation summary for all mice", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)});
+            [medianSlidingCorrelationMatrix, meanSlidingCorrelationMatrix, xLabels, mouseNames] = obj.dataForPlotSlidingCorrelationBar(timeWindow, timeShift, smoothFactor, downsampleFactor);
             
-            obj.helperPlotCorrelationBarByMouse(meanSlidingCorrelationMatrix, xLabels, mouseNames, {"Mean - Sliding window correlation by mouse", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)});
-            obj.helperPlotCorrelationBarSummary(meanSlidingCorrelationMatrix, xLabels, {"Mean - Sliding window correlation summary for all mice", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)});
+            obj.drawBarByMouse(medianSlidingCorrelationMatrix, xLabels, mouseNames, {"Median - Sliding window correlation by mouse", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor);
+            obj.drawBarSummary(medianSlidingCorrelationMatrix, xLabels, {"Median - Sliding window correlation summary for all mice", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor);
+            
+            obj.drawBarByMouse(meanSlidingCorrelationMatrix, xLabels, mouseNames, {"Mean - Sliding window correlation by mouse", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor);
+            obj.drawBarSummary(meanSlidingCorrelationMatrix, xLabels, {"Mean - Sliding window correlation summary for all mice", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor);
             
         end
         
         % ============= Helpers =============
-        function [correlationMatrix, finalXLabels, mouseNames] = calculateCorrelations(obj, smoothFactor, downsampleFactor)
+        function [correlationMatrix, finalXLabels, mouseNames] = dataForPlotCorrelationBar(obj, smoothFactor, downsampleFactor)
+            % Returns the correlation for all the categories, for all the
+            % mice in the list.
             correlationMatrix = [];
             finalXLabels = [];
             mouseNames = [];
@@ -118,18 +140,22 @@ classdef MouseList < handle
             end
         end
         
-        function [medianSlidingCorrelationMatrix, meanSlidingCorrelationMatrix, finalXLabels, mouseNames] = calculateSlidingWindow(obj, timeWindow, timeShift)
+        function [medianSlidingCorrelationMatrix, meanSlidingCorrelationMatrix, finalXLabels, mouseNames] = dataForPlotSlidingCorrelationBar(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Returns the mean / median of the sliding window values 
+            % for all the categories, for all the mice in the list.
+            
             medianSlidingCorrelationMatrix = [];
             meanSlidingCorrelationMatrix = [];
             finalXLabels = [];
             mouseNames = [];
             
             for mouse = obj.LoadedMouseList
-                [medianSlidingCorrelationVec, meanSlidingCorrelationVec, currentXLabels] = mouse.dataForPlotSlidingCorrelationBar(timeWindow, timeShift);
+                [meanSlidingCorrelationVec, medianSlidingCorrelationVec, currentXLabels] = mouse.dataForPlotSlidingCorrelationBar(timeWindow, timeShift, smoothFactor, downsampleFactor);
                 
                 % Add to all
-                medianSlidingCorrelationMatrix = [medianSlidingCorrelationMatrix, medianSlidingCorrelationVec'];
                 meanSlidingCorrelationMatrix = [meanSlidingCorrelationMatrix, meanSlidingCorrelationVec'];
+                medianSlidingCorrelationMatrix = [medianSlidingCorrelationMatrix, medianSlidingCorrelationVec'];
+                
                 finalXLabels = [finalXLabels, currentXLabels'];
                 mouseNames = [mouseNames, mouse.Name];
                 
@@ -138,11 +164,14 @@ classdef MouseList < handle
     end
     
     
-    
     methods (Static)
         % ============================= Plot ==============================
         % ============= Helpers =============
         function drawBarByMouse(matrix, xLabels, mouseNames, figureTitle, smoothFactor, downsampleFactor)
+            % Draws a bar graph of the given labels - where each mouse
+            % appears. In the given matrix, each column is a mouse, and
+            % each row is a category fitting to the xLabels.
+            
             fig = figure("Name", "Mouse List By Mouse", "NumberTitle", "off");
             ax = axes;
             
@@ -168,6 +197,11 @@ classdef MouseList < handle
         end
         
         function drawBarSummary(matrix, xLabels, figureTitle, smoothFactor, downsampleFactor)
+            % Draws a bar graph of the given labels - that summarizes the
+            % data of all the given mice by category (mean). In the given
+            % matrix, each column is a mouse, and each row is a category
+            % fitting to the xLabels.
+            
             fig = figure("Name", "Mouse List Summary", "NumberTitle", "off");
             ax = axes;
             
@@ -191,7 +225,7 @@ classdef MouseList < handle
             else
                 ylim(ax, [-1, 0])
             end
-        end 
+        end
     end
 end
 

@@ -46,7 +46,7 @@ classdef Mouse < handle
         % ============= Main ============
         function obj = Mouse(name, gcampJrgecoReversed, listType)
             % Constructs an instance of this class - saves it to the
-            % constant path and adds it to it's relavent MouseList
+            % constant path and adds it to it's relevant MouseList
             
             obj.organizeMouseName(name);
             obj.GcampJrgecoReversed = gcampJrgecoReversed;
@@ -128,7 +128,7 @@ classdef Mouse < handle
         function createPassiveDataAndInfo(obj)
             % This function divides the passive data and info into it's
             % appropriate sections (by BBN/FS, pre/post, awake/anesthetized).
-            % It then saves the results into the relevant mouse propreties.
+            % It then saves the results into the relevant mouse properties.
             % It also saves as a mouse property a "exist" table that saves
             % all the existing passive data names.
             
@@ -240,7 +240,7 @@ classdef Mouse < handle
             % Plots the gcamp and jrGeco signals from all the mouses'
             % sessions according to the description vector (see vectors
             % structure in the function getRawSignals).
-            % The function first smooths the signal, then downsamples it
+            % The function first smooths the signal, then down samples it
             % and at last plots it.
             
             [gcampSignal, jrgecoSignal, timeVector, signalTitle] = obj.dataForPlotAllSessions(descriptionVector, smoothFactor, downsampleFactor);
@@ -263,7 +263,7 @@ classdef Mouse < handle
             % data, eg. a mouse that didnt have a pre-awake-FS recording
             % session).
             % It also plots the best fit line for the scatter plot.
-            % The function first smooths the signal, then downsamples it
+            % The function first smooths the signal, then down samples it
             % and at last plots it and finds the best fitting line.
             
             fig = figure("Name", "Scatter plot of signals for mouse " + obj.Name, "NumberTitle", "off", "position", [498,113,1069,767]);
@@ -292,7 +292,7 @@ classdef Mouse < handle
             obj.drawScatterPlot(curPlot, descriptionVector, smoothFactor, downsampleFactor);
             title(curPlot, "Task" , 'Interpreter', 'none')
             
-            sgtitle({"Scatter plot of signals for mouse " + obj.Name, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            sgtitle({"Scatter plot of signals for mouse " + obj.Name, "\fontsize{7}Smoothed by: " + smoothFactor + ", then down sampled by: " + downsampleFactor})
         end
         
         function plotCorrelationBar(obj, smoothFactor, downsampleFactor)
@@ -300,11 +300,12 @@ classdef Mouse < handle
             % correlations of all the possible categories (no bar for a
             % category that has no data, eg. a mouse that didnt have a 
             % pre-awake-FS recording session).
-            % The function first smooths the signals, then downsamples them
-            % and at last calculates their correalation and plots it.
+            % The function first smooths the signals, then down samples them
+            % and at last calculates their correlation and plots it.
             
             [correlationVec, xLabels] = obj.dataForPlotCorrelationBar(smoothFactor, downsampleFactor);
-            obj.drawCorrelationBar(correlationVec, xLabels, smoothFactor, downsampleFactor)
+            obj.drawBar(correlationVec, xLabels, "Results of comparing correlations of mouse " + obj.Name, "Correlation", smoothFactor, downsampleFactor)
+            
         end
         
         % ======= Sliding Correlation =======
@@ -313,8 +314,8 @@ classdef Mouse < handle
             % sessions according to the description vector (see vectors
             % structure in the function getRawSignals).
             % It then plots the sliding window correlation.
-            % The function first smooths the signal, then downsamples it
-            % and at last calculats the sliding correlation and plots it.
+            % The function first smooths the signal, then down samples it
+            % and at last calculates the sliding correlation and plots it.
             
             [gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, signalTitle] = obj.dataForPlotSlidingCorrelation(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
             obj.drawSlidingCorrelation(gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift, signalTitle, smoothFactor, downsampleFactor)
@@ -322,7 +323,7 @@ classdef Mouse < handle
         
         function plotComparisonSlidingCorrelation(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
             % Plots summary of the sliding correlations by all the different
-            % possible categories - plots a comparrison heatmap and a
+            % possible categories - plots a comparison heatmap and a
             % comparison bar of mean / median
             
             obj.plotSlidingCorrelationHeatmap(timeWindow, timeShift, smoothFactor, downsampleFactor)
@@ -330,11 +331,11 @@ classdef Mouse < handle
         end
         
         function plotSlidingCorrelationHeatmap(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
-            % Plots heatmap of the histogam of the sliding window
-            % corrrelation values for all possible categories (A histogram of 
+            % Plots heatmap of the histogram of the sliding window
+            % correlation values for all possible categories (A histogram of
             % zeros for a category that has no data, eg. a mouse that didnt
             % have a pre-awake-FS recording session).
-            % The function first smooths the signal, then downsamples it
+            % The function first smooths the signal, then down samples it
             % and at last calculates the sliding windows, it's relevant
             % histogram and plots the heatmap.
             
@@ -348,19 +349,20 @@ classdef Mouse < handle
             % window values of all the possible categories (no bar for a
             % category that has no data, eg. a mouse that didnt have a 
             % pre-awake-FS recording session).
-            % The function first smooths the signals, then downsamples them
+            % The function first smooths the signals, then down samples them
             % then calculates the sliding window, and at last calculates
-            % the mean / medianof it's values.
+            % the mean / median of it's values.
             
             [meanSlidingCorrelationVec, medianSlidingCorrelationVec, xLabels] = obj.dataForPlotSlidingCorrelationBar(timeWindow, timeShift, smoothFactor, downsampleFactor);
-            obj.drawSlidingCorrelationBar(meanSlidingCorrelationVec, medianSlidingCorrelationVec, xLabels, timeWindow, timeShift, smoothFactor, downsampleFactor)
-
+            
+            obj.drawBar(meanSlidingCorrelationVec, xLabels, "Mean of sliding window correlation values for mouse " + obj.Name, "Mean of sliding window correlation values", smoothFactor, downsampleFactor)
+            obj.drawBar(medianSlidingCorrelationVec, xLabels, "Median of sliding window correlation values for mouse " + obj.Name, "Median of sliding window correlation values", smoothFactor, downsampleFactor)
         end
         
         % ============= Helpers =============
         % === get data ===
         function [gcampSignal, jrgecoSignal, timeVector, signalTitle] = dataForPlotAllSessions(obj, descriptionVector, smoothFactor, downsampleFactor)
-            % Returns the relevant signals smoothed and downsampled and a
+            % Returns the relevant signals smoothed and down sampled and a
             % fitting time vector to the plotAllSessions function
             
             [gcampSignal, jrgecoSignal, signalTitle, totalTime, ~] = obj.getInformationReshapeDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor);
@@ -370,9 +372,9 @@ classdef Mouse < handle
         
         function [correlationVec, xLabels] = dataForPlotCorrelationBar(obj, smoothFactor, downsampleFactor)
             % Returns a vector of correlations between the smoothed and
-            % downsampled signals for each possible categorie.
+            % down sampled signals for each possible category.
             % It also returns a matching vector that holds all the
-            % categorie names (xLabels).
+            % category names (xLabels).
             % This function is a helper for the plotCorrelationBar function
             
             correlationVec = [];
@@ -413,7 +415,7 @@ classdef Mouse < handle
         end
         
         function [gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, signalTitle] = dataForPlotSlidingCorrelation(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor)
-            % Returns the relevant signals smoothed and downsampled, a 
+            % Returns the relevant signals smoothed and down sampled, a
             % fitting time vector for the signals, a vector of the sliding
             % window correlation and a time vector for it.
             % This function is a helper for the plotSlidingCorrelation func
@@ -425,11 +427,11 @@ classdef Mouse < handle
         end
         
         function [histogramMatrix, labels] = dataForPlotSlidingCorrelationHeatmap(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
-            % Returns a vector of hitograms (a matrix) of the sliding
-            % correlation values between the smoothed and downsampled
+            % Returns a vector of histograms (a matrix) of the sliding
+            % correlation values between the smoothed and down sampled
             % signals for each possible category.
             % It also returns a matching vector that holds all the
-            % categorie names (labels).
+            % category names (labels).
             % This function is a helper for the
             % plotSlidingCorrelationHeatmap function
             
@@ -475,9 +477,9 @@ classdef Mouse < handle
         
         function [meanSlidingCorrelationVec, medianSlidingCorrelationVec, xLabels] = dataForPlotSlidingCorrelationBar(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
             % Returns a vector of the means and another of the medians of
-            % the sliding window correlation for each possible categorie.
+            % the sliding window correlation for each possible category.
             % It also returns a matching vector that holds all the
-            % categorie names (xLabels).
+            % category names (xLabels).
             % This function is a helper for the
             % plotSlidingCorrelationBar function
             
@@ -554,7 +556,7 @@ classdef Mouse < handle
         function drawScatterPlot(obj, curPlot, descriptionVector, smoothFactor, downsampleFactor)
             % Draws the scatter plot for the plotCorrelationScatterPlot
             % function. In order to have all the scatter plots on the same
-            % window (figure) it recieves the plot and doesn't create it
+            % window (figure) it receives the plot and doesn't create it
             % itself.
             
             if obj.signalExists(descriptionVector)
@@ -580,30 +582,6 @@ classdef Mouse < handle
                 maxTick = max([xLimits(2), yLimits(2)]);
                 xlim(curPlot, [minTick, maxTick])
                 ylim(curPlot, [minTick, maxTick])
-            end
-        end
-        
-        function drawCorrelationBar(obj, correlationVec, xLabels, smoothFactor, downsampleFactor)
-            % Draws the bars for the plotCorrelationBar function.
-            
-            fig = figure("Name", "Results of comparing correlations of mouse " + obj.Name, "NumberTitle", "off");
-            ax = axes;
-            categories = categorical(xLabels);
-            categories = reordercats(categories,xLabels);
-            bar(ax, categories, correlationVec);
-            set(ax,'TickLabelInterpreter','none')
-            title(ax, {"Results of comparing correlations of mouse " + obj.Name, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
-            ylabel("Correlation")
-            
-            minY = min(correlationVec);
-            maxY = max(correlationVec);
-            
-            if (minY < 0) && (0 < maxY)
-                ylim(ax, [-1, 1])
-            elseif (0 < maxY)                                              % for sure 0 <= minY
-                ylim(ax, [0, 1])
-            else
-                ylim(ax, [-1, 0])
             end
         end
         
@@ -659,55 +637,10 @@ classdef Mouse < handle
             line(ax, [-0.5, size(labels, 2)], [0, 0], 'Color', 'black')
         end
         
-        function drawSlidingCorrelationBar(obj, meanSlidingCorrelationVec, medianSlidingCorrelationVec, xLabels, timeWindow, timeShift, smoothFactor, downsampleFactor)
-            % Draws the bars for the plotSlidingCorrelationBar function.
-            
-            fig = figure("Name", "Results of comparing sliding window correlations for mouse " + obj.Name, "NumberTitle", "off");
-            categories = categorical(xLabels);
-            categories = reordercats(categories, xLabels);
-            
-            % Mean
-            meanPlot = subplot(1,2,1);
-            bar(meanPlot, categories, meanSlidingCorrelationVec);
-            set(meanPlot,'TickLabelInterpreter','none')
-            title(meanPlot, "Mean", 'Interpreter', 'none')
-            ylabel("Mean of sliding window correlation values")
-            
-            minY = min(meanSlidingCorrelationVec);
-            maxY = max(meanSlidingCorrelationVec);
-            
-            if (minY < 0) && (0 < maxY)
-                ylim(meanPlot, [-1, 1])
-            elseif (0 < maxY)                                              % for sure 0 <= minY
-                ylim(meanPlot, [0, 1])
-            else
-                ylim(meanPlot, [-1, 0])
-            end
-            
-            % Median
-            medianPlot = subplot(1,2,2);
-            bar(medianPlot, categories, medianSlidingCorrelationVec);
-            set(medianPlot,'TickLabelInterpreter','none')
-            title(medianPlot, "Median", 'Interpreter', 'none')
-            ylabel("Median of sliding window correlation values")
-            
-            minY = min(medianSlidingCorrelationVec);
-            maxY = max(medianSlidingCorrelationVec);
-            
-            if (minY < 0) && (0 < maxY)
-                ylim(medianPlot, [-1, 1])
-            elseif (0 < maxY)                                              % for sure 0 <= minY
-                ylim(medianPlot, [0, 1])
-            else
-                ylim(medianPlot, [-1, 0])
-            end
-            
-            % General
-            sgtitle({"Results of comparing sliding correlations of mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}) 
-        end
-        
         function drawBar(obj, vector, xLabels, figureTitle, yLable, smoothFactor, downsampleFactor)
-            % Draws the bars for the plotCorrelationBar function.
+            % Draws a bar graph according to the vector, where the xLabels
+            % are the categories, and all the other arguments are for the 
+            % title and lables.
             
             fig = figure("Name", "Results of mouse " + obj.Name, "NumberTitle", "off");
             ax = axes;
@@ -822,8 +755,8 @@ classdef Mouse < handle
         
         function [gcampSignal, jrgecoSignal, signalTitle, totalTime, fs] = getInformationReshapeDownsampleAndSmooth(obj, descriptionVector, smoothFactor, downsampleFactor)
             % Returns the signals (according to the description vector) 
-            % after first concantunating each one to a continuous signal
-            % then smoothing them and then downsampling them.
+            % after first concatenating each one to a continuous signal
+            % then smoothing them and then down sampling them.
             % It also returns basic data about the signals - their title,
             % the total time (of the continuous signal) and the sampling
             % per second (fs).
