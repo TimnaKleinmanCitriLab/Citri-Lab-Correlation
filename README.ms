@@ -1,6 +1,6 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% GENERAL %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#GENERAL
 
-%%% Brief
+##Brief
 The proper way to use this program is first to create the wanted mice
     (mouse types are subclasses of Mouse, look at Main for examples). By
     creating them they are automatically updated / added to the relevant
@@ -16,7 +16,7 @@ NOTICE: in order to use the mouse list, you need to load the list, and then
 The relevant functions are under "Plot" title, and are basically (see
     elaboration in each section separately)
 
-%%% Saving the data
+##Saving the data
 When parsed by me, passive has the following categories -
     1. State - awake / anesthetized
     2. Sound Type - BBN / FS
@@ -24,9 +24,9 @@ When parsed by me, passive has the following categories -
     these categories are used for the plots, and for the description vector.
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Mouse %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#Mouse
 
-%%% Use
+##Use
 Notice that in a lot of function a description vector is needed. It's built
     as so - 
     * For Task signals ["Task", "divideBy"],
@@ -34,7 +34,7 @@ Notice that in a lot of function a description vector is needed. It's built
     * For Passive signals ["Passive", "state", "soundType", "time"],
                      eg.  ["Passive", "awake", "BBN", "post"]
 
-%%% Useful functions
+##Useful functions
 The most useful functions are the plot functions and are:
     * plotAllSessions
     * plotComparisonCorrelation
@@ -50,7 +50,7 @@ Notice that every plot function has two parts:
     2. draw
 (except scatter plot that has only draw)
 
-%%% Code structure:
+##Code structure:
 * Methods *
     Constructor Functions
         Main
@@ -71,15 +71,15 @@ Notice that every plot function has two parts:
     Plot
         Helpers
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Mouse List %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#Mouse List
 
-%%% Useful functions
+##Useful functions
 The most useful functions are the plot functions and are:
     * plotCorrelationScatterPlot
     * plotCorrelationBar
     * plotSlidingCorrelationBar
 
-%%% Code structure:
+##Code structure:
 * Methods *
     Constructor and initialization
     Plot
