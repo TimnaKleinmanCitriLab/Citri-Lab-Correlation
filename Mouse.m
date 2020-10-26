@@ -25,6 +25,9 @@ classdef Mouse < handle
         CONST_PASSIVE_TIMES = ["pre", "post"];
         
         CONST_PASSIVE_TRIAL_TIME = 5;
+        
+        % Free
+        CONST_FREE_DATA = "free\Free_comb.mat";
     end
     
     properties
@@ -79,7 +82,7 @@ classdef Mouse < handle
         end
         
         function createMatFiles(obj)
-            % Both for Task and for Passive - stores the mat files for the
+            % For Task, Passive and Free - stores the mat files for the
             % raw data as a Mouse property.
             
             % Task
@@ -92,6 +95,9 @@ classdef Mouse < handle
             
             % Passive
             obj.RawMatFile.Passive = matfile(fileBeg + obj.CONST_PASSIVE_DATA);
+            
+            % Free
+            obj.RawMatFile.Free = matfile(fileBeg + obj.CONST_FREE_DATA);
         end
         
         function createTaskInfo(obj)
@@ -151,9 +157,15 @@ classdef Mouse < handle
                             % Save info
                             obj.Info.Passive.(state).(soundType).(time) = tInfo(relevantLines, :);
                             
+                            % Fix jrgeco baseline to zero
+                            gcampData = gcampPassive(relevantLines, :);
+                            
+                            jrgecoData = jrgecoPassive(relevantLines, :);
+                            jrgecoData = jrgecoData - mean(jrgecoData, 'all');
+                            
                             % Save data
-                            obj.ProcessedRawData.Passive.(state).(soundType).(time).gcamp = gcampPassive(relevantLines, :);
-                            obj.ProcessedRawData.Passive.(state).(soundType).(time).jrgeco = jrgecoPassive(relevantLines, :);
+                            obj.ProcessedRawData.Passive.(state).(soundType).(time).gcamp = gcampData;
+                            obj.ProcessedRawData.Passive.(state).(soundType).(time).jrgeco = jrgecoData;
                         end
                     end
                 end
@@ -230,8 +242,6 @@ classdef Mouse < handle
             
             % NOTE - 3 last indexes of differences aren't relevant
         end
-        
-        
         
         
         % ============================= Plot ==============================
@@ -537,9 +547,9 @@ classdef Mouse < handle
             figure("Name", "Signal from all sessions of mouse " + obj.Name, "NumberTitle", "off");
             ax = gca;
             
-            plot(ax, timeVector, gcampSignal, 'LineWidth', 2, 'Color', '#009999');
+            plot(ax, timeVector, gcampSignal, 'LineWidth', 1.5, 'Color', '#009999');
             hold on;
-            plot(ax, timeVector, jrgecoSignal, 'LineWidth', 2, 'Color', '#990099');
+            plot(ax, timeVector, jrgecoSignal, 'LineWidth', 1.5, 'Color', '#990099');
             hold off;
             
             title(ax, {"Signal From: " +  signalTitle, "Mouse: " + obj.Name, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}, 'FontSize', 12) % TODO - Fix
@@ -670,9 +680,9 @@ classdef Mouse < handle
             % frequency sample (fs) of the signal and a title that explains
             % the signal. The function returns the data according to the
             % given description vector:
-            % For Task signals ["Task", "divideBy"],
+            % For Task signals - ["Task", "divideBy"],
             %      for example ["Task", "lick"]
-            % For Passive signals ["Passive", "state", "soundType", "time"],
+            % For Passive signal - ["Passive", "state", "soundType", "time"],
             %         for example ["Passive", "awake", "BBN", "post"]
             % If there is no such signal, raises an error.
             
@@ -699,7 +709,9 @@ classdef Mouse < handle
                 end
                 
             else
-                error("Problem with given description vector");
+                error("Problem with given description vector. Should be one of the following:" + newline +...
+                    "For Task signals - [Task, divideBy]" +  newline +...
+                    "For Passive signal - [Passive, state, soundType, time]");
             end
         end
         
@@ -831,42 +843,6 @@ classdef Mouse < handle
             plot(timeVector, gcampXjrgeco)
         end
         
-        function plotAllSessionsSmooth(obj, descriptionVector, smoothFactor)
-            % Plots the gcamp + jrgeco signals from all the mouses' sessions
-            % (task or passive)
-            
-            % Generate Data
-            [gcampSignal, jrgecoSignal, trialTime, ~, signalTitle] = obj.getRawSignals(descriptionVector);
-            
-            numTrials = size(gcampSignal, 1);
-            
-            
-            gcampSignal = reshape(gcampSignal', 1, []);
-            jrgecoSignal = reshape(jrgecoSignal', 1, []);
-            
-            gcampSignal = smooth(gcampSignal', smoothFactor)';
-            jrgecoSignal = smooth(jrgecoSignal', smoothFactor)';
-            
-            timeVector = linspace(0, numTrials * trialTime, size(gcampSignal, 2));
-            
-            % Plot
-            figure("Name", "Signal from all sessions of mouse " + obj.Name, "NumberTitle", "off");
-            ax = gca;
-            
-            plot(ax, timeVector, gcampSignal, 'LineWidth', 2, 'Color', '#009999');
-            hold on;
-            plot(ax, timeVector, jrgecoSignal, 'LineWidth', 2, 'Color', '#990099');
-            hold off;
-            
-            title({"Signal From: " +  signalTitle, "Mouse: " + obj.Name, "Smoothed by " + smoothFactor}, 'Interpreter', 'none', 'FontSize', 12) % TODO - Fix
-            
-            [gcampType, jrgecoType] = obj.findGcampJrgecoType();
-            
-            legend(gcampType + " (gcamp)", jrgecoType + " (jrgeco)", 'Location', 'best', 'Interpreter', 'none')
-            xlabel("Time (sec)", 'FontSize', 14)
-            ylabel("zscored \DeltaF/F", 'FontSize', 14)
-            xlim([0 100])
-        end
     end
     
     
