@@ -98,8 +98,8 @@ classdef MouseList < handle
             
             [correlationMatrix, xLabels, mouseNames] = obj.dataForPlotCorrelationBar(smoothFactor, downsampleFactor);
             
-            obj.drawBarByMouse(correlationMatrix, xLabels, mouseNames, "Whole signal correlations by mouse", smoothFactor, downsampleFactor);
-            obj.drawBarSummary(correlationMatrix, xLabels, "Whole signal correlations summary for all mice", smoothFactor, downsampleFactor);
+            obj.drawBarByMouse(correlationMatrix, xLabels, mouseNames, {"Whole signal correlations by mouse"}, smoothFactor, downsampleFactor);
+            obj.drawBarSummary(correlationMatrix, xLabels, {"Whole signal correlations summary for all mice"}, smoothFactor, downsampleFactor);
         end
         
         function plotSlidingCorrelationBar(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
@@ -174,7 +174,8 @@ classdef MouseList < handle
             
             bar(ax, categories, matrix)
             set(ax,'TickLabelInterpreter','none')
-            title(ax, {figureTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            FigureFinalTitle = [figureTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor];
+            title(ax, FigureFinalTitle)
             ylabel("Correlation")
             legend(ax, mouseNames, 'Interpreter', 'none', 'Location', 'best')
             
@@ -198,20 +199,36 @@ classdef MouseList < handle
             
             fig = figure("Name", "Mouse List Summary", "NumberTitle", "off");
             ax = axes;
+
+            semVector = [];
+            meanVector = [];
+            for rowIndex = 1:size(matrix, 1)
+                curRow = matrix(rowIndex, :);
+                curRow = nonzeros(curRow);
+                semVector = [semVector; std(curRow)/sqrt(length(curRow))];
+                meanVector = [meanVector; mean(curRow)];
+            end
             
-            correlationMean = sum(matrix,2) ./ sum(matrix~=0,2);           % Not mean(matrix, 2) cause this way doesn't count zeros!
+            % Mean (without error) can also be calculated like this:
+            % meanVector = sum(matrix,2) ./ sum(matrix~=0,2);           % Not mean(matrix, 2) cause this way doesn't count zeros!
             
             categories = categorical(xLabels(:,1));
             categories = reordercats(categories, xLabels(:,1));
             
             % Bar plot
-            bar(ax, categories, correlationMean)
+            bar(ax, categories, meanVector)
+            hold on
             set(ax,'TickLabelInterpreter','none')
-            title(ax, {figureTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            FigureFinalTitle = [figureTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor, "Error bar is SEM"];
+            title(ax, FigureFinalTitle)
             ylabel(["Correlation", "(mean of all mice)"])
             
-            minY = min(min(correlationMean));
-            maxY = max(max(correlationMean));
+            % Error bar
+            er = errorbar(meanVector, semVector, 'k');
+            er.LineStyle = 'none';
+            
+            minY = min(min(meanVector));
+            maxY = max(max(meanVector));
             
             if (minY < 0) && (0 < maxY)
                 ylim(ax, [-1, 1])
@@ -219,15 +236,6 @@ classdef MouseList < handle
                 ylim(ax, [0, 1])
             else
                 ylim(ax, [-1, 0])
-            end
-            
-            % Error plot
-            semVec = [];
-            meanVec = [];
-            for rowIndex = size(matrix, 1)
-                curRow = matrix(curRow, :);
-                curRow = nonzeros(curRow);
-                semVec = [semVec; std(curRow)];
             end
         end
     end
