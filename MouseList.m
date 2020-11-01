@@ -113,14 +113,10 @@ classdef MouseList < handle
             % then calculates the sliding window, and at last calculates
             % the mean / median of it's values.
             
-            [medianSlidingCorrelationMatrix, meanSlidingCorrelationMatrix, xLabels, mouseNames] = obj.dataForPlotSlidingCorrelationBar(timeWindow, timeShift, smoothFactor, downsampleFactor);
+            [medianSlidingCorrelationMatrix, xLabels, mouseNames] = obj.dataForPlotSlidingCorrelationBar(timeWindow, timeShift, smoothFactor, downsampleFactor);
             
             obj.drawBarByMouse(medianSlidingCorrelationMatrix, xLabels, mouseNames, {"Median - Sliding window correlation by mouse", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor);
             obj.drawBarSummary(medianSlidingCorrelationMatrix, xLabels, {"Median - Sliding window correlation summary for all mice", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor);
-            
-            obj.drawBarByMouse(meanSlidingCorrelationMatrix, xLabels, mouseNames, {"Mean - Sliding window correlation by mouse", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor);
-            obj.drawBarSummary(meanSlidingCorrelationMatrix, xLabels, {"Mean - Sliding window correlation summary for all mice", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor);
-            
         end
         
         % ============= Helpers =============
@@ -140,20 +136,18 @@ classdef MouseList < handle
             end
         end
         
-        function [medianSlidingCorrelationMatrix, meanSlidingCorrelationMatrix, finalXLabels, mouseNames] = dataForPlotSlidingCorrelationBar(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
+        function [medianSlidingCorrelationMatrix, finalXLabels, mouseNames] = dataForPlotSlidingCorrelationBar(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
             % Returns the mean / median of the sliding window values 
             % for all the categories, for all the mice in the list.
             
             medianSlidingCorrelationMatrix = [];
-            meanSlidingCorrelationMatrix = [];
             finalXLabels = [];
             mouseNames = [];
             
             for mouse = obj.LoadedMouseList
-                [meanSlidingCorrelationVec, medianSlidingCorrelationVec, currentXLabels] = mouse.dataForPlotSlidingCorrelationBar(timeWindow, timeShift, smoothFactor, downsampleFactor);
+                [medianSlidingCorrelationVec, currentXLabels] = mouse.dataForPlotSlidingCorrelationBar(timeWindow, timeShift, smoothFactor, downsampleFactor);
                 
                 % Add to all
-                meanSlidingCorrelationMatrix = [meanSlidingCorrelationMatrix, meanSlidingCorrelationVec'];
                 medianSlidingCorrelationMatrix = [medianSlidingCorrelationMatrix, medianSlidingCorrelationVec'];
                 
                 finalXLabels = [finalXLabels, currentXLabels'];
@@ -210,6 +204,7 @@ classdef MouseList < handle
             categories = categorical(xLabels(:,1));
             categories = reordercats(categories, xLabels(:,1));
             
+            % Bar plot
             bar(ax, categories, correlationMean)
             set(ax,'TickLabelInterpreter','none')
             title(ax, {figureTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
@@ -224,6 +219,15 @@ classdef MouseList < handle
                 ylim(ax, [0, 1])
             else
                 ylim(ax, [-1, 0])
+            end
+            
+            % Error plot
+            semVec = [];
+            meanVec = [];
+            for rowIndex = size(matrix, 1)
+                curRow = matrix(curRow, :);
+                curRow = nonzeros(curRow);
+                semVec = [semVec; std(curRow)];
             end
         end
     end

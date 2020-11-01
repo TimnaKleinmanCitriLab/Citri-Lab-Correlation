@@ -363,9 +363,8 @@ classdef Mouse < handle
             % then calculates the sliding window, and at last calculates
             % the mean / median of it's values.
             
-            [meanSlidingCorrelationVec, medianSlidingCorrelationVec, xLabels] = obj.dataForPlotSlidingCorrelationBar(timeWindow, timeShift, smoothFactor, downsampleFactor);
+            [medianSlidingCorrelationVec, xLabels] = obj.dataForPlotSlidingCorrelationBar(timeWindow, timeShift, smoothFactor, downsampleFactor);
             
-            obj.drawBar(meanSlidingCorrelationVec, xLabels, "Mean of sliding window correlation values for mouse " + obj.Name, "Mean of sliding window correlation values", smoothFactor, downsampleFactor)
             obj.drawBar(medianSlidingCorrelationVec, xLabels, "Median of sliding window correlation values for mouse " + obj.Name, "Median of sliding window correlation values", smoothFactor, downsampleFactor)
         end
         
@@ -485,7 +484,7 @@ classdef Mouse < handle
             end
         end
         
-        function [meanSlidingCorrelationVec, medianSlidingCorrelationVec, xLabels] = dataForPlotSlidingCorrelationBar(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
+        function [medianSlidingCorrelationVec, xLabels] = dataForPlotSlidingCorrelationBar(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
             % Returns a vector of the means and another of the medians of
             % the sliding window correlation for each possible category.
             % It also returns a matching vector that holds all the
@@ -494,7 +493,6 @@ classdef Mouse < handle
             % plotSlidingCorrelationBar function
             
             medianSlidingCorrelationVec = [];
-            meanSlidingCorrelationVec = [];
             xLabels = [];
             
             % Passive
@@ -503,8 +501,7 @@ classdef Mouse < handle
                     for time = obj.CONST_PASSIVE_TIMES
                         descriptionVector = ["Passive", (state), (soundType), (time)];
                         
-                        [curMeanSlidingCorrelation, curMedianSlidingCorrelation] = obj.getWholeSignalSlidingMeanAndMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
-                        meanSlidingCorrelationVec = [meanSlidingCorrelationVec, curMeanSlidingCorrelation];
+                        curMedianSlidingCorrelation = obj.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
                         medianSlidingCorrelationVec = [medianSlidingCorrelationVec, curMedianSlidingCorrelation];
                         
                         xLabels = [xLabels, (time) + ' ' + (state) + ' ' + (soundType)];
@@ -515,14 +512,13 @@ classdef Mouse < handle
             
             % Task
             descriptionVector = ["Task", "onset"];
-            [curMeanSlidingCorrelation, curMedianSlidingCorrelation] = obj.getWholeSignalSlidingMeanAndMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
-            meanSlidingCorrelationVec = [meanSlidingCorrelationVec, curMeanSlidingCorrelation];
+            curMedianSlidingCorrelation = obj.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
             medianSlidingCorrelationVec = [medianSlidingCorrelationVec, curMedianSlidingCorrelation];
             
             xLabels = [xLabels, "Task"];
         end
         
-        function [meanSlidingCorrelation, medianSlidingCorrelation] = getWholeSignalSlidingMeanAndMedian(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor)
+        function medianSlidingCorrelation = getWholeSignalSlidingMedian(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor)
             % Returns the mean and median of the sliding window correlation
             % for the given description vector. If no signal exists returns
             % zero.
@@ -530,11 +526,9 @@ classdef Mouse < handle
                 [gcampSignal, jrgecoSignal, ~, ~, fs] = obj.getInformationReshapeDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor);
                 
                 [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
-                meanSlidingCorrelation = mean(correlationVector);
                 medianSlidingCorrelation = median(correlationVector);
                 
             else
-                meanSlidingCorrelation = 0;
                 medianSlidingCorrelation = 0;
                 
             end
