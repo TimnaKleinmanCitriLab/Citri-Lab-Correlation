@@ -64,6 +64,9 @@ classdef Mouse < handle
             % Passive
             obj.createPassiveDataAndInfo();
             
+            % Free
+             obj.createAndStrightenFreeData();
+            
             save(obj.ObjectPath, "obj");
             obj.addToList(listType);
         end
@@ -216,6 +219,38 @@ classdef Mouse < handle
             mouseList.add(obj);
         end
         
+        function createAndStrightenFreeData(obj)
+            tInfo = obj.RawMatFile.Free.t_info;
+            gcampFree = obj.RawMatFile.Free.all_trials;
+            jrgecoFree = obj.RawMatFile.Free.af_trials;
+            
+            for rowIndex = 1:size(tInfo, 1)
+                if tInfo.display(rowIndex) > 0                            % Should display
+                    % Get DateTime
+                    date = tInfo.organized_date(rowIndex, :);
+%                     time = tInfo.time(rowIndex, :);
+%                     time = "" + time(1:2) + time(4:5);                                % Delete seconds from time 
+                    dateHour = "t" + date;
+                    
+                    % Extract signals from cell
+                    gcampData = gcampFree(rowIndex);
+                    gcampData = gcampData{:};
+                    jrgecoData = jrgecoFree(rowIndex);
+                    jrgecoData = jrgecoData{:};
+                    
+                    % Fix jrgeco baseline to zero
+                    jrgecoData = jrgecoData - mean(jrgecoData);
+                    
+                    % Save data
+                    obj.ProcessedRawData.Free.(dateHour).gcamp = gcampData;
+                    obj.ProcessedRawData.Free.(dateHour).jrgeco = jrgecoData;
+                end
+            end
+            tInfo(tInfo.display < 0,:) = [];                               % Delete info for rows that aren't displayed
+            obj.Info.Free = tInfo;
+            
+        end
+        
         % ============= Helpers =============
         function [gcampDifference, jrgecoDifference] = getDayDifferences(obj)
             % Creates for each day how much one needs to add in order to have
@@ -299,6 +334,8 @@ classdef Mouse < handle
             curPlot = subplot(3, passiveAmount / 2, index);
             descriptionVector = ["Task", "onset"];
             
+            
+            
             obj.drawScatterPlot(curPlot, descriptionVector, smoothFactor, downsampleFactor);
             title(curPlot, "Task" , 'Interpreter', 'none')
             
@@ -370,6 +407,11 @@ classdef Mouse < handle
             obj.drawBar(medianSlidingCorrelationVec, xLabels, "Median of sliding window correlation values for mouse " + obj.Name, "Median of sliding window correlation values", smoothFactor, downsampleFactor)
         end
         
+        % ======= Cross Correlation =======
+%         function plotCrossCorrelation(obj, descriptionVector, movement, smoothFactor, downsampleFactor)
+%             obj.dataForPlotSlidingCorrelationBar(descriptionVector, movement, smoothFactor, downsampleFactor)
+%         end
+        
         % ============= Helpers =============
         % === get data ===
         function [gcampSignal, jrgecoSignal, timeVector, signalTitle] = dataForPlotAllSessions(obj, descriptionVector, smoothFactor, downsampleFactor)
@@ -410,6 +452,20 @@ classdef Mouse < handle
             curCorrelation = obj.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor);
             correlationVec = [correlationVec, curCorrelation];
             xLabels = [xLabels, "Task"];
+            
+            % Free
+            if isfield(obj.ProcessedRawData, "Free")
+                fields = fieldnames(obj.ProcessedRawData.Free);
+                
+                for index = 1:numel(fields)
+                    tDateHour = fields{index};
+                    descriptionVector = ["Free", (tDateHour)];
+                    curCorrelation = obj.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor);
+                    correlationVec = [correlationVec, curCorrelation];
+                    [~, ~, ~, ~, signalTitle] = getRawSignals(obj, descriptionVector);
+                    xLabels = [xLabels, signalTitle];
+                end
+            end
         end
         
         function correlation = getWholeSignalCorrelation(obj, descriptionVector, smoothFactor, downsampleFactor)
@@ -518,6 +574,22 @@ classdef Mouse < handle
             medianSlidingCorrelationVec = [medianSlidingCorrelationVec, curMedianSlidingCorrelation];
             
             xLabels = [xLabels, "Task"];
+            
+            % Free
+            if isfield(obj.ProcessedRawData, "Free")
+                fields = fieldnames(obj.ProcessedRawData.Free);
+                
+                for index = 1:numel(fields)
+                    tDateHour = fields{index};
+                    descriptionVector = ["Free", (tDateHour)];
+                    
+                    curMedianSlidingCorrelation = obj.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    medianSlidingCorrelationVec = [medianSlidingCorrelationVec, curMedianSlidingCorrelation];
+                    
+                    [~, ~, ~, ~, signalTitle] = getRawSignals(obj, descriptionVector);
+                    xLabels = [xLabels, signalTitle];
+                end
+            end
         end
         
         function medianSlidingCorrelation = getWholeSignalSlidingMedian(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor)
@@ -535,6 +607,19 @@ classdef Mouse < handle
                 
             end
         end
+        
+%         function dataForPlotSlidingCorrelationBar(obj, descriptionVector, movement, smoothFactor, downsampleFactor)
+%             [gcampSignal, jrgecoSignal, signalTitle, totalTime, fs] = getInformationReshapeDownsampleAndSmooth(obj, descriptionVector, smoothFactor, downsampleFactor)
+%             rows = size(gcampLowered,1);
+%             cols = size(gcampLowered, 2);
+%             gcampXjrgeco = zeros(rows, cols * 2 - 1);
+%             
+%             for index = 1:rows
+%                 gcampXjrgeco(index,:) = xcorr(gcampLowered(index,:), jrgecoLowered(index,:), 'normalized');
+%             end
+%             gcampXjrgeco = sum(gcampXjrgeco) / rows;
+%             plot(ax, timeVector, gcampXjrgeco)
+%         end
         
         % ==== draw ====
         function drawAllSessions(obj, gcampSignal, jrgecoSignal, timeVector, signalTitle, smoothFactor, downsampleFactor)
@@ -683,6 +768,25 @@ classdef Mouse < handle
             xtickangle(ax, -30)
             title(ax, {"Sliding Window Heatmap for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             line(ax, [-0.5, size(labels, 2)], [0, 0], 'Color', 'black')
+            
+            % Plot
+            fig = figure("Name", "Comparison Sliding Window Correlation for mouse " + obj.Name, "NumberTitle", "off");
+            ax = axes;
+            
+            ax.YLabel.String = 'correlation';
+            
+            
+            imagesc(ax, [0, size(histogramMatrix, 2)-1], [1, -1], histogramMatrix) % Limits are 1 to -1 so 1 will be up and -1 down, need to change ticks too
+            cBar = colorbar;
+            ylabel(cBar, 'Probability', 'Rotation',270)
+            cBar.Label.VerticalAlignment = 'bottom';
+            % ax.YTick = -1:-0.2:1;
+            ax.YTickLabel = 1:-0.2:-1;                                     % TODO - Fix!
+            ax.XTickLabel = labels;
+            ax.TickLabelInterpreter = 'none';
+            xtickangle(ax, -30)
+            title(ax, {"Sliding Window Heatmap for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            line(ax, [-0.5, size(labels, 2)], [0, 0], 'Color', 'black')
         end
         
         function drawBar(obj, vector, xLabels, figureTitle, yLable, smoothFactor, downsampleFactor)
@@ -743,7 +847,14 @@ classdef Mouse < handle
                     fs = size(gcampSignal, 2) / trialTime;
                     signalTitle = (time) + " " + (state) + " " + (soundType);
                 elseif descriptionVector(1) == "Free"                      % Free
-                    %%%%%%% TODO %%%%%%
+                    tDateHour = descriptionVector(2);
+                    gcampSignal = obj.ProcessedRawData.Free.(tDateHour).gcamp;
+                    jrgecoSignal = obj.ProcessedRawData.Free.(tDateHour).jrgeco;                   
+                    dateHour = extractAfter(tDateHour,'t'); % to look for row
+                    tInfoRowNum = obj.Info.Free.organized_date == str2double(dateHour) == 1;
+                    fs = obj.Info.Free.fs(tInfoRowNum);
+                    trialTime = round(size(gcampSignal, 2) / fs);
+                    signalTitle = "Free - " +  obj.Info.Free.date(tInfoRowNum, :) + " " + obj.Info.Free.time(tInfoRowNum, :);
                 end
                 
             else
@@ -785,7 +896,12 @@ classdef Mouse < handle
                     exists = false;
                 end
             elseif descriptionVector(1) == "Free"                          % Free
-                exists = true;
+                dateHour = descriptionVector(2);
+                if isfield(obj.ProcessedRawData.Free, dateHour)
+                    exists = true;
+                else
+                    exists = false;
+                end
             else
                 exists = false;
             end
