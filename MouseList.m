@@ -99,7 +99,9 @@ classdef MouseList < handle
             [correlationMatrix, xLabels, mouseNames] = obj.dataForPlotCorrelationBar(smoothFactor, downsampleFactor);
             
             obj.drawBarByMouse(correlationMatrix, xLabels, mouseNames, {"Whole signal correlations by mouse"}, smoothFactor, downsampleFactor);
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto\" + obj.Type + " Correlation Bar - by mouse")
             obj.drawBarSummary(correlationMatrix, xLabels, {"Whole signal correlations summary for all mice"}, smoothFactor, downsampleFactor);
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto\" + obj.Type + " Correlation Bar - all")
         end
         
         function plotSlidingCorrelationBar(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
@@ -113,10 +115,18 @@ classdef MouseList < handle
             % then calculates the sliding window, and at last calculates
             % the mean / median of it's values.
             
-            [medianSlidingCorrelationMatrix, xLabels, mouseNames] = obj.dataForPlotSlidingCorrelationBar(timeWindow, timeShift, smoothFactor, downsampleFactor);
+            [medianSlidingCorrelationMatrix, varSlidingCorrelationMatrix, xLabels, mouseNames] = obj.dataForPlotSlidingCorrelationBar(timeWindow, timeShift, smoothFactor, downsampleFactor);
             
-            obj.drawBarByMouse(medianSlidingCorrelationMatrix, xLabels, mouseNames, {"Median - Sliding window correlation by mouse", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor);
-            obj.drawBarSummary(medianSlidingCorrelationMatrix, xLabels, {"Median - Sliding window correlation summary for all mice", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor);
+            obj.drawBarByMouse(medianSlidingCorrelationMatrix, xLabels, mouseNames, {"Median - Sliding window correlation by mouse", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor, true);
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto\" + obj.Type + " Median Sliding Correlation Bar - by mouse")
+            obj.drawBarSummary(medianSlidingCorrelationMatrix, xLabels, {"Median - Sliding window correlation summary for all mice", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor, true);
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto\" + obj.Type + " Median Sliding Correlation Bar - all")
+            
+            
+            obj.drawBarByMouse(varSlidingCorrelationMatrix, xLabels, mouseNames, {"Variance - Sliding window correlation by mouse", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor, false);
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto\" + obj.Type + " Variance Sliding Correlation Bar - by mouse")
+            obj.drawBarSummary(varSlidingCorrelationMatrix, xLabels, {"Variance - Sliding window correlation summary for all mice", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor, false);
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto\" + obj.Type + " Variance Sliding Correlation Bar - all")
         end
         
         % ============= Helpers =============
@@ -136,32 +146,29 @@ classdef MouseList < handle
             end
         end
         
-        function [medianSlidingCorrelationMatrix, finalXLabels, mouseNames] = dataForPlotSlidingCorrelationBar(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
-            % Returns the mean / median of the sliding window values 
+        function [medianSlidingCorrelationMatrix, varSlidingCorrelationMatrix, finalXLabels, mouseNames] = dataForPlotSlidingCorrelationBar(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Returns the mean / median of the sliding window values
             % for all the categories, for all the mice in the list.
             
             medianSlidingCorrelationMatrix = [];
+            varSlidingCorrelationMatrix = [];
             finalXLabels = [];
             mouseNames = [];
             
             for mouse = obj.LoadedMouseList
-                [medianSlidingCorrelationVec, currentXLabels] = mouse.dataForPlotSlidingCorrelationBar(timeWindow, timeShift, smoothFactor, downsampleFactor);
+                [medianSlidingCorrelationVec, varSlidingCorrelationVec, currentXLabels] = mouse.dataForPlotSlidingCorrelationBar(timeWindow, timeShift, smoothFactor, downsampleFactor);
                 
                 % Add to all
                 medianSlidingCorrelationMatrix = [medianSlidingCorrelationMatrix, medianSlidingCorrelationVec'];
+                varSlidingCorrelationMatrix = [varSlidingCorrelationMatrix, varSlidingCorrelationVec'];
                 
                 finalXLabels = [finalXLabels, currentXLabels'];
                 mouseNames = [mouseNames, mouse.Name];
                 
             end
         end
-    end
-    
-    
-    methods (Static)
-        % ============================= Plot ==============================
-        % ============= Helpers =============
-        function drawBarByMouse(matrix, xLabels, mouseNames, figureTitle, smoothFactor, downsampleFactor)
+        
+        function drawBarByMouse(obj, matrix, xLabels, mouseNames, figureTitle, smoothFactor, downsampleFactor, oneToMinusOne)
             % Draws a bar graph of the given labels - where each mouse
             % appears. In the given matrix, each column is a mouse, and
             % each row is a category fitting to the xLabels.
@@ -174,7 +181,7 @@ classdef MouseList < handle
             
             bar(ax, categories, matrix)
             set(ax,'TickLabelInterpreter','none')
-            FigureFinalTitle = [figureTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor];
+            FigureFinalTitle = [figureTitle, obj.Type, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor];
             title(ax, FigureFinalTitle)
             ylabel("Correlation")
             legend(ax, mouseNames, 'Interpreter', 'none', 'Location', 'best')
@@ -182,16 +189,18 @@ classdef MouseList < handle
             minY = min(min(matrix));
             maxY = max(max(matrix));
             
-            if (minY < 0) && (0 < maxY)
-                ylim(ax, [-1, 1])
-            elseif (0 < maxY)                                              % for sure 0 <= minY
-                ylim(ax, [0, 1])
-            else
-                ylim(ax, [-1, 0])
+            if oneToMinusOne
+                if (minY < 0) && (0 < maxY)
+                    ylim(ax, [-1, 1])
+                elseif (0 < maxY)                                          % for sure 0 <= minY
+                    ylim(ax, [0, 1])
+                else
+                    ylim(ax, [-1, 0])
+                end
             end
         end
         
-        function drawBarSummary(matrix, xLabels, figureTitle, smoothFactor, downsampleFactor)
+        function drawBarSummary(obj, matrix, xLabels, figureTitle, smoothFactor, downsampleFactor, oneToMinusOne)
             % Draws a bar graph of the given labels - that summarizes the
             % data of all the given mice by category (mean). In the given
             % matrix, each column is a mouse, and each row is a category
@@ -199,7 +208,7 @@ classdef MouseList < handle
             
             fig = figure("Name", "Mouse List Summary", "NumberTitle", "off");
             ax = axes;
-
+            
             semVector = [];
             meanVector = [];
             for rowIndex = 1:size(matrix, 1)
@@ -219,7 +228,7 @@ classdef MouseList < handle
             bar(ax, categories, meanVector)
             hold on
             set(ax,'TickLabelInterpreter','none')
-            FigureFinalTitle = [figureTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor, "Error bar is SEM"];
+            FigureFinalTitle = [figureTitle, obj.Type, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor, "Error bar is SEM"];
             title(ax, FigureFinalTitle)
             ylabel(["Correlation", "(mean of all mice)"])
             
@@ -230,12 +239,14 @@ classdef MouseList < handle
             minY = min(min(meanVector));
             maxY = max(max(meanVector));
             
-            if (minY < 0) && (0 < maxY)
-                ylim(ax, [-1, 1])
-            elseif (0 < maxY)                                              % for sure 0 <= minY
-                ylim(ax, [0, 1])
-            else
-                ylim(ax, [-1, 0])
+            if oneToMinusOne
+                if (minY < 0) && (0 < maxY)
+                    ylim(ax, [-1, 1])
+                elseif (0 < maxY)                                              % for sure 0 <= minY
+                    ylim(ax, [0, 1])
+                else
+                    ylim(ax, [-1, 0])
+                end
             end
         end
     end

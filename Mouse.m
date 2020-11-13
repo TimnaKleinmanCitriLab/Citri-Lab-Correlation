@@ -246,7 +246,7 @@ classdef Mouse < handle
                     obj.ProcessedRawData.Free.(dateHour).jrgeco = jrgecoData;
                 end
             end
-            tInfo(tInfo.display < 0,:) = [];                               % Delete info for rows that aren't displayed
+%             tInfo(tInfo.display <= 0,:) = [];                               % Delete info for rows that aren't displayed
             obj.Info.Free = tInfo;
             
         end
@@ -319,7 +319,7 @@ classdef Mouse < handle
             for time = obj.CONST_PASSIVE_TIMES
                 for state = obj.CONST_PASSIVE_STATES
                     for soundType = obj.CONST_PASSIVE_SOUND_TYPES
-                        curPlot = subplot(3, passiveAmount / 2, index);
+                        curPlot = subplot(4, passiveAmount / 2, index);
                         descriptionVector = ["Passive", (state), (soundType), (time)];
                         
                         obj.drawScatterPlot(curPlot, descriptionVector, smoothFactor, downsampleFactor);
@@ -330,11 +330,26 @@ classdef Mouse < handle
                 end
             end
             
+            % Free
+            if isfield(obj.ProcessedRawData, "Free")
+                fields = fieldnames(obj.ProcessedRawData.Free);
+                
+                for in = 1:numel(fields)
+                    curPlot = subplot(4, passiveAmount / 2, index);
+                    tDateHour = fields{in};
+                    descriptionVector = ["Free", (tDateHour)];
+                    
+                    obj.drawScatterPlot(curPlot, descriptionVector, smoothFactor, downsampleFactor);
+                    [~, ~, ~, ~, signalTitle] = getRawSignals(obj, descriptionVector);
+                    title(curPlot, signalTitle , 'Interpreter', 'none')
+                    index = index + 1;
+                end
+            end
+            
+            
             % Task
-            curPlot = subplot(3, passiveAmount / 2, index);
+            curPlot = subplot(4, passiveAmount / 2, index);
             descriptionVector = ["Task", "onset"];
-            
-            
             
             obj.drawScatterPlot(curPlot, descriptionVector, smoothFactor, downsampleFactor);
             title(curPlot, "Task" , 'Interpreter', 'none')
@@ -351,7 +366,7 @@ classdef Mouse < handle
             % and at last calculates their correlation and plots it.
             
             [correlationVec, xLabels] = obj.dataForPlotCorrelationBar(smoothFactor, downsampleFactor);
-            obj.drawBar(correlationVec, xLabels, "Results of comparing correlations of mouse " + obj.Name, "Correlation", smoothFactor, downsampleFactor)
+            obj.drawBar(correlationVec, xLabels, "Results of comparing correlations of mouse " + obj.Name, "Correlation", smoothFactor, downsampleFactor, true)
             
         end
         
@@ -390,7 +405,7 @@ classdef Mouse < handle
             
             [histogramMatrix, labels] = dataForPlotSlidingCorrelationHeatmap(obj, timeWindow, timeShift, smoothFactor, downsampleFactor);
             obj.drawSlidingCorrelationHeatmap(histogramMatrix, labels, timeWindow, timeShift, smoothFactor, downsampleFactor)
-            
+            obj.drawSlidingCorrelationHistogram(histogramMatrix, labels, timeWindow, timeShift, smoothFactor, downsampleFactor)
         end
         
         function plotSlidingCorrelationBar(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
@@ -402,9 +417,11 @@ classdef Mouse < handle
             % then calculates the sliding window, and at last calculates
             % the mean / median of it's values.
             
-            [medianSlidingCorrelationVec, xLabels] = obj.dataForPlotSlidingCorrelationBar(timeWindow, timeShift, smoothFactor, downsampleFactor);
+            [medianSlidingCorrelationVec, varSlidingCorrelationVec, xLabels] = obj.dataForPlotSlidingCorrelationBar(timeWindow, timeShift, smoothFactor, downsampleFactor);
             
-            obj.drawBar(medianSlidingCorrelationVec, xLabels, "Median of sliding window correlation values for mouse " + obj.Name, "Median of sliding window correlation values", smoothFactor, downsampleFactor)
+            obj.drawBar(medianSlidingCorrelationVec, xLabels, "Median of sliding window correlation values for mouse " + obj.Name, "Median of sliding window correlation values", smoothFactor, downsampleFactor, true)
+            obj.drawBar(varSlidingCorrelationVec, xLabels, "Variance of sliding window correlation values for mouse " + obj.Name, "Variance", smoothFactor, downsampleFactor, false)
+            
         end
         
         % ======= Cross Correlation =======
@@ -524,6 +541,23 @@ classdef Mouse < handle
             
             histogramMatrix = [histogramMatrix, binCount'];
             labels = [labels, "Task"];
+            
+            % Free
+            if isfield(obj.ProcessedRawData, "Free")
+                fields = fieldnames(obj.ProcessedRawData.Free);
+                
+                for index = 1:numel(fields)
+                    tDateHour = fields{index};
+                    descriptionVector = ["Free", (tDateHour)];
+                    
+                    binCount = obj.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    histogramMatrix = [histogramMatrix, binCount'];
+                    
+                    [~, ~, ~, ~, signalTitle] = getRawSignals(obj, descriptionVector);
+                    labels = [labels, signalTitle];
+                end
+            end
+            
         end
         
         function binCount = getWholeSignalSlidingBincount(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor)
@@ -542,7 +576,7 @@ classdef Mouse < handle
             end
         end
         
-        function [medianSlidingCorrelationVec, xLabels] = dataForPlotSlidingCorrelationBar(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
+        function [medianSlidingCorrelationVec, varSlidingCorrelationVec, xLabels] = dataForPlotSlidingCorrelationBar(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
             % Returns a vector of the means and another of the medians of
             % the sliding window correlation for each possible category.
             % It also returns a matching vector that holds all the
@@ -551,6 +585,7 @@ classdef Mouse < handle
             % plotSlidingCorrelationBar function
             
             medianSlidingCorrelationVec = [];
+            varSlidingCorrelationVec = [];
             xLabels = [];
             
             % Passive
@@ -559,8 +594,9 @@ classdef Mouse < handle
                     for time = obj.CONST_PASSIVE_TIMES
                         descriptionVector = ["Passive", (state), (soundType), (time)];
                         
-                        curMedianSlidingCorrelation = obj.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                        [curMedianSlidingCorrelation, curVarSlidingCorrelation] = obj.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
                         medianSlidingCorrelationVec = [medianSlidingCorrelationVec, curMedianSlidingCorrelation];
+                        varSlidingCorrelationVec = [varSlidingCorrelationVec, curVarSlidingCorrelation];
                         
                         xLabels = [xLabels, (time) + ' ' + (state) + ' ' + (soundType)];
                         
@@ -570,8 +606,9 @@ classdef Mouse < handle
             
             % Task
             descriptionVector = ["Task", "onset"];
-            curMedianSlidingCorrelation = obj.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+            [curMedianSlidingCorrelation, curVarSlidingCorrelation] = obj.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
             medianSlidingCorrelationVec = [medianSlidingCorrelationVec, curMedianSlidingCorrelation];
+            varSlidingCorrelationVec = [varSlidingCorrelationVec, curVarSlidingCorrelation];
             
             xLabels = [xLabels, "Task"];
             
@@ -583,8 +620,9 @@ classdef Mouse < handle
                     tDateHour = fields{index};
                     descriptionVector = ["Free", (tDateHour)];
                     
-                    curMedianSlidingCorrelation = obj.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    [curMedianSlidingCorrelation, curVarSlidingCorrelation] = obj.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
                     medianSlidingCorrelationVec = [medianSlidingCorrelationVec, curMedianSlidingCorrelation];
+                    varSlidingCorrelationVec = [varSlidingCorrelationVec, curVarSlidingCorrelation];
                     
                     [~, ~, ~, ~, signalTitle] = getRawSignals(obj, descriptionVector);
                     xLabels = [xLabels, signalTitle];
@@ -592,7 +630,7 @@ classdef Mouse < handle
             end
         end
         
-        function medianSlidingCorrelation = getWholeSignalSlidingMedian(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor)
+        function [medianSlidingCorrelation, varSlidingCorrelation] = getWholeSignalSlidingMedian(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor)
             % Returns the mean and median of the sliding window correlation
             % for the given description vector. If no signal exists returns
             % zero.
@@ -601,9 +639,11 @@ classdef Mouse < handle
                 
                 [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
                 medianSlidingCorrelation = median(correlationVector);
+                varSlidingCorrelation = var(correlationVector);
                 
             else
                 medianSlidingCorrelation = 0;
+                varSlidingCorrelation = 0;
                 
             end
         end
@@ -725,7 +765,12 @@ classdef Mouse < handle
             
             % Heatmap Sliding
             % p = pcolor(correlationPlot, slidingCorrelation, 'LineStyle', 'none');
+            colormap(winter)
+            slidingCorrelation = smooth(slidingCorrelation', 10)';
             imagesc(heatmapPlot, slidingCorrelation);
+            cBar = colorbar(slidingPlot);
+            ylabel(cBar, 'Correlation', 'Rotation',270)
+            cBar.Label.VerticalAlignment = 'bottom';
             
             % Signal
             plot(signalPlot, signalTimeVector, gcampSignal, 'LineWidth', 0.5, 'Color', '#009999');
@@ -768,28 +813,33 @@ classdef Mouse < handle
             xtickangle(ax, -30)
             title(ax, {"Sliding Window Heatmap for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             line(ax, [-0.5, size(labels, 2)], [0, 0], 'Color', 'black')
-            
-            % Plot
-            fig = figure("Name", "Comparison Sliding Window Correlation for mouse " + obj.Name, "NumberTitle", "off");
-            ax = axes;
-            
-            ax.YLabel.String = 'correlation';
-            
-            
-            imagesc(ax, [0, size(histogramMatrix, 2)-1], [1, -1], histogramMatrix) % Limits are 1 to -1 so 1 will be up and -1 down, need to change ticks too
-            cBar = colorbar;
-            ylabel(cBar, 'Probability', 'Rotation',270)
-            cBar.Label.VerticalAlignment = 'bottom';
-            % ax.YTick = -1:-0.2:1;
-            ax.YTickLabel = 1:-0.2:-1;                                     % TODO - Fix!
-            ax.XTickLabel = labels;
-            ax.TickLabelInterpreter = 'none';
-            xtickangle(ax, -30)
-            title(ax, {"Sliding Window Heatmap for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
-            line(ax, [-0.5, size(labels, 2)], [0, 0], 'Color', 'black')
         end
         
-        function drawBar(obj, vector, xLabels, figureTitle, yLable, smoothFactor, downsampleFactor)
+        function drawSlidingCorrelationHistogram(obj, histogramMatrix, labels, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            fig = figure();
+            ax = axes;
+            x = [-0.99: 0.02: 0.99];
+            xLabels = [];
+            
+            for index = 5:size(histogramMatrix, 2)
+                smoothed = histogramMatrix(:,index)';
+                if labels(index) ~= "Task"
+                    smoothed = smooth(smoothed', 5)';
+                end
+                plot(x, smoothed, 'LineWidth', 1.5)
+                hold on
+                xLabels = [xLabels, labels(index)];
+            end
+            
+            ax.XLabel.String = 'correlation';
+            ax.YLabel.String = 'amount';
+            legend(xLabels, 'Location', 'best')
+            
+            title(ax, {"Sliding Window Histogram for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            
+        end
+        
+        function drawBar(obj, vector, xLabels, figureTitle, yLable, smoothFactor, downsampleFactor, oneToMinusOne)
             % Draws a bar graph according to the vector, where the xLabels
             % are the categories, and all the other arguments are for the
             % title and lables.
@@ -806,12 +856,14 @@ classdef Mouse < handle
             minY = min(vector);
             maxY = max(vector);
             
-            if (minY < 0) && (0 < maxY)
-                ylim(ax, [-1, 1])
-            elseif (0 < maxY)                                              % for sure 0 <= minY
-                ylim(ax, [0, 1])
-            else
-                ylim(ax, [-1, 0])
+            if oneToMinusOne
+                if (minY < 0) && (0 < maxY)
+                    ylim(ax, [-1, 1])
+                elseif (0 < maxY)                                              % for sure 0 <= minY
+                    ylim(ax, [0, 1])
+                else
+                    ylim(ax, [-1, 0])
+                end
             end
         end
         
@@ -854,7 +906,8 @@ classdef Mouse < handle
                     tInfoRowNum = obj.Info.Free.organized_date == str2double(dateHour) == 1;
                     fs = obj.Info.Free.fs(tInfoRowNum);
                     trialTime = round(size(gcampSignal, 2) / fs);
-                    signalTitle = "Free - " +  obj.Info.Free.date(tInfoRowNum, :) + " " + obj.Info.Free.time(tInfoRowNum, :);
+%                     signalTitle = "Free - " +  obj.Info.Free.date(tInfoRowNum, :) + " " + obj.Info.Free.time(tInfoRowNum, :);
+                    signalTitle = "Free - " +  obj.Info.Free.pre_or_post(tInfoRowNum, :);
                 end
                 
             else
