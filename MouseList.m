@@ -48,7 +48,7 @@ classdef MouseList < handle
             % Loads all the mice in the list to a new list named
             % LoadedMouseList (before, there is only a list of the mice
             % paths in MousePathList)
-            
+            obj.LoadedMouseList = [];
             for mouseStruct = obj.MousePathList
                 curMouse = load(mouseStruct.Path).obj;
                 obj.LoadedMouseList = [obj.LoadedMouseList, curMouse];
@@ -99,9 +99,9 @@ classdef MouseList < handle
             [correlationMatrix, xLabels, mouseNames] = obj.dataForPlotCorrelationBar(smoothFactor, downsampleFactor);
             
             obj.drawBarByMouse(correlationMatrix, xLabels, mouseNames, {"Whole signal correlations by mouse"}, smoothFactor, downsampleFactor);
-            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto\" + obj.Type + " Correlation Bar - by mouse")
+%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto\" + obj.Type + " Correlation Bar - by mouse")
             obj.drawBarSummary(correlationMatrix, xLabels, {"Whole signal correlations summary for all mice"}, smoothFactor, downsampleFactor);
-            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto\" + obj.Type + " Correlation Bar - all")
+%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto\" + obj.Type + " Correlation Bar - all")
         end
         
         function plotSlidingCorrelationBar(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
@@ -118,15 +118,15 @@ classdef MouseList < handle
             [medianSlidingCorrelationMatrix, varSlidingCorrelationMatrix, xLabels, mouseNames] = obj.dataForPlotSlidingCorrelationBar(timeWindow, timeShift, smoothFactor, downsampleFactor);
             
             obj.drawBarByMouse(medianSlidingCorrelationMatrix, xLabels, mouseNames, {"Median - Sliding window correlation by mouse", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor, true);
-            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto\" + obj.Type + " Median Sliding Correlation Bar - by mouse")
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto Saved\" + obj.Type + " Median Sliding Correlation Bar - by mouse")
             obj.drawBarSummary(medianSlidingCorrelationMatrix, xLabels, {"Median - Sliding window correlation summary for all mice", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor, true);
-            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto\" + obj.Type + " Median Sliding Correlation Bar - all")
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto Saved\" + obj.Type + " Median Sliding Correlation Bar - all")
             
             
             obj.drawBarByMouse(varSlidingCorrelationMatrix, xLabels, mouseNames, {"Variance - Sliding window correlation by mouse", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor, false);
-            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto\" + obj.Type + " Variance Sliding Correlation Bar - by mouse")
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto Saved\" + obj.Type + " Variance Sliding Correlation Bar - by mouse")
             obj.drawBarSummary(varSlidingCorrelationMatrix, xLabels, {"Variance - Sliding window correlation summary for all mice", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor, false);
-            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto\" + obj.Type + " Variance Sliding Correlation Bar - all")
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto Saved\" + obj.Type + " Variance Sliding Correlation Bar - all")
         end
         
         % ============= Helpers =============

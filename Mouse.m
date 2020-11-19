@@ -381,7 +381,9 @@ classdef Mouse < handle
             
             [gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, signalTitle] = obj.dataForPlotSlidingCorrelationAll(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
             obj.drawSlidingCorrelation(gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift, signalTitle, smoothFactor, downsampleFactor)
+%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\" + obj.Name + "\Sliding Correlation Zoom Task")
             obj.drawSlidingCorrelationAllHeatmap(gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift, signalTitle, smoothFactor, downsampleFactor)
+%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\" + obj.Name + "\Sliding Correlation Heatmap Over Time Task")
             
         end
         
@@ -406,6 +408,7 @@ classdef Mouse < handle
             [histogramMatrix, labels] = dataForPlotSlidingCorrelationHeatmap(obj, timeWindow, timeShift, smoothFactor, downsampleFactor);
             obj.drawSlidingCorrelationHeatmap(histogramMatrix, labels, timeWindow, timeShift, smoothFactor, downsampleFactor)
             obj.drawSlidingCorrelationHistogram(histogramMatrix, labels, timeWindow, timeShift, smoothFactor, downsampleFactor)
+%             obj.drawBar(skewness(histogramMatrix), labels, "Skewness of of sliding window correlation values for mouse " + obj.Name, "Skewness", smoothFactor, downsampleFactor, false)
         end
         
         function plotSlidingCorrelationBar(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
@@ -831,8 +834,8 @@ classdef Mouse < handle
                 xLabels = [xLabels, labels(index)];
             end
             
-            ax.XLabel.String = 'correlation';
-            ax.YLabel.String = 'amount';
+            ax.XLabel.String = 'Correlation';
+            ax.YLabel.String = 'Amount';
             legend(xLabels, 'Location', 'best')
             
             title(ax, {"Sliding Window Histogram for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
