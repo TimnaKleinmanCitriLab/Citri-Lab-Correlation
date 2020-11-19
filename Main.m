@@ -9,9 +9,9 @@ OfcAccMouse("3_from406", true);
 OfcAccMouse("6_from406", false);
 OfcAccMouse("2_from430", false);
 
-AudAccMouse("3_from410", false);
-AudAccMouse("4_from410", false);
-AudAccMouse("4_from410L", false);
+AudAccMouse("3_from410", true);
+AudAccMouse("4_from410", true);
+AudAccMouse("4_from410L", true);
 AudAccMouse("3_from430", false);
 AudAccMouse("4_from430", false);
 
