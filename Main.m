@@ -24,3 +24,16 @@ AudInAccOutMouse("2_from440", false);
 AudInAccOutMouse("3_from440", false);
 
 AudInAudOutMouse("4_from440", false);
+
+%% 2 - LOAD ALL LISTS AND MICE
+OfcAcc = load('W:\shared\Timna\Gal Projects\Mouse Lists\OfcAccMice.mat').obj;
+AudAcc = load('W:\shared\Timna\Gal Projects\Mouse Lists\AudAccMice.mat').obj;
+AccInAccOut = load('W:\shared\Timna\Gal Projects\Mouse Lists\AccInAccOutMice.mat').obj;
+AudInAccOut = load('W:\shared\Timna\Gal Projects\Mouse Lists\AudInAccOutMice.mat').obj;
+AudInAudOut = load('W:\shared\Timna\Gal Projects\Mouse Lists\AudInAudOutMice.mat').obj;
+
+AccInAccOut.loadMice()
+AudAcc.loadMice()
+AudInAccOut.loadMice()
+AudInAudOut.loadMice()
+OfcAcc.loadMice()
