@@ -428,9 +428,10 @@ classdef Mouse < handle
         end
         
         % ======= Cross Correlation =======
-%         function plotCrossCorrelation(obj, descriptionVector, movement, smoothFactor, downsampleFactor)
-%             obj.dataForPlotSlidingCorrelationBar(descriptionVector, movement, smoothFactor, downsampleFactor)
-%         end
+        function plotCrossCorrelation(obj, descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
+            [gcampXjrgeco, timeVector, signalTitle] = obj.dataForPlotCrossCorrelation(descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape);
+            obj.drawCrossCorrelatiom(gcampXjrgeco, timeVector, signalTitle, smoothFactor, downsampleFactor, shouldReshape)
+        end
         
         % ============= Helpers =============
         % === get data ===
@@ -651,18 +652,41 @@ classdef Mouse < handle
             end
         end
         
-%         function dataForPlotSlidingCorrelationBar(obj, descriptionVector, movement, smoothFactor, downsampleFactor)
-%             [gcampSignal, jrgecoSignal, signalTitle, totalTime, fs] = getInformationReshapeDownsampleAndSmooth(obj, descriptionVector, smoothFactor, downsampleFactor)
-%             rows = size(gcampLowered,1);
-%             cols = size(gcampLowered, 2);
-%             gcampXjrgeco = zeros(rows, cols * 2 - 1);
-%             
-%             for index = 1:rows
-%                 gcampXjrgeco(index,:) = xcorr(gcampLowered(index,:), jrgecoLowered(index,:), 'normalized');
-%             end
-%             gcampXjrgeco = sum(gcampXjrgeco) / rows;
-%             plot(ax, timeVector, gcampXjrgeco)
-%         end
+        function [gcampXjrgeco, timeVector, signalTitle, maxLag] = dataForPlotCrossCorrelation(obj, descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
+            if shouldReshape
+                [gcampSignal, jrgecoSignal, signalTitle, trialTime, fs] = obj.getInformationReshapeDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor);
+            
+            else
+            
+                [gcampSignal, jrgecoSignal, trialTime, fs, signalTitle] = obj.getRawSignals(descriptionVector);
+
+                smoothedGcampSignal = zeros(size(gcampSignal, 1), size(gcampSignal, 2));
+                smoothedJrgecoSignal = zeros(size(gcampSignal, 1), size(gcampSignal, 2));
+
+                for index = 1:size(gcampSignal, 1)
+                    smoothedGcampSignal(index,:) = smooth(gcampSignal(index,:)', smoothFactor)';
+                    smoothedJrgecoSignal(index,:) = smooth(jrgecoSignal(index,:)', smoothFactor)';
+                end
+                
+                gcampSignal = downsample(smoothedGcampSignal', downsampleFactor)';
+                jrgecoSignal = downsample(smoothedJrgecoSignal', downsampleFactor)';
+                fs = fs / downsampleFactor;
+            end
+            
+            if maxLag == 0
+                maxLag = trialTime;
+            end
+            
+            rows = size(gcampSignal, 1);
+            
+            timeVector = linspace(-maxLag, maxLag, round(fs * maxLag) * 2 + 1);
+            gcampXjrgeco = zeros(rows, round(fs * maxLag) * 2 + 1);
+            
+            for index = 1:rows
+                gcampXjrgeco(index,:) = xcorr(gcampSignal(index,:), jrgecoSignal(index,:), round(fs * maxLag), 'normalized');               % TODO - think if should normalize before or after
+            end
+            gcampXjrgeco = sum(gcampXjrgeco, 1) / rows;
+        end
         
         % ==== draw ====
         function drawAllSessions(obj, gcampSignal, jrgecoSignal, timeVector, signalTitle, smoothFactor, downsampleFactor)
@@ -870,6 +894,30 @@ classdef Mouse < handle
             end
         end
         
+        function drawCrossCorrelatiom(obj, gcampXjrgeco, timeVector, signalTitle, smoothFactor, downsampleFactor, shouldReshape)
+            % Draws the plot for the plotCrossCorrelation function.
+            fig = figure();
+            
+            ax = gca;
+            
+            plot(ax, timeVector, gcampXjrgeco, 'LineWidth', 1.5);
+            
+            [peak, index] = max(gcampXjrgeco);
+            % hold on
+            % plot(timeVector(index), peak, 'o')
+            % hold off
+            
+            title(ax, {"Signal From: " +  signalTitle, "Reshaped: " + shouldReshape, "Mouse: " + obj.Name, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}, 'FontSize', 12)
+            
+            xlabel("Time Shift (sec)", 'FontSize', 14)
+            ylabel("Cross Correlation (normalized)", 'FontSize', 14)
+            
+            yline(ax, 0, 'Color', [192, 192, 192]/255)
+            xline(ax, 0, 'Color', [192, 192, 192]/255)
+            
+            annotation('textbox', [.15 .5 .3 .3], 'String', {"Max point at:", "x = " + timeVector(index) + ", y = " + peak}, 'FitBoxToText','on');
+        end
+        
         % ======================== General Helpers ========================
         function [gcampSignal, jrgecoSignal, trialTime, fs, signalTitle] = getRawSignals(obj, descriptionVector)
             % Returns the raw gcamp and jrGeco signals, along with the
@@ -1032,26 +1080,26 @@ classdef Mouse < handle
             gcampXjrgeco = zeros(rows, cols * 2 - 1);
             
             for index = 1:rows
-                gcampXjrgeco(index,:) = xcorr(gcampLowered(index,:), jrgecoLowered(index,:), 'normalized');
+                gcampXjrgeco(index,:) = xcorr(gcampLowered(index,:), jrgecoLowered(index,:));
             end
             gcampXjrgeco = sum(gcampXjrgeco) / rows;
             plot(ax, timeVector, gcampXjrgeco)
         end
         
-        function plotCrossCorrelation(obj, descriptionVector)
-            [gcampSignal, jrgecoSignal, trialTime, ~, ~] = getRawSignals(obj, descriptionVector);
-            
-            rows = size(gcampSignal,1);
-            cols = size(gcampSignal, 2);
-            timeVector = linspace(-trialTime, trialTime, size(gcampSignal, 2) * 2 - 1);
-            gcampXjrgeco = zeros(rows, cols * 2 - 1);
-            
-            for index = 1:rows
-                gcampXjrgeco(index,:) = xcorr(gcampSignal(index,:), jrgecoSignal(index,:), 'normalized');  %TODO - think if should be normalized here or at the end
-            end
-            gcampXjrgeco = sum(gcampXjrgeco) / rows;
-            plot(timeVector, gcampXjrgeco)
-        end
+%         function plotCrossCorrelation(obj, descriptionVector)
+%             [gcampSignal, jrgecoSignal, trialTime, ~, ~] = getRawSignals(obj, descriptionVector);
+%             
+%             rows = size(gcampSignal,1);
+%             cols = size(gcampSignal, 2);
+%             timeVector = linspace(-trialTime, trialTime, size(gcampSignal, 2) * 2 - 1);
+%             gcampXjrgeco = zeros(rows, cols * 2 - 1);
+%             
+%             for index = 1:rows
+%                 gcampXjrgeco(index,:) = xcorr(gcampSignal(index,:), jrgecoSignal(index,:), 'normalized');  %TODO - think if should be normalized here or at the end
+%             end
+%             gcampXjrgeco = sum(gcampXjrgeco) / rows;
+%             plot(timeVector, gcampXjrgeco)
+%         end
         
     end
     
