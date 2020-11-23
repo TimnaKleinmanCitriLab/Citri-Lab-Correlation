@@ -129,6 +129,30 @@ classdef MouseList < handle
             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto Saved\" + obj.Type + " Variance Sliding Correlation Bar - all")
         end
         
+%         function plotCrossCorrelation(obj, gcampXjrgeco, timeVector, signalTitle, smoothFactor, downsampleFactor)
+%             % Draws the plot for the plotCrossCorrelation function.
+%             fig = figure();
+%             
+%             ax = gca;
+%             
+%             plot(ax, timeVector, gcampXjrgeco, 'LineWidth', 1.5);
+%             
+%             [peak, index] = max(gcampXjrgeco);
+%             % hold on
+%             % plot(timeVector(index), peak, 'o')
+%             % hold off
+%             
+%             title(ax, {"Signal From: " +  signalTitle, "Mouse: " + obj.Name, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}, 'FontSize', 12)
+%             
+%             xlabel("Time Shift (sec)", 'FontSize', 14)
+%             ylabel("Cross Correlation (normalized)", 'FontSize', 14)
+%             
+%             yline(ax, 0, 'Color', [192, 192, 192]/255)
+%             xline(ax, 0, 'Color', [192, 192, 192]/255)
+%             
+%             annotation('textbox', [.15 .5 .3 .3], 'String', {"Max point at:", "x = " + timeVector(index) + ", y = " + peak}, 'FitBoxToText','on');
+%         end
+        
         % ============= Helpers =============
         function [correlationMatrix, finalXLabels, mouseNames] = dataForPlotCorrelationBar(obj, smoothFactor, downsampleFactor)
             % Returns the correlation for all the categories, for all the
@@ -167,6 +191,8 @@ classdef MouseList < handle
                 
             end
         end
+        
+%         function dataForCrossCorrelation(obj, )
         
         function drawBarByMouse(obj, matrix, xLabels, mouseNames, figureTitle, smoothFactor, downsampleFactor, oneToMinusOne)
             % Draws a bar graph of the given labels - where each mouse
@@ -249,6 +275,29 @@ classdef MouseList < handle
                 end
             end
         end
+        
+        % Delete after use
+        function drawCrossCorrelation(obj, descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
+            for mouse = obj.LoadedMouseList
+                mouse.plotCrossCorrelation(descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
+                savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross Correlation\Concatenated Task\" + obj.Type + "\" + mouse.Name + " - Concatenated Task")
+            end
+        end
+
+        % Delete after use
+        function drawCrossCorrelationFree(obj, maxLag, smoothFactor, downsampleFactor, shouldReshape)
+            for mouse = obj.LoadedMouseList
+                fields = fieldnames(mouse.ProcessedRawData.Free);
+                
+                for index = 1:numel(fields)
+                    tDateHour = fields{index};
+                    descriptionVector = ["Free", (tDateHour)];
+                    
+                    mouse.plotAutoCorrelation(descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
+                end
+            end
+        end
+        
     end
 end
 
