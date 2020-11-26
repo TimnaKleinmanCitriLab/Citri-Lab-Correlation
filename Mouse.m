@@ -225,12 +225,9 @@ classdef Mouse < handle
             jrgecoFree = obj.RawMatFile.Free.af_trials;
             
             for rowIndex = 1:size(tInfo, 1)
-                if tInfo.display(rowIndex) > 0                            % Should display
-                    % Get DateTime
-                    date = tInfo.organized_date(rowIndex, :);
-%                     time = tInfo.time(rowIndex, :);
-%                     time = "" + time(1:2) + time(4:5);                                % Delete seconds from time 
-                    dateHour = "t" + date;
+                if tInfo.display(rowIndex) > 0                             % Should display
+                    % Get time- pre / post
+                    time = tInfo.pre_or_post(rowIndex, :);                 % Needs to be only one of pre and one of post
                     
                     % Extract signals from cell
                     gcampData = gcampFree(rowIndex);
@@ -242,8 +239,8 @@ classdef Mouse < handle
                     jrgecoData = jrgecoData - mean(jrgecoData);
                     
                     % Save data
-                    obj.ProcessedRawData.Free.(dateHour).gcamp = gcampData;
-                    obj.ProcessedRawData.Free.(dateHour).jrgeco = jrgecoData;
+                    obj.ProcessedRawData.Free.(time).gcamp = gcampData;
+                    obj.ProcessedRawData.Free.(time).jrgeco = jrgecoData;
                 end
             end
 %             tInfo(tInfo.display <= 0,:) = [];                               % Delete info for rows that aren't displayed
@@ -332,18 +329,16 @@ classdef Mouse < handle
             
             % Free
             if isfield(obj.ProcessedRawData, "Free")
-                fields = fieldnames(obj.ProcessedRawData.Free);
-                
-                for in = 1:numel(fields)
-                    curPlot = subplot(4, passiveAmount / 2, index);
-                    tDateHour = fields{in};
-                    descriptionVector = ["Free", (tDateHour)];
-                    
-                    obj.drawScatterPlot(curPlot, descriptionVector, smoothFactor, downsampleFactor);
-                    [~, ~, ~, ~, signalTitle] = getRawSignals(obj, descriptionVector);
-                    title(curPlot, signalTitle , 'Interpreter', 'none')
-                    index = index + 1;
-                end
+                curPlot = subplot(4, passiveAmount / 2, index);
+                descriptionVector = ["Free", "Pre"];
+                obj.drawScatterPlot(curPlot, descriptionVector, smoothFactor, downsampleFactor);
+                title(curPlot, "Free - pre" , 'Interpreter', 'none')
+                index = index + 1;
+                curPlot = subplot(4, passiveAmount / 2, index);
+                descriptionVector = ["Free", "post"];
+                obj.drawScatterPlot(curPlot, descriptionVector, smoothFactor, downsampleFactor);
+                title(curPlot, "Free - post" , 'Interpreter', 'none')
+                index = index + 1;
             end
             
             
@@ -485,16 +480,15 @@ classdef Mouse < handle
             
             % Free
             if isfield(obj.ProcessedRawData, "Free")
-                fields = fieldnames(obj.ProcessedRawData.Free);
+                descriptionVector = ["Free", "Pre"];
+                curCorrelation = obj.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor);
+                correlationVec = [correlationVec, curCorrelation];
+                xLabels = [xLabels, "Free - pre"];
                 
-                for index = 1:numel(fields)
-                    tDateHour = fields{index};
-                    descriptionVector = ["Free", (tDateHour)];
-                    curCorrelation = obj.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor);
-                    correlationVec = [correlationVec, curCorrelation];
-                    [~, ~, ~, ~, signalTitle] = getRawSignals(obj, descriptionVector);
-                    xLabels = [xLabels, signalTitle];
-                end
+                descriptionVector = ["Free", "post"];
+                curCorrelation = obj.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor);
+                correlationVec = [correlationVec, curCorrelation];
+                xLabels = [xLabels, "Free - post"];
             end
         end
         
@@ -557,18 +551,15 @@ classdef Mouse < handle
             
             % Free
             if isfield(obj.ProcessedRawData, "Free")
-                fields = fieldnames(obj.ProcessedRawData.Free);
+                descriptionVector = ["Free", "pre"];
+                binCount = obj.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                histogramMatrix = [histogramMatrix, binCount'];
+                labels = [labels, "Free - pre"];
                 
-                for index = 1:numel(fields)
-                    tDateHour = fields{index};
-                    descriptionVector = ["Free", (tDateHour)];
-                    
-                    binCount = obj.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
-                    histogramMatrix = [histogramMatrix, binCount'];
-                    
-                    [~, ~, ~, ~, signalTitle] = getRawSignals(obj, descriptionVector);
-                    labels = [labels, signalTitle];
-                end
+                descriptionVector = ["Free", "post"];
+                binCount = obj.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                histogramMatrix = [histogramMatrix, binCount'];
+                labels = [labels, "Free - post"];
             end
             
         end
@@ -627,19 +618,17 @@ classdef Mouse < handle
             
             % Free
             if isfield(obj.ProcessedRawData, "Free")
-                fields = fieldnames(obj.ProcessedRawData.Free);
+                descriptionVector = ["Free", "pre"];
+                [curMedianSlidingCorrelation, curVarSlidingCorrelation] = obj.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                medianSlidingCorrelationVec = [medianSlidingCorrelationVec, curMedianSlidingCorrelation];
+                varSlidingCorrelationVec = [varSlidingCorrelationVec, curVarSlidingCorrelation];
+                xLabels = [xLabels, "Free - pre"];
                 
-                for index = 1:numel(fields)
-                    tDateHour = fields{index};
-                    descriptionVector = ["Free", (tDateHour)];
-                    
-                    [curMedianSlidingCorrelation, curVarSlidingCorrelation] = obj.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
-                    medianSlidingCorrelationVec = [medianSlidingCorrelationVec, curMedianSlidingCorrelation];
-                    varSlidingCorrelationVec = [varSlidingCorrelationVec, curVarSlidingCorrelation];
-                    
-                    [~, ~, ~, ~, signalTitle] = getRawSignals(obj, descriptionVector);
-                    xLabels = [xLabels, signalTitle];
-                end
+                descriptionVector = ["Free", "post"];
+                [curMedianSlidingCorrelation, curVarSlidingCorrelation] = obj.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                medianSlidingCorrelationVec = [medianSlidingCorrelationVec, curMedianSlidingCorrelation];
+                varSlidingCorrelationVec = [varSlidingCorrelationVec, curVarSlidingCorrelation];
+                xLabels = [xLabels, "Free - post"];
             end
         end
         
@@ -1000,15 +989,12 @@ classdef Mouse < handle
                     fs = size(gcampSignal, 2) / trialTime;
                     signalTitle = (time) + " " + (state) + " " + (soundType);
                 elseif descriptionVector(1) == "Free"                      % Free
-                    tDateHour = descriptionVector(2);
-                    gcampSignal = obj.ProcessedRawData.Free.(tDateHour).gcamp;
-                    jrgecoSignal = obj.ProcessedRawData.Free.(tDateHour).jrgeco;                   
-                    dateHour = extractAfter(tDateHour,'t'); % to look for row
-                    tInfoRowNum = obj.Info.Free.organized_date == str2double(dateHour) == 1;
-                    fs = obj.Info.Free.fs(tInfoRowNum);
+                    time = descriptionVector(2);
+                    gcampSignal = obj.ProcessedRawData.Free.(time).gcamp;
+                    jrgecoSignal = obj.ProcessedRawData.Free.(time).jrgeco;                   
+                    fs = obj.Info.Free.fs(1);                              % All fs are suppoed to be the same - change if not!
                     trialTime = round(size(gcampSignal, 2) / fs);
-%                     signalTitle = "Free - " +  obj.Info.Free.date(tInfoRowNum, :) + " " + obj.Info.Free.time(tInfoRowNum, :);
-                    signalTitle = "Free - " +  obj.Info.Free.pre_or_post(tInfoRowNum, :);
+                    signalTitle = "Free - " +  time;
                 end
                 
             else
@@ -1050,8 +1036,8 @@ classdef Mouse < handle
                     exists = false;
                 end
             elseif descriptionVector(1) == "Free"                          % Free
-                dateHour = descriptionVector(2);
-                if isfield(obj.ProcessedRawData.Free, dateHour)
+                time = descriptionVector(2);
+                if isfield(obj.ProcessedRawData.Free, time)
                     exists = true;
                 else
                     exists = false;
