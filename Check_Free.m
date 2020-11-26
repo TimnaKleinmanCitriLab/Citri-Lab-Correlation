@@ -48,6 +48,8 @@ function checkMouse()
     end
 end
 
+%% Save Free
+save('\\132.64.59.21\Citri_Lab\gala\Phys data\New Rig\####\free\Free_comb.mat', 't_info', 'af_trials', 'all_trials')
 
 %% Load Free
 % load('\\132.64.59.21\Citri_Lab\gala\Phys data\New Rig\3_from410\free\Free_comb_original.mat')
