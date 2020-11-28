@@ -328,18 +328,16 @@ classdef Mouse < handle
             end
             
             % Free
-            if isfield(obj.ProcessedRawData, "Free")
-                curPlot = subplot(4, passiveAmount / 2, index);
-                descriptionVector = ["Free", "Pre"];
-                obj.drawScatterPlot(curPlot, descriptionVector, smoothFactor, downsampleFactor);
-                title(curPlot, "Free - pre" , 'Interpreter', 'none')
-                index = index + 1;
-                curPlot = subplot(4, passiveAmount / 2, index);
-                descriptionVector = ["Free", "post"];
-                obj.drawScatterPlot(curPlot, descriptionVector, smoothFactor, downsampleFactor);
-                title(curPlot, "Free - post" , 'Interpreter', 'none')
-                index = index + 1;
-            end
+            curPlot = subplot(4, passiveAmount / 2, index);
+            descriptionVector = ["Free", "Pre"];
+            obj.drawScatterPlot(curPlot, descriptionVector, smoothFactor, downsampleFactor);
+            title(curPlot, "Free - pre" , 'Interpreter', 'none')
+            index = index + 1;
+            curPlot = subplot(4, passiveAmount / 2, index);
+            descriptionVector = ["Free", "post"];
+            obj.drawScatterPlot(curPlot, descriptionVector, smoothFactor, downsampleFactor);
+            title(curPlot, "Free - post" , 'Interpreter', 'none')
+            index = index + 1;
             
             
             % Task
@@ -479,17 +477,15 @@ classdef Mouse < handle
             xLabels = [xLabels, "Task"];
             
             % Free
-            if isfield(obj.ProcessedRawData, "Free")
-                descriptionVector = ["Free", "Pre"];
-                curCorrelation = obj.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor);
-                correlationVec = [correlationVec, curCorrelation];
-                xLabels = [xLabels, "Free - pre"];
-                
-                descriptionVector = ["Free", "post"];
-                curCorrelation = obj.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor);
-                correlationVec = [correlationVec, curCorrelation];
-                xLabels = [xLabels, "Free - post"];
-            end
+            descriptionVector = ["Free", "Pre"];
+            curCorrelation = obj.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor);
+            correlationVec = [correlationVec, curCorrelation];
+            xLabels = [xLabels, "Free - pre"];
+            
+            descriptionVector = ["Free", "post"];
+            curCorrelation = obj.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor);
+            correlationVec = [correlationVec, curCorrelation];
+            xLabels = [xLabels, "Free - post"];
         end
         
         function correlation = getWholeSignalCorrelation(obj, descriptionVector, smoothFactor, downsampleFactor)
@@ -550,17 +546,15 @@ classdef Mouse < handle
             labels = [labels, "Task"];
             
             % Free
-            if isfield(obj.ProcessedRawData, "Free")
-                descriptionVector = ["Free", "pre"];
-                binCount = obj.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
-                histogramMatrix = [histogramMatrix, binCount'];
-                labels = [labels, "Free - pre"];
-                
-                descriptionVector = ["Free", "post"];
-                binCount = obj.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
-                histogramMatrix = [histogramMatrix, binCount'];
-                labels = [labels, "Free - post"];
-            end
+            descriptionVector = ["Free", "pre"];
+            binCount = obj.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+            histogramMatrix = [histogramMatrix, binCount'];
+            labels = [labels, "Free - pre"];
+            
+            descriptionVector = ["Free", "post"];
+            binCount = obj.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+            histogramMatrix = [histogramMatrix, binCount'];
+            labels = [labels, "Free - post"];
             
         end
         
@@ -617,19 +611,17 @@ classdef Mouse < handle
             xLabels = [xLabels, "Task"];
             
             % Free
-            if isfield(obj.ProcessedRawData, "Free")
-                descriptionVector = ["Free", "pre"];
-                [curMedianSlidingCorrelation, curVarSlidingCorrelation] = obj.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
-                medianSlidingCorrelationVec = [medianSlidingCorrelationVec, curMedianSlidingCorrelation];
-                varSlidingCorrelationVec = [varSlidingCorrelationVec, curVarSlidingCorrelation];
-                xLabels = [xLabels, "Free - pre"];
-                
-                descriptionVector = ["Free", "post"];
-                [curMedianSlidingCorrelation, curVarSlidingCorrelation] = obj.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
-                medianSlidingCorrelationVec = [medianSlidingCorrelationVec, curMedianSlidingCorrelation];
-                varSlidingCorrelationVec = [varSlidingCorrelationVec, curVarSlidingCorrelation];
-                xLabels = [xLabels, "Free - post"];
-            end
+            descriptionVector = ["Free", "pre"];
+            [curMedianSlidingCorrelation, curVarSlidingCorrelation] = obj.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+            medianSlidingCorrelationVec = [medianSlidingCorrelationVec, curMedianSlidingCorrelation];
+            varSlidingCorrelationVec = [varSlidingCorrelationVec, curVarSlidingCorrelation];
+            xLabels = [xLabels, "Free - pre"];
+            
+            descriptionVector = ["Free", "post"];
+            [curMedianSlidingCorrelation, curVarSlidingCorrelation] = obj.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+            medianSlidingCorrelationVec = [medianSlidingCorrelationVec, curMedianSlidingCorrelation];
+            varSlidingCorrelationVec = [varSlidingCorrelationVec, curVarSlidingCorrelation];
+            xLabels = [xLabels, "Free - post"];
         end
         
         function [medianSlidingCorrelation, varSlidingCorrelation] = getWholeSignalSlidingMedian(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor)
@@ -1037,7 +1029,7 @@ classdef Mouse < handle
                 end
             elseif descriptionVector(1) == "Free"                          % Free
                 time = descriptionVector(2);
-                if isfield(obj.ProcessedRawData.Free, time)
+                if isfield(obj.ProcessedRawData,"Free") && isfield(obj.ProcessedRawData.Free, time)
                     exists = true;
                 else
                     exists = false;
@@ -1123,8 +1115,6 @@ classdef Mouse < handle
         end
         
     end
-    
-    
     
     methods (Static)
         % ============================= Plot ==============================
