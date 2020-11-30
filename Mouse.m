@@ -374,9 +374,9 @@ classdef Mouse < handle
             
             [gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, signalTitle] = obj.dataForPlotSlidingCorrelationAll(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
             obj.drawSlidingCorrelation(gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift, signalTitle, smoothFactor, downsampleFactor)
-%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\" + obj.Name + "\Sliding Correlation Zoom Task")
+%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Tactical\" + obj.Name + "\Sliding Correlation Zoom - " + signalTitle)
             obj.drawSlidingCorrelationAllHeatmap(gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift, signalTitle, smoothFactor, downsampleFactor)
-%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\" + obj.Name + "\Sliding Correlation Heatmap Over Time Task")
+%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Tactical\" + obj.Name + "\Sliding Correlation Heatmap Over Time - " + signalTitle)
             
         end
         
@@ -422,8 +422,12 @@ classdef Mouse < handle
         
         % ======= Cross Correlation =======
         function plotCrossCorrelation(obj, descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
-            [gcampXjrgeco, timeVector, signalTitle] = obj.dataForPlotCrossCorrelation(descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape);
-            obj.drawCrossCorrelation(gcampXjrgeco, timeVector, signalTitle, "Cross Correlation", smoothFactor, downsampleFactor, shouldReshape)
+            [firstXSecond, timeVector, signalTitle] = obj.dataForPlotCrossCorrelation(descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape);
+            
+            first = obj.GCAMP;
+            second = obj.JRGECO;
+            
+            obj.drawCrossCorrelation(firstXSecond, timeVector, signalTitle, "Cross Correlation between " + first + " and " + second, smoothFactor, downsampleFactor, shouldReshape)
 %             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross Correlation\Free\" + obj.Name + " - " + signalTitle)
         end
         
@@ -642,12 +646,14 @@ classdef Mouse < handle
             end
         end
         
-        function [gcampXjrgeco, timeVector, signalTitle, maxLag] = dataForPlotCrossCorrelation(obj, descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
+        function [firstXSecond, timeVector, signalTitle, maxLag] = dataForPlotCrossCorrelation(obj, descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
+            % REturns the cross correlation between the first signal and
+            % the second (reversed gcamp and geco if reversed in mouse)
+            
             if shouldReshape
                 [gcampSignal, jrgecoSignal, signalTitle, trialTime, fs] = obj.getInformationReshapeDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor);
             
             else
-            
                 [gcampSignal, jrgecoSignal, trialTime, fs, signalTitle] = obj.getRawSignals(descriptionVector);
 
                 smoothedGcampSignal = zeros(size(gcampSignal, 1), size(gcampSignal, 2));
@@ -667,15 +673,21 @@ classdef Mouse < handle
                 maxLag = trialTime;
             end
             
+            if obj.GcampJrgecoReversed
+                temp = gcampSignal;
+                gcampSignal = jrgecoSignal;
+                jrgecoSignal = temp;
+            end
+            
             rows = size(gcampSignal, 1);
             
             timeVector = linspace(-maxLag, maxLag, round(fs * maxLag) * 2 + 1);
-            gcampXjrgeco = zeros(rows, round(fs * maxLag) * 2 + 1);
+            firstXSecond = zeros(rows, round(fs * maxLag) * 2 + 1);
             
             for index = 1:rows
-                gcampXjrgeco(index,:) = xcorr(gcampSignal(index,:), jrgecoSignal(index,:), round(fs * maxLag), 'normalized');               % TODO - think if should normalize before or after
+                firstXSecond(index,:) = xcorr(gcampSignal(index,:), jrgecoSignal(index,:), round(fs * maxLag), 'normalized');               % TODO - think if should normalize before or after
             end
-            gcampXjrgeco = sum(gcampXjrgeco, 1) / rows;
+            firstXSecond = sum(firstXSecond, 1) / rows;
         end
         
         function [gcampXgcamp, jrgecoXjrgeco, timeVector, signalTitle, maxLag] = dataForPlotAutoCorrelation(obj, descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
@@ -938,7 +950,7 @@ classdef Mouse < handle
             
             [gcampType, jrgecoType] = obj.findGcampJrgecoType();
             
-            title(ax, {CrossType + ", Signal From: " +  signalTitle, "Mouse: " + obj.Name, "\fontsize{9}Gcamp = " + gcampType + ", JrGeco = " + jrgecoType, "Concatenated: " + shouldReshape, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}, 'FontSize', 12)
+            title(ax, {CrossType,  signalTitle, "Mouse: " + obj.Name, "\fontsize{9}Gcamp = " + gcampType + ", JrGeco = " + jrgecoType, "Concatenated: " + shouldReshape, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}, 'FontSize', 12)
             
             xlabel("Time Shift (sec)", 'FontSize', 14)
             ylabel("Cross Correlation (normalized)", 'FontSize', 14)
@@ -946,7 +958,7 @@ classdef Mouse < handle
             yline(ax, 0, 'Color', [192, 192, 192]/255)
             xline(ax, 0, 'Color', [192, 192, 192]/255)
             
-            annotation('textbox', [.15 .5 .3 .3], 'String', {"Max point at:", "x = " + timeVector(index) + ", y = " + peak}, 'FitBoxToText','on');
+            annotation('textbox', [.15 .4 .3 .3], 'String', {"Max point at:", "x = " + timeVector(index) + ", y = " + peak}, 'FitBoxToText','on');
         end
         
         % ======================== General Helpers ========================

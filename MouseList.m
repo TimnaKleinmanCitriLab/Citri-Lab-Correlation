@@ -98,10 +98,10 @@ classdef MouseList < handle
             
             [correlationMatrix, xLabels, mouseNames] = obj.dataForPlotCorrelationBar(smoothFactor, downsampleFactor);
             
-            obj.drawBarByMouse(correlationMatrix, xLabels, mouseNames, {"Whole signal correlations by mouse"}, smoothFactor, downsampleFactor);
-%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto\" + obj.Type + " Correlation Bar - by mouse")
-            obj.drawBarSummary(correlationMatrix, xLabels, {"Whole signal correlations summary for all mice"}, smoothFactor, downsampleFactor);
-%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto\" + obj.Type + " Correlation Bar - all")
+            obj.drawBarByMouse(correlationMatrix, xLabels, mouseNames, "Correlation", {"Whole signal correlations by mouse"}, smoothFactor, downsampleFactor, true);
+%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Bars\" + obj.Type + " Correlation Bar - by mouse")
+            obj.drawBarSummary(correlationMatrix, xLabels, "Correlation", {"Whole signal correlations summary for all mice"}, smoothFactor, downsampleFactor, true);
+%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Bars\" + obj.Type + " Correlation Bar - all")
         end
         
         function plotSlidingCorrelationBar(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
@@ -117,41 +117,38 @@ classdef MouseList < handle
             
             [medianSlidingCorrelationMatrix, varSlidingCorrelationMatrix, xLabels, mouseNames] = obj.dataForPlotSlidingCorrelationBar(timeWindow, timeShift, smoothFactor, downsampleFactor);
             
-            obj.drawBarByMouse(medianSlidingCorrelationMatrix, xLabels, mouseNames, {"Median - Sliding window correlation by mouse", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor, true);
-            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto Saved\" + obj.Type + " Median Sliding Correlation Bar - by mouse")
-            obj.drawBarSummary(medianSlidingCorrelationMatrix, xLabels, {"Median - Sliding window correlation summary for all mice", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor, true);
-            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto Saved\" + obj.Type + " Median Sliding Correlation Bar - all")
+            obj.drawBarByMouse(medianSlidingCorrelationMatrix, xLabels, mouseNames, "Correlation", {"Median - Sliding window correlation by mouse", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor, true);
+%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Window Bars\Median\" + obj.Type + " Median Sliding Correlation Bar - by mouse")
+            obj.drawBarSummary(medianSlidingCorrelationMatrix, xLabels, "Correlation", {"Median - Sliding window correlation summary for all mice", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor, true);
+%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Window Bars\Median\" + obj.Type + " Median Sliding Correlation Bar - all")
             
             
-            obj.drawBarByMouse(varSlidingCorrelationMatrix, xLabels, mouseNames, {"Variance - Sliding window correlation by mouse", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor, false);
-            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto Saved\" + obj.Type + " Variance Sliding Correlation Bar - by mouse")
-            obj.drawBarSummary(varSlidingCorrelationMatrix, xLabels, {"Variance - Sliding window correlation summary for all mice", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor, false);
-            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto Saved\" + obj.Type + " Variance Sliding Correlation Bar - all")
+            obj.drawBarByMouse(varSlidingCorrelationMatrix, xLabels, mouseNames, "Correlation", {"Variance - Sliding window correlation by mouse", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor, false);
+%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Window Bars\Variance\" + obj.Type + " Variance Sliding Correlation Bar - by mouse")
+            obj.drawBarSummary(varSlidingCorrelationMatrix, xLabels, "Correlation", {"Variance - Sliding window correlation summary for all mice", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor, false);
+%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Window Bars\Variance\" + obj.Type + " Variance Sliding Correlation Bar - all")
         end
         
-%         function plotCrossCorrelation(obj, gcampXjrgeco, timeVector, signalTitle, smoothFactor, downsampleFactor)
-%             % Draws the plot for the plotCrossCorrelation function.
-%             fig = figure();
-%             
-%             ax = gca;
-%             
-%             plot(ax, timeVector, gcampXjrgeco, 'LineWidth', 1.5);
-%             
-%             [peak, index] = max(gcampXjrgeco);
-%             % hold on
-%             % plot(timeVector(index), peak, 'o')
-%             % hold off
-%             
-%             title(ax, {"Signal From: " +  signalTitle, "Mouse: " + obj.Name, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}, 'FontSize', 12)
-%             
-%             xlabel("Time Shift (sec)", 'FontSize', 14)
-%             ylabel("Cross Correlation (normalized)", 'FontSize', 14)
-%             
-%             yline(ax, 0, 'Color', [192, 192, 192]/255)
-%             xline(ax, 0, 'Color', [192, 192, 192]/255)
-%             
-%             annotation('textbox', [.15 .5 .3 .3], 'String', {"Max point at:", "x = " + timeVector(index) + ", y = " + peak}, 'FitBoxToText','on');
-%         end
+        function plotCrossAndAutoCorrealtionByMouse(obj, descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
+            [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
+            for mouse = obj.LoadedMouseList
+                mouse.plotCrossCorrelation(descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
+%                 savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross Correlation\" + signalTitle + "\Concat - " + shouldReshape + "\" +  obj.Type + "\" + mouse.Name + " - " + signalTitle)
+                
+%                 mouse.plotAutoCorrelation(descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
+%                 savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto Correlation\" + signalTitle + "\Concat - " + shouldReshape + "\" +  obj.Type + "\" + mouse.Name + signalTitle)
+            end
+        end
+        
+        function plotCrossCorrelationLagBar(obj, descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
+            [signalTitle, firstSignal, secondSignal, timeLagVec, maxHeightVec, mouseNames] = obj.dataForPlotCrossCorrelationLagBar(descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape);
+            
+            obj.drawBarByMouse(timeLagVec, mouseNames, firstSignal + " VS. " + secondSignal, "Lag \fontsize{9}(sec)", {"Cross correlation lag - by mouse", signalTitle, "Max lag - " + maxLag}, smoothFactor, downsampleFactor, true);
+%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross Correlation\" + signalTitle + "\Concat - " + shouldReshape + "\" +  obj.Type + "\" + " Cross correlation lag - by mouse")
+
+            obj.drawBarByMouse(maxHeightVec, mouseNames, firstSignal + " VS. " + secondSignal, "Cross correlation \fontsize{9}(normalized)", {"Cross correlation maximum by mouse", signalTitle, "Max lag - " + maxLag}, smoothFactor, downsampleFactor, true);
+%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross Correlation\" + signalTitle + "\Concat - " + shouldReshape + "\" +  obj.Type + "\" + " Cross correlation maximum - by mouse")
+        end
         
         % ============= Helpers =============
         function [correlationMatrix, finalXLabels, mouseNames] = dataForPlotCorrelationBar(obj, smoothFactor, downsampleFactor)
@@ -192,9 +189,29 @@ classdef MouseList < handle
             end
         end
         
-%         function dataForCrossCorrelation(obj, )
+        function [signalTitle, firstSignal, secondSignal, timeLagVec, maxHeightVec, mouseNames] = dataForPlotCrossCorrelationLagBar(obj, descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
+            timeLagVec = [];
+            maxHeightVec = [];
+            mouseNames = [];
+            
+            for mouse = obj.LoadedMouseList
+                [firstXSecond, timeVector, signalTitle] = mouse.dataForPlotCrossCorrelation(descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape);
+                
+                [peak, index] = max(firstXSecond);
+                
+                % Add to all
+                timeLagVec = [timeLagVec;  timeVector(index)];
+                maxHeightVec = [maxHeightVec, peak];
+                
+                mouseNames = [mouseNames; mouse.Name];
+            end
+            
+            firstSignal = mouse.GCAMP;
+            secondSignal = mouse.JRGECO;
+            
+        end
         
-        function drawBarByMouse(obj, matrix, xLabels, mouseNames, figureTitle, smoothFactor, downsampleFactor, oneToMinusOne)
+        function drawBarByMouse(obj, matrix, xLabels, mouseNames, yLabel, figureTitle, smoothFactor, downsampleFactor, oneToMinusOne)
             % Draws a bar graph of the given labels - where each mouse
             % appears. In the given matrix, each column is a mouse, and
             % each row is a category fitting to the xLabels.
@@ -209,7 +226,7 @@ classdef MouseList < handle
             set(ax,'TickLabelInterpreter','none')
             FigureFinalTitle = [figureTitle, obj.Type, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor];
             title(ax, FigureFinalTitle)
-            ylabel("Correlation")
+            ylabel(yLabel)
             legend(ax, mouseNames, 'Interpreter', 'none', 'Location', 'best')
             
             minY = min(min(matrix));
@@ -226,7 +243,7 @@ classdef MouseList < handle
             end
         end
         
-        function drawBarSummary(obj, matrix, xLabels, figureTitle, smoothFactor, downsampleFactor, oneToMinusOne)
+        function drawBarSummary(obj, matrix, xLabels, yLabel, figureTitle, smoothFactor, downsampleFactor, oneToMinusOne)
             % Draws a bar graph of the given labels - that summarizes the
             % data of all the given mice by category (mean). In the given
             % matrix, each column is a mouse, and each row is a category
@@ -256,7 +273,7 @@ classdef MouseList < handle
             set(ax,'TickLabelInterpreter','none')
             FigureFinalTitle = [figureTitle, obj.Type, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor, "Error bar is SEM"];
             title(ax, FigureFinalTitle)
-            ylabel(["Correlation", "(mean of all mice)"])
+            ylabel([yLabel, "(mean of all mice)"])
             
             % Error bar
             er = errorbar(meanVector, semVector, 'k');
@@ -272,28 +289,6 @@ classdef MouseList < handle
                     ylim(ax, [0, 1])
                 else
                     ylim(ax, [-1, 0])
-                end
-            end
-        end
-        
-        % Delete after use
-        function drawCrossCorrelation(obj, descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
-            for mouse = obj.LoadedMouseList
-                mouse.plotCrossCorrelation(descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
-                savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross Correlation\Concatenated Task\" + obj.Type + "\" + mouse.Name + " - Concatenated Task")
-            end
-        end
-
-        % Delete after use
-        function drawCrossCorrelationFree(obj, maxLag, smoothFactor, downsampleFactor, shouldReshape)
-            for mouse = obj.LoadedMouseList
-                fields = fieldnames(mouse.ProcessedRawData.Free);
-                
-                for index = 1:numel(fields)
-                    tDateHour = fields{index};
-                    descriptionVector = ["Free", (tDateHour)];
-                    
-                    mouse.plotAutoCorrelation(descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
                 end
             end
         end
