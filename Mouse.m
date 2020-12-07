@@ -596,7 +596,7 @@ classdef Mouse < handle
                     for time = obj.CONST_PASSIVE_TIMES
                         descriptionVector = ["Passive", (state), (soundType), (time)];
                         
-                        [curMedianSlidingCorrelation, curVarSlidingCorrelation] = obj.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                        [curMedianSlidingCorrelation, curVarSlidingCorrelation] = obj.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, false);
                         medianSlidingCorrelationVec = [medianSlidingCorrelationVec, curMedianSlidingCorrelation];
                         varSlidingCorrelationVec = [varSlidingCorrelationVec, curVarSlidingCorrelation];
                         
@@ -608,7 +608,7 @@ classdef Mouse < handle
             
             % Task
             descriptionVector = ["Task", "onset"];
-            [curMedianSlidingCorrelation, curVarSlidingCorrelation] = obj.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+            [curMedianSlidingCorrelation, curVarSlidingCorrelation] = obj.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, false);
             medianSlidingCorrelationVec = [medianSlidingCorrelationVec, curMedianSlidingCorrelation];
             varSlidingCorrelationVec = [varSlidingCorrelationVec, curVarSlidingCorrelation];
             
@@ -616,24 +616,30 @@ classdef Mouse < handle
             
             % Free
             descriptionVector = ["Free", "pre"];
-            [curMedianSlidingCorrelation, curVarSlidingCorrelation] = obj.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+            [curMedianSlidingCorrelation, curVarSlidingCorrelation] = obj.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, false);
             medianSlidingCorrelationVec = [medianSlidingCorrelationVec, curMedianSlidingCorrelation];
             varSlidingCorrelationVec = [varSlidingCorrelationVec, curVarSlidingCorrelation];
             xLabels = [xLabels, "Free - pre"];
             
             descriptionVector = ["Free", "post"];
-            [curMedianSlidingCorrelation, curVarSlidingCorrelation] = obj.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+            [curMedianSlidingCorrelation, curVarSlidingCorrelation] = obj.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, false);
             medianSlidingCorrelationVec = [medianSlidingCorrelationVec, curMedianSlidingCorrelation];
             varSlidingCorrelationVec = [varSlidingCorrelationVec, curVarSlidingCorrelation];
             xLabels = [xLabels, "Free - post"];
         end
         
-        function [medianSlidingCorrelation, varSlidingCorrelation] = getWholeSignalSlidingMedian(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor)
+        function [medianSlidingCorrelation, varSlidingCorrelation] = getWholeSignalSlidingMedian(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, shouldShuffel)
             % Returns the mean and median of the sliding window correlation
             % for the given description vector. If no signal exists returns
             % zero.
             if obj.signalExists(descriptionVector)
                 [gcampSignal, jrgecoSignal, ~, ~, fs] = obj.getInformationReshapeDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor);
+                
+                if shouldShuffel
+                    idx = randperm(length(gcampSignal));
+                    gcampSignal(idx) = gcampSignal;
+                    jrgecoSignal(idx) = jrgecoSignal;
+                end
                 
                 [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
                 medianSlidingCorrelation = median(correlationVector);
@@ -762,6 +768,12 @@ classdef Mouse < handle
                 [gcampSignal, jrgecoSignal, ~, ~, ~] = getInformationReshapeDownsampleAndSmooth(obj, descriptionVector, smoothFactor, downsampleFactor);
                 
                 [gcampType, jrgecoType] = obj.findGcampJrgecoType();
+                
+                % Test - wasn't worth it
+%                 gcampSignal = gcampSignal';
+%                 jrgecoSignal = jrgecoSignal';
+%                 tbl = table(gcampSignal,jrgecoSignal);
+%                 scatterhistogram(tbl, 'gcampSignal','jrgecoSignal',  'MarkerStyle', '.')
                 
                 scatter(curPlot, gcampSignal, jrgecoSignal, 5,'filled');
                 
