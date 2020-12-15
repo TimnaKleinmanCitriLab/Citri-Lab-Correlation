@@ -286,6 +286,8 @@ classdef Mouse < handle
             % and at last plots it.
             
             [gcampSignal, jrgecoSignal, timeVector, signalTitle] = obj.dataForPlotAllSessions(descriptionVector, smoothFactor, downsampleFactor);
+            gcampSignal = gcampSignal + 4;
+            
             obj.drawAllSessions(gcampSignal, jrgecoSignal, timeVector, signalTitle, smoothFactor, downsampleFactor)
         end
         
@@ -466,7 +468,7 @@ classdef Mouse < handle
                     for time = obj.CONST_PASSIVE_TIMES
                         
                         descriptionVector = ["Passive", (state), (soundType), (time)];
-                        curCorrelation = obj.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor);
+                        curCorrelation = obj.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor, false);
                         
                         correlationVec = [correlationVec, curCorrelation];
                         xLabels = [xLabels, (time) + ' ' + (state) + ' ' + (soundType)];
@@ -476,28 +478,35 @@ classdef Mouse < handle
             
             % Task
             descriptionVector = ["Task", "onset"];
-            curCorrelation = obj.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor);
+            curCorrelation = obj.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor, false);
             correlationVec = [correlationVec, curCorrelation];
             xLabels = [xLabels, "Task"];
             
             % Free
             descriptionVector = ["Free", "Pre"];
-            curCorrelation = obj.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor);
+            curCorrelation = obj.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor, false);
             correlationVec = [correlationVec, curCorrelation];
             xLabels = [xLabels, "Free - pre"];
             
             descriptionVector = ["Free", "post"];
-            curCorrelation = obj.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor);
+            curCorrelation = obj.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor, false);
             correlationVec = [correlationVec, curCorrelation];
             xLabels = [xLabels, "Free - post"];
         end
         
-        function correlation = getWholeSignalCorrelation(obj, descriptionVector, smoothFactor, downsampleFactor)
+        function correlation = getWholeSignalCorrelation(obj, descriptionVector, smoothFactor, downsampleFactor, shouldShuffel)
             % Returns the correlation between gcamp and jrgeco for the
             % given description vector. If no signal exists returns zero.
             if obj.signalExists(descriptionVector)
                 
                 [gcampSignal, jrgecoSignal, ~, ~, ~] = getInformationReshapeDownsampleAndSmooth(obj, descriptionVector, smoothFactor, downsampleFactor);
+                
+                if shouldShuffel
+                    idx = randperm(length(gcampSignal));
+                    gcampSignal(idx) = gcampSignal;
+%                     jrgecoSignal(idx) = jrgecoSignal;
+                end
+                
                 correlation = corr(gcampSignal', jrgecoSignal');
                 
             else
@@ -534,7 +543,7 @@ classdef Mouse < handle
                 for soundType = obj.CONST_PASSIVE_SOUND_TYPES
                     for time = obj.CONST_PASSIVE_TIMES
                         descriptionVector = ["Passive", (state), (soundType), (time)];
-                        binCount = obj.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                        binCount = obj.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, false);
                         
                         histogramMatrix = [histogramMatrix, binCount'];
                         labels = [labels, (time) + ' ' + (state) + ' ' + (soundType)];
@@ -544,25 +553,25 @@ classdef Mouse < handle
             
             % Task
             descriptionVector = ["Task", "onset"];
-            binCount = obj.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+            binCount = obj.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, false);
             
             histogramMatrix = [histogramMatrix, binCount'];
             labels = [labels, "Task"];
             
             % Free
             descriptionVector = ["Free", "pre"];
-            binCount = obj.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+            binCount = obj.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, false);
             histogramMatrix = [histogramMatrix, binCount'];
             labels = [labels, "Free - pre"];
             
             descriptionVector = ["Free", "post"];
-            binCount = obj.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
+            binCount = obj.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, false);
             histogramMatrix = [histogramMatrix, binCount'];
             labels = [labels, "Free - post"];
             
         end
         
-        function binCount = getWholeSignalSlidingBincount(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor)
+        function binCount = getWholeSignalSlidingBincount(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, shouldShuffel)
             % Returns the bin count of the sliding window values.
             % If no signal exists returns a vector of zeros.
             numOfBins = 100;
@@ -570,6 +579,13 @@ classdef Mouse < handle
             if obj.signalExists(descriptionVector)
                 histogramEdges = linspace(-1, 1, numOfBins + 1);           % Creates x - 1 bins
                 [gcampSignal, jrgecoSignal, ~, ~, fs] = obj.getInformationReshapeDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor);
+                
+                if shouldShuffel
+                    idx = randperm(length(gcampSignal));
+                    gcampSignal(idx) = gcampSignal;
+%                     jrgecoSignal(idx) = jrgecoSignal;
+                end
+                
                 [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
                 
                 [binCount,~] = histcounts(correlationVector, histogramEdges, 'Normalization', 'probability');
@@ -638,11 +654,11 @@ classdef Mouse < handle
                 if shouldShuffel
                     idx = randperm(length(gcampSignal));
                     gcampSignal(idx) = gcampSignal;
-                    jrgecoSignal(idx) = jrgecoSignal;
+%                     jrgecoSignal(idx) = jrgecoSignal;
                 end
                 
                 [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
-                medianSlidingCorrelation = median(correlationVector);
+                medianSlidingCorrelation = median(correlationVector); 
                 varSlidingCorrelation = var(correlationVector);
                 
             else
@@ -910,6 +926,7 @@ classdef Mouse < handle
                 hold on
                 xLabels = [xLabels, labels(index)];
             end
+            hold off
             
             ax.XLabel.String = 'Correlation';
             ax.YLabel.String = 'Amount';

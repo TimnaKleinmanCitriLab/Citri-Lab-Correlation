@@ -5,7 +5,8 @@ for mouseList = listOfLists
 %     mouseList.plotSlidingCorrelationBar(3, 0.2, 300, 10)
 %     mouseList.plotCrossCorrelationLagBar(["Free", "post"], 1.5, 300, 10, true)
 %     mouseList.plotCrossCorrelationLagBar(["Passive", "awake","FS", "post"], 1.5, 300, 10, true)
-    mouseList.plotCrossCorrelationLagBar(["Passive", "awake","BBN", "post"], 1.5, 300, 10, true)
+%     mouseList.plotCrossCorrelationLagBar(["Passive", "awake","BBN", "post"], 1.5, 300, 10, true)
+    mouseList.plotCorrelationScatterPlot(["Free", "post"], 300, 100)
 end
 
 
