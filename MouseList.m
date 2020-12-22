@@ -131,14 +131,11 @@ classdef MouseList < handle
 %             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Window Bars\Variance\" + obj.Type + " Variance Sliding Correlation Bar - all")
         end
         
-        function plotCrossAndAutoCorrealtionByMouse(obj, descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
+        function plotCrossAndAutoCorrealtionByMouse(obj, descriptionVector, maxLag, lim, smoothFactor, downsampleFactor, shouldReshape)
             [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
             for mouse = obj.LoadedMouseList
-                mouse.plotCrossCorrelation(descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
-%                 savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross Correlation\" + signalTitle + "\Concat - " + shouldReshape + "\" +  obj.Type + "\" + mouse.Name + " - " + signalTitle)
-                
-%                 mouse.plotAutoCorrelation(descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
-%                 savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto Correlation\" + signalTitle + "\Concat - " + shouldReshape + "\" +  obj.Type + "\" + mouse.Name + signalTitle)
+                mouse.plotCrossAndAutoCorrelation(descriptionVector, maxLag, lim, smoothFactor, downsampleFactor, shouldReshape)
+%                 savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross And Auto Correlation\" + signalTitle + "\Concat - " + shouldReshape + "\" +  obj.Type + "\" + mouse.Name + " - " + signalTitle)
             end
         end
         
@@ -147,10 +144,10 @@ classdef MouseList < handle
             
             % By mouse
             obj.drawBarByMouse(timeLagVec, mouseNames, firstSignal + " VS. " + secondSignal, "Lag \fontsize{9}(sec)", {"Cross correlation lag - by mouse", signalTitle, "Max lag - " + maxLag}, smoothFactor, downsampleFactor, true);
-            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross Correlation\" + signalTitle + "\Concat - " + shouldReshape + "\" +  obj.Type + "\" + " Cross correlation lag - by mouse")
+%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross Correlation\" + signalTitle + "\Concat - " + shouldReshape + "\" +  obj.Type + "\" + " Cross correlation lag - by mouse")
 
             obj.drawBarByMouse(maxHeightVec, mouseNames, firstSignal + " VS. " + secondSignal, "Cross correlation \fontsize{9}(normalized)", {"Cross correlation maximum by mouse", signalTitle, "Max lag - " + maxLag}, smoothFactor, downsampleFactor, true);
-            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross Correlation\" + signalTitle + "\Concat - " + shouldReshape + "\" +  obj.Type + "\" + " Cross correlation maximum - by mouse")
+%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross Correlation\" + signalTitle + "\Concat - " + shouldReshape + "\" +  obj.Type + "\" + " Cross correlation maximum - by mouse")
             
         end
         
@@ -185,13 +182,42 @@ classdef MouseList < handle
             end
             
             obj.drawRelativeBubbleByMouse(miceCorrelation, miceSliding, miceNames, signalTitle, smoothFactor, downsampleFactor)
-%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding\" + obj.Type + " - " + signalTitle + " - By Mouse")
-            obj.drawTwoBubble(miceCorrelation, shuffledCorrelation, miceSliding, shuffledSliding, signalTitle, smoothFactor, downsampleFactor)
-%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding\" + obj.Type + " - " + signalTitle + " - All Mice")
-
+            %             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding\" + obj.Type + " - " + signalTitle + " - By Mouse")
+            obj.drawTwoBubble(miceCorrelation, shuffledCorrelation, miceSliding, shuffledSliding, signalTitle, smoothFactor, downsampleFactor, true)
+            %             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding\" + obj.Type + " - " + signalTitle + " - All Mice")
+            
+        end
+        
+        function plotCorrOnly(obj, descriptionVector, smoothFactor, downsampleFactor)
+            [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
+            
+            miceCorrelation = [];
+            shuffledCorrelation = [];
+            
+            miceNames = [];
+            
+            for mouse = obj.LoadedMouseList
+                % Correlation
+                mouseCorrelation = mouse.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor, false);
+                miceCorrelation = [miceCorrelation, mouseCorrelation];
+                
+                curShuffleCorrelation = mouse.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor, true);
+                shuffledCorrelation = [shuffledCorrelation, curShuffleCorrelation];
+                
+                % General
+                miceNames = [miceNames, mouse.Name];
+            end
+            
+            obj.drawSingleBubbleByMouse(miceCorrelation, miceNames, signalTitle, smoothFactor, downsampleFactor)
+%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Bubble\" + obj.Type + " - " + signalTitle + " - By Mouse")
+            obj.drawSingleBubble(miceCorrelation, shuffledCorrelation, signalTitle, smoothFactor, downsampleFactor, true)
+%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Bubble\" + obj.Type + " - " + signalTitle + " - All Mice")
+            
         end
         
         function plotHistogram(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            
+            % Data
             [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
             
             histogramMatrix = [];
@@ -201,12 +227,13 @@ classdef MouseList < handle
                 binCount = mouse.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, false);
                 histogramMatrix = [histogramMatrix, binCount'];
                 miceNames = [miceNames, mouse.Name];
-                
-                binCount = mouse.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, true);
-                histogramMatrix = [histogramMatrix, binCount'];
-                miceNames = [miceNames, 'Shuffled for ' + mouse.Name];
             end
             
+            binCount = mouse.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, true);
+            histogramMatrix = [histogramMatrix, binCount'];
+            miceNames = [miceNames, 'Shuffled'];
+            
+            % Plot
             fig = figure();
             ax = axes;
             x = [-0.99: 0.02: 0.99];
@@ -393,7 +420,7 @@ classdef MouseList < handle
             
         end
         
-        function drawTwoBubble(obj, first, firstRandom, second, secondRandom, signalTitle, smoothFactor, downsampleFactor)
+        function drawTwoBubble(obj, first, firstRandom, second, secondRandom, signalTitle, smoothFactor, downsampleFactor, plotIndividuals)
             
             % Calcl Mean
             firstMean = mean(first);
@@ -416,23 +443,81 @@ classdef MouseList < handle
             errorbar(ax, xAxe, [firstMean, secondMean], [firstSEM, secondSEM],'o', 'LineWidth', 1, 'color', 'blue', 'MarkerFaceColor', 'blue', 'MarkerSize', 6, 'CapSize', 12)
             hold on
             errorbar(ax, xAxe, [firstRandomMean, secondRandomMean], [firstRandomSEM, secondRandomSEM],'o', 'LineWidth', 1, 'color', 'black', 'MarkerFaceColor', 'black', 'MarkerSize', 6, 'CapSize', 12)
-            
-            for idx = 1:size(first, 2)
-                plot(ax, xAxe, [first(idx), second(idx)], 'o-', 'color', '#C0C0C0')
-                hold on
+            if plotIndividuals
+                for idx = 1:size(first, 2)
+                    plot(ax, xAxe, [first(idx), second(idx)], 'o-', 'color', '#C0C0C0')
+                    hold on
+                end
             end
             hold off
             
-            hold off
-            
             % Titles
-            legend(ax, 'Mice', 'Shuffled', 'Individuals', 'Location', 'best')           
+            legend(ax, 'Mice', 'Shuffled', 'Individuals', 'Location', 'best')
             
             title(ax, {"Correlation Vs. Sliding Correlation - all mice", obj.Type, signalTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             xlim(ax, [0.75, 1.75])
             ax.XTick = xAxe;
             ax.XTickLabel = ["Correlation", "Sliding Correlation \fontsize{7}(median)"];
             ylabel(ax, "Correlation / Median of sliding correlation")
+        end
+        
+        function drawSingleBubbleByMouse(obj, first, miceNames, signalTitle, smoothFactor, downsampleFactor)
+            fig = figure('Position', [711,425,401,511]);
+            ax = axes;
+            
+            xAxe = [1];
+            
+            for idx = 1:size(miceNames, 2)
+                plot(ax, xAxe, [first(idx)], 'o-')
+                hold on
+            end
+            hold off
+            
+            legend(ax, miceNames, 'Location', 'best')
+            
+            title(ax, {"Correlation", obj.Type, signalTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            xlim(ax, [0.85, 1.15])
+            ax.XTick = xAxe;
+            ax.XTickLabel = ["Correlation"];
+            ylabel(ax, "Correlation")
+            
+        end
+        
+        function drawSingleBubble(obj, first, firstRandom, signalTitle, smoothFactor, downsampleFactor, plotIndividuals)
+            
+            % Calcl Mean
+            firstMean = mean(first);
+            firstRandomMean = mean(firstRandom);
+            
+            % Calc SEM
+            firstSEM = std(first)/sqrt(length(first));
+            firstRandomSEM = std(firstRandom)/sqrt(length(firstRandom));
+            
+            % Figure
+            fig = figure('Position', [711,425,401,511]);
+            ax = axes;
+            xAxe = [1];
+            
+            % Plot
+            errorbar(ax, xAxe, [firstMean], [firstSEM,],'o', 'LineWidth', 1, 'color', 'blue', 'MarkerFaceColor', 'blue', 'MarkerSize', 6, 'CapSize', 12)
+            hold on
+            errorbar(ax, xAxe, [firstRandomMean], [firstRandomSEM],'o', 'LineWidth', 1, 'color', 'black', 'MarkerFaceColor', 'black', 'MarkerSize', 6, 'CapSize', 12)
+            if plotIndividuals
+                for idx = 1:size(first, 2)
+                    plot(ax, xAxe, [first(idx)], 'o-', 'color', '#C0C0C0')
+                    hold on
+                end
+            end
+            hold off
+            
+            % Titles
+            legend(ax, 'Mice', 'Shuffled', 'Individuals', 'Location', 'best')
+            
+            title(ax, {"Correlation - all mice", obj.Type, signalTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            xlim(ax, [0.85, 1.15])
+            ax.XTick = xAxe;
+            ax.XTickLabel = ["Correlation"];
+            ylabel(ax, "Correlation")
         end
         
     end

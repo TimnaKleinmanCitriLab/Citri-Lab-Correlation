@@ -365,7 +365,7 @@ classdef Mouse < handle
             
         end
         
-        % ======= Sliding Correlation =======
+        % ======= Sliding Correlation ====                                                                                                                                   ===
         function plotSlidingCorrelationAll(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor)
             % Plots the gcamp and jrgeco signals from all the mouses'
             % sessions according to the description vector (see vectors
@@ -423,22 +423,29 @@ classdef Mouse < handle
         end
         
         % ======= Cross Correlation =======
-        function plotCrossCorrelation(obj, descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
+        function plotCrossAndAutoCorrelation(obj, descriptionVector, maxLag, lim, smoothFactor, downsampleFactor, shouldReshape)
+            
+            [firstXSecond, timeVector, signalTitle] = obj.dataForPlotCrossCorrelation(descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape);
+            [gcampXgcamp, jrgecoXjrgeco, ~, ~] = obj.dataForPlotAutoCorrelation(descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape);
+            
+            [first, second] = obj.findGcampJrgecoType();
+            
+            obj.drawCrossCorrelation([firstXSecond; gcampXgcamp; jrgecoXjrgeco], timeVector, lim, ["Cross", "Auto Gcamps", "Auto JrGeco"], signalTitle, "Cross and Auto Correlation Between " + first + " and " + second, smoothFactor, downsampleFactor, shouldReshape)
+        end
+        
+        function plotCrossCorrelation(obj, descriptionVector, maxLag, lim, smoothFactor, downsampleFactor, shouldReshape)
             [firstXSecond, timeVector, signalTitle] = obj.dataForPlotCrossCorrelation(descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape);
             
             first = obj.GCAMP;
             second = obj.JRGECO;
             
-            obj.drawCrossCorrelation(firstXSecond, timeVector, signalTitle, "Cross Correlation between " + first + " and " + second, smoothFactor, downsampleFactor, shouldReshape)
-%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross Correlation\Free\" + obj.Name + " - " + signalTitle)
+            obj.drawCrossCorrelation([firstXSecond], timeVector, lim, ["Cross"], signalTitle, "Cross Correlation between " + first + " and " + second, smoothFactor, downsampleFactor, shouldReshape)
         end
         
-        function plotAutoCorrelation(obj, descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
+        function plotAutoCorrelation(obj, descriptionVector, maxLag, lim, smoothFactor, downsampleFactor, shouldReshape)
             [gcampXgcamp, jrgecoXjrgeco, timeVector, signalTitle] = obj.dataForPlotAutoCorrelation(descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape);
-            obj.drawCrossCorrelation(gcampXgcamp, timeVector, signalTitle, "Auto Correlation - Gcamp", smoothFactor, downsampleFactor, shouldReshape)
-%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto Correlation\Concatenated Task\OfcAccMice\" + obj.Name + " - gcamp - " + signalTitle)
-            obj.drawCrossCorrelation(jrgecoXjrgeco, timeVector, signalTitle, "Auto Correlation - JrGeco", smoothFactor, downsampleFactor, shouldReshape)
-%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Auto Correlation\Concatenated Task\OfcAccMice\" + obj.Name + " - jrgeco -  " + signalTitle)
+            
+            obj.drawCrossCorrelation([gcampXgcamp; jrgecoXjrgeco], timeVector, lim, ["Auto Gcamps", "Auto JrGeco"], signalTitle, "Auto Correlation", smoothFactor, downsampleFactor, shouldReshape)
         end
         
         % ============= Helpers =============
@@ -669,7 +676,7 @@ classdef Mouse < handle
         end
         
         function [firstXSecond, timeVector, signalTitle, maxLag] = dataForPlotCrossCorrelation(obj, descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
-            % REturns the cross correlation between the first signal and
+            % Returns the cross correlation between the first signal and
             % the second (reversed gcamp and geco if reversed in mouse)
             
             if shouldReshape
@@ -744,8 +751,8 @@ classdef Mouse < handle
             jrgecoXjrgeco = zeros(rows, round(fs * maxLag) * 2 + 1);
             
             for index = 1:rows
-                gcampXgcamp(index,:) = xcorr(gcampSignal(index,:), round(fs * maxLag), 'normalized');               % TODO - think if should normalize before or after
-                jrgecoXjrgeco(index,:) = xcorr(jrgecoSignal(index,:), round(fs * maxLag), 'normalized');               % TODO - think if should normalize before or after
+                gcampXgcamp(index,:) = xcorr(gcampSignal(index,:), round(fs * maxLag), 'normalized');
+                jrgecoXjrgeco(index,:) = xcorr(jrgecoSignal(index,:), round(fs * maxLag), 'normalized');
             end
             gcampXgcamp = sum(gcampXgcamp, 1) / rows;
             jrgecoXjrgeco = sum(jrgecoXjrgeco, 1) / rows;
@@ -964,18 +971,20 @@ classdef Mouse < handle
             end
         end
         
-        function drawCrossCorrelation(obj, gcampXjrgeco, timeVector, signalTitle, CrossType, smoothFactor, downsampleFactor, shouldReshape)
+        function drawCrossCorrelation(obj, crossSignalList, timeVector, lim, legendList, signalTitle, CrossType, smoothFactor, downsampleFactor, shouldReshape)
             % Draws the plot for the plotCrossCorrelation function.
             fig = figure();
             
             ax = gca;
             
-            plot(ax, timeVector, gcampXjrgeco, 'LineWidth', 1.5);
+            for idx = 1:size(crossSignalList, 1)
+                plot(ax, timeVector, crossSignalList(idx,:), 'LineWidth', 1.5);
+                hold on
+            end
+            hold off
             
-            [peak, index] = max(gcampXjrgeco);
-            % hold on
-            % plot(timeVector(index), peak, 'o')
-            % hold off
+            legend(legendList, 'Location', 'best')
+            set(0,'DefaultLegendAutoUpdate','off')
             
             [gcampType, jrgecoType] = obj.findGcampJrgecoType();
             
@@ -986,8 +995,7 @@ classdef Mouse < handle
             
             yline(ax, 0, 'Color', [192, 192, 192]/255)
             xline(ax, 0, 'Color', [192, 192, 192]/255)
-            
-            annotation('textbox', [.15 .4 .3 .3], 'String', {"Max point at:", "x = " + timeVector(index) + ", y = " + peak}, 'FitBoxToText','on');
+            xlim([-lim, lim])
         end
         
         % ======================== General Helpers ========================
