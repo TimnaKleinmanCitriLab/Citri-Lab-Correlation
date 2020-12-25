@@ -134,9 +134,38 @@ classdef MouseList < handle
         function plotCrossAndAutoCorrealtionByMouse(obj, descriptionVector, maxLag, lim, smoothFactor, downsampleFactor, shouldReshape)
             [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
             for mouse = obj.LoadedMouseList
-                mouse.plotCrossAndAutoCorrelation(descriptionVector, maxLag, lim, smoothFactor, downsampleFactor, shouldReshape)
-%                 savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross And Auto Correlation\" + signalTitle + "\Concat - " + shouldReshape + "\" +  obj.Type + "\" + mouse.Name + " - " + signalTitle)
+                if mouse.signalExists(descriptionVector)
+                    mouse.plotCrossAndAutoCorrelation(descriptionVector, maxLag, lim, smoothFactor, downsampleFactor, shouldReshape)
+%                     savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross And Auto Correlation\" + signalTitle + "\Concat - " + shouldReshape + "\" +  obj.Type + "\" + mouse.Name + " - " + signalTitle)
+                end
             end
+        end
+        
+        function plotCrossAndAutoCorrealtionAverage(obj, descriptionVector, maxLag, lim, smoothFactor, downsampleFactor, shouldReshape)
+            [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
+            allMiceCross = [];
+            allMiceAutoFirst = [];
+            allMiceAutoSecond = [];
+            
+            for mouse = obj.LoadedMouseList
+                if mouse.signalExists(descriptionVector)
+                    [firstXSecond, timeVector, signalTitle] = mouse.dataForPlotCrossCorrelation(descriptionVector, lim, smoothFactor, downsampleFactor, shouldReshape);
+                    [firstXfirst, secondXsecond, ~, ~] = mouse.dataForPlotAutoCorrelation(descriptionVector, lim, smoothFactor, downsampleFactor, shouldReshape);
+                    
+                    allMiceCross = [allMiceCross; firstXSecond];
+                    allMiceAutoFirst = [allMiceAutoFirst; firstXfirst];
+                    allMiceAutoSecond = [allMiceAutoSecond; secondXsecond];
+                    
+                end
+            end
+            meanMiceCross = mean(allMiceCross, 1);
+            meanMiceAutoFirst = mean(allMiceAutoFirst);
+            meanMiceAutoSecond = mean(allMiceAutoSecond);
+            
+            first = mouse.GCAMP;
+            second = mouse.JRGECO;
+            
+            mouse.drawCrossCorrelation([meanMiceCross; meanMiceAutoFirst], timeVector, lim, ["Cross", "Auto - " + first], signalTitle, "Cross and Auto Correlation Between " + first + " and " + second + " - ALL MICE", smoothFactor, downsampleFactor, shouldReshape)
         end
         
         function plotCrossCorrelationLagBar(obj, descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
