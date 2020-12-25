@@ -15,6 +15,8 @@ classdef Mouse < handle
         CONST_DATA_BY_MOVEMENT = "CueInCloud_comb_movement.mat";
         CONST_DATA_BY_ONSET = "CueInCloud_comb_t_onset.mat";
         
+        CONST_TASK_OUTCOMES = ["correct", "late", "omitted", "premature"]
+        
         CONST_TASK_TRIAL_TIME = 20;
         
         % Passive
@@ -28,6 +30,7 @@ classdef Mouse < handle
         
         % Free
         CONST_FREE_DATA = "free\Free_comb.mat";
+        
     end
     
     properties
@@ -422,15 +425,61 @@ classdef Mouse < handle
             
         end
         
+        function plotSlidingCorrelationTaskByOutcome(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            descriptionVector = ["Task", straightenedBy];
+            [gcampSignal, jrgecoSignal, signalTitle, trialTime, fs] = obj.getInformationDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor, false);
+            tInfo = obj.Info.Task.(straightenedBy);
+            
+            outcomesAmount = size(obj.CONST_TASK_OUTCOMES, 2);
+            outcomes = cell(outcomesAmount, 2);         % Rows for outcome type, cols 1 - gcamp, 2 - geco
+            outcomesMeanGcamp = zeros(outcomesAmount, size(gcampSignal, 2));
+            outcomesMeanJrgeco = zeros(outcomesAmount, size(gcampSignal, 2));
+            outcomesMeanSliding = zeros(outcomesAmount, XXXXXXXXXXXXX);
+            
+            for indx = 1:outcomesAmount
+                outcome = obj.CONST_TASK_OUTCOMES(indx);
+                gcampOutcomeMatrix = gcampSignal(tInfo.trial_result == outcome, :);
+                jrgecoOutcomeMatrix = jrgecoSignal(tInfo.trial_result == outcome, :);
+                
+                slidingCorrMatrix = zeros(size(gcampSignal, 1), XXXXXXXXXXXXX);
+                
+                outcomesMeanGcamp(indx, :) = mean(gcampOutcomeMatrix);
+                outcomesMeanJrgeco(indx, :) = mean(jrgecoOutcomeMatrix);
+                outcomesMeanSliding(indx, :) = mean(slidingCorrMatrix);
+                
+                
+                outcomes(indx,1) = {gcampSignal(tInfo.trial_result == outcome, :)};
+                outcomes(indx,2) = {jrgecoSignal(tInfo.trial_result == outcome, :)};
+            end
+            
+            slidingFigure = figure;
+            timeVec = linspace(-5, 15, size(gcampSignal, 1));
+            
+            for indx = 1:outcomesAmount
+                currentPlot = subplot(outcomesAmount, 2, indx);
+                gcampSignal = outcomes(indx,1);
+                gcampSignal = gcampSignal{:};
+                jrgecoSignal = outcomes(indx,2);
+                jrgecoSignal = 
+                for row = 1:size(gcampSignal,1)
+                    
+                end
+                plot()
+                
+            end
+            
+        end
+        
         % ======= Cross Correlation =======
         function plotCrossAndAutoCorrelation(obj, descriptionVector, maxLag, lim, smoothFactor, downsampleFactor, shouldReshape)
             
             [firstXSecond, timeVector, signalTitle] = obj.dataForPlotCrossCorrelation(descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape);
-            [gcampXgcamp, jrgecoXjrgeco, ~, ~] = obj.dataForPlotAutoCorrelation(descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape);
+            [firstXfirst, secondXsecond, ~, ~] = obj.dataForPlotAutoCorrelation(descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape);
             
-            [first, second] = obj.findGcampJrgecoType();
+            first = obj.GCAMP;
+            second = obj.JRGECO;
             
-            obj.drawCrossCorrelation([firstXSecond; gcampXgcamp; jrgecoXjrgeco], timeVector, lim, ["Cross", "Auto Gcamps", "Auto JrGeco"], signalTitle, "Cross and Auto Correlation Between " + first + " and " + second, smoothFactor, downsampleFactor, shouldReshape)
+            obj.drawCrossCorrelation([firstXSecond; firstXfirst], timeVector, lim, ["Cross", "Auto - " + first], signalTitle, "Cross and Auto Correlation Between " + first + " and " + second, smoothFactor, downsampleFactor, shouldReshape)
         end
         
         function plotCrossCorrelation(obj, descriptionVector, maxLag, lim, smoothFactor, downsampleFactor, shouldReshape)
@@ -439,7 +488,7 @@ classdef Mouse < handle
             first = obj.GCAMP;
             second = obj.JRGECO;
             
-            obj.drawCrossCorrelation([firstXSecond], timeVector, lim, ["Cross"], signalTitle, "Cross Correlation between " + first + " and " + second, smoothFactor, downsampleFactor, shouldReshape)
+            obj.drawCrossCorrelation([firstXSecond], timeVector, lim, ["Cross"], signalTitle, "Cross Correlation Between " + first + " and " + second, smoothFactor, downsampleFactor, shouldReshape)
         end
         
         function plotAutoCorrelation(obj, descriptionVector, maxLag, lim, smoothFactor, downsampleFactor, shouldReshape)
@@ -454,7 +503,7 @@ classdef Mouse < handle
             % Returns the relevant signals smoothed and down sampled and a
             % fitting time vector to the plotAllSessions function
             
-            [gcampSignal, jrgecoSignal, signalTitle, totalTime, ~] = obj.getInformationReshapeDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor);
+            [gcampSignal, jrgecoSignal, signalTitle, totalTime, ~] = obj.getInformationDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor, true);
             
             timeVector = linspace(0, totalTime, size(gcampSignal, 2));
         end
@@ -506,7 +555,7 @@ classdef Mouse < handle
             % given description vector. If no signal exists returns zero.
             if obj.signalExists(descriptionVector)
                 
-                [gcampSignal, jrgecoSignal, ~, ~, ~] = getInformationReshapeDownsampleAndSmooth(obj, descriptionVector, smoothFactor, downsampleFactor);
+                [gcampSignal, jrgecoSignal, ~, ~, ~] = getInformationDownsampleAndSmooth(obj, descriptionVector, smoothFactor, downsampleFactor, true);
                 
                 if shouldShuffel
                     idx = randperm(length(gcampSignal));
@@ -527,7 +576,7 @@ classdef Mouse < handle
             % window correlation and a time vector for it.
             % This function is a helper for the plotSlidingCorrelation func
             
-            [gcampSignal, jrgecoSignal, signalTitle, totalTime, fs] = obj.getInformationReshapeDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor);
+            [gcampSignal, jrgecoSignal, signalTitle, totalTime, fs] = obj.getInformationDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor, true);
             [correlationVector, correlationTimeVector] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
             
             signalTimeVector = linspace(0, totalTime, size(gcampSignal, 2));
@@ -585,7 +634,7 @@ classdef Mouse < handle
             
             if obj.signalExists(descriptionVector)
                 histogramEdges = linspace(-1, 1, numOfBins + 1);           % Creates x - 1 bins
-                [gcampSignal, jrgecoSignal, ~, ~, fs] = obj.getInformationReshapeDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor);
+                [gcampSignal, jrgecoSignal, ~, ~, fs] = obj.getInformationDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor, true);
                 
                 if shouldShuffel
                     idx = randperm(length(gcampSignal));
@@ -656,7 +705,7 @@ classdef Mouse < handle
             % for the given description vector. If no signal exists returns
             % zero.
             if obj.signalExists(descriptionVector)
-                [gcampSignal, jrgecoSignal, ~, ~, fs] = obj.getInformationReshapeDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor);
+                [gcampSignal, jrgecoSignal, ~, ~, fs] = obj.getInformationDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor, true);
                 
                 if shouldShuffel
                     idx = randperm(length(gcampSignal));
@@ -680,7 +729,7 @@ classdef Mouse < handle
             % the second (reversed gcamp and geco if reversed in mouse)
             
             if shouldReshape
-                [gcampSignal, jrgecoSignal, signalTitle, trialTime, fs] = obj.getInformationReshapeDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor);
+                [gcampSignal, jrgecoSignal, signalTitle, trialTime, fs] = obj.getInformationDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor, true);
             
             else
                 [gcampSignal, jrgecoSignal, trialTime, fs, signalTitle] = obj.getRawSignals(descriptionVector);
@@ -719,43 +768,31 @@ classdef Mouse < handle
             firstXSecond = sum(firstXSecond, 1) / rows;
         end
         
-        function [gcampXgcamp, jrgecoXjrgeco, timeVector, signalTitle, maxLag] = dataForPlotAutoCorrelation(obj, descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
-            if shouldReshape
-                [gcampSignal, jrgecoSignal, signalTitle, trialTime, fs] = obj.getInformationReshapeDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor);
-                
-            else
-            
-                [gcampSignal, jrgecoSignal, trialTime, fs, signalTitle] = obj.getRawSignals(descriptionVector);
-
-                smoothedGcampSignal = zeros(size(gcampSignal, 1), size(gcampSignal, 2));
-                smoothedJrgecoSignal = zeros(size(gcampSignal, 1), size(gcampSignal, 2));
-
-                for index = 1:size(gcampSignal, 1)
-                    smoothedGcampSignal(index,:) = smooth(gcampSignal(index,:)', smoothFactor)';
-                    smoothedJrgecoSignal(index,:) = smooth(jrgecoSignal(index,:)', smoothFactor)';
-                end
-                
-                gcampSignal = downsample(smoothedGcampSignal', downsampleFactor)';
-                jrgecoSignal = downsample(smoothedJrgecoSignal', downsampleFactor)';
-                fs = fs / downsampleFactor;
-            end
+        function [firstXfirst, secondXsecond, timeVector, signalTitle, maxLag] = dataForPlotAutoCorrelation(obj, descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
+            [gcampSignal, jrgecoSignal, signalTitle, trialTime, fs] = obj.getInformationDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor, shouldReshape);
             
             if maxLag == 0
                 maxLag = trialTime;
             end
             
+            if obj.GcampJrgecoReversed
+                temp = gcampSignal;
+                gcampSignal = jrgecoSignal;
+                jrgecoSignal = temp;
+            end
+            
             rows = size(gcampSignal, 1);
             
             timeVector = linspace(-maxLag, maxLag, round(fs * maxLag) * 2 + 1);
-            gcampXgcamp = zeros(rows, round(fs * maxLag) * 2 + 1);
-            jrgecoXjrgeco = zeros(rows, round(fs * maxLag) * 2 + 1);
+            firstXfirst = zeros(rows, round(fs * maxLag) * 2 + 1);
+            secondXsecond = zeros(rows, round(fs * maxLag) * 2 + 1);
             
             for index = 1:rows
-                gcampXgcamp(index,:) = xcorr(gcampSignal(index,:), round(fs * maxLag), 'normalized');
-                jrgecoXjrgeco(index,:) = xcorr(jrgecoSignal(index,:), round(fs * maxLag), 'normalized');
+                firstXfirst(index,:) = xcorr(gcampSignal(index,:), round(fs * maxLag), 'normalized');
+                secondXsecond(index,:) = xcorr(jrgecoSignal(index,:), round(fs * maxLag), 'normalized');
             end
-            gcampXgcamp = sum(gcampXgcamp, 1) / rows;
-            jrgecoXjrgeco = sum(jrgecoXjrgeco, 1) / rows;
+            firstXfirst = sum(firstXfirst, 1) / rows;
+            secondXsecond = sum(secondXsecond, 1) / rows;
         end
         
         % ==== draw ====
@@ -788,7 +825,7 @@ classdef Mouse < handle
             % itself.
             
             if obj.signalExists(descriptionVector)
-                [gcampSignal, jrgecoSignal, ~, ~, ~] = getInformationReshapeDownsampleAndSmooth(obj, descriptionVector, smoothFactor, downsampleFactor);
+                [gcampSignal, jrgecoSignal, ~, ~, ~] = getInformationDownsampleAndSmooth(obj, descriptionVector, smoothFactor, downsampleFactor, true);
                 
                 [gcampType, jrgecoType] = obj.findGcampJrgecoType();
                 
@@ -988,7 +1025,7 @@ classdef Mouse < handle
             
             [gcampType, jrgecoType] = obj.findGcampJrgecoType();
             
-            title(ax, {CrossType,  signalTitle, "Mouse: " + obj.Name, "\fontsize{9}Gcamp = " + gcampType + ", JrGeco = " + jrgecoType, "Concatenated: " + shouldReshape, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}, 'FontSize', 12)
+            title(ax, {CrossType,  signalTitle, "Mouse: " + obj.Name, "\fontsize{9}" + gcampType + " = gcamp" + ", " + jrgecoType + " = jrGeco", "Concatenated: " + shouldReshape, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}, 'FontSize', 12)
             
             xlabel("Time Shift (sec)", 'FontSize', 14)
             ylabel("Cross Correlation (normalized)", 'FontSize', 14)
@@ -1100,7 +1137,7 @@ classdef Mouse < handle
             end
         end
         
-        function [gcampSignal, jrgecoSignal, signalTitle, totalTime, fs] = getInformationReshapeDownsampleAndSmooth(obj, descriptionVector, smoothFactor, downsampleFactor)
+        function [gcampSignal, jrgecoSignal, signalTitle, totalTime, fs] = getInformationDownsampleAndSmooth(obj, descriptionVector, smoothFactor, downsampleFactor, shouldReshape)
             % Returns the signals (according to the description vector)
             % after first concatenating each one to a continuous signal
             % then smoothing them and then down sampling them.
@@ -1109,58 +1146,38 @@ classdef Mouse < handle
             % per second (fs).
             % If there is no such signal, raises an error
             
-            [gcampSignal, jrgecoSignal, trialTime, fs, signalTitle] = obj.getRawSignals(descriptionVector);
+            if shouldReshape
+                [gcampSignal, jrgecoSignal, trialTime, fs, signalTitle] = obj.getRawSignals(descriptionVector);
+                
+                totalTime = size(gcampSignal, 1) * trialTime;
+                
+                gcampSignal = reshape(gcampSignal', 1, []);
+                jrgecoSignal = reshape(jrgecoSignal', 1, []);
+                
+                gcampSignal = smooth(gcampSignal', smoothFactor)';
+                jrgecoSignal = smooth(jrgecoSignal', smoothFactor)';
+                
+                gcampSignal = downsample(gcampSignal, downsampleFactor);
+                jrgecoSignal = downsample(jrgecoSignal, downsampleFactor);
+                fs = fs / downsampleFactor;
             
-            totalTime = size(gcampSignal, 1) * trialTime;
-            
-            gcampSignal = reshape(gcampSignal', 1, []);
-            jrgecoSignal = reshape(jrgecoSignal', 1, []);
-            
-            gcampSignal = smooth(gcampSignal', smoothFactor)';
-            jrgecoSignal = smooth(jrgecoSignal', smoothFactor)';
-            
-            gcampSignal = downsample(gcampSignal, downsampleFactor);
-            jrgecoSignal = downsample(jrgecoSignal, downsampleFactor);
-            fs = fs / downsampleFactor;
-            
-        end
-        
-        % ============================== Old ==============================
-        function plotMouseCrossCorrelations(obj, subPlots, timeVector)
-            [plotByCloud, plotByCue, plotByLick, plotByMove, plotByOnset] = subPlots{:};
-            
-            % TODO - use for on Matfile - for idx = numel(Matfile) ... MatFile{idx}
-            obj.plotGeneralCrossCorrelation(plotByCloud, timeVector, obj.DATA_BY_CLOUD);
-            obj.plotGeneralCrossCorrelation(plotByCue, timeVector, obj.DATA_BY_CUE);
-            obj.plotGeneralCrossCorrelation(plotByLick, timeVector, obj.DATA_BY_LICK);
-            obj.plotGeneralCrossCorrelation(plotByMove, timeVector, obj.DATA_BY_MOVEMENT);
-            obj.plotGeneralCrossCorrelation(plotByOnset, timeVector, obj.DATA_BY_ONSET);
-            
-        end
-        
-        function plotGeneralCrossCorrelation(obj, ax, timeVector, dataBy)
-            dataFile = matfile(obj.FILE_DIRECTORY + obj.FOLDER_DELIMITER + obj.Name + obj.FOLDER_DELIMITER + dataBy);
-            if obj.GcampJrgecoReversed
-                gcampLowered = zscore(dataFile.af_trials')';
-                jrgecoLowered = zscore(dataFile.all_trials')';
             else
-                % gcampLowered = dataFile.all_trials;
-                % gcampLowered = dataFile.all_trials - mean(dataFile.all_trials);% Needs to be lowered so upwards won't give too much weight
-                gcampLowered = zscore(dataFile.all_trials')';   % Another option
-                % jrgecoLowered = dataFile.af_trials;
-                % jrgecoLowered = dataFile.af_trials - mean(dataFile.af_trials); % Needs to be lowered so upwards won't give too much weight
-                jrgecoLowered = zscore(dataFile.af_trials')';   % Another option
+                [gcampSignal, jrgecoSignal, trialTime, fs, signalTitle] = obj.getRawSignals(descriptionVector);
+
+                totalTime = trialTime;
+                
+                smoothedGcampSignal = zeros(size(gcampSignal, 1), size(gcampSignal, 2));
+                smoothedJrgecoSignal = zeros(size(gcampSignal, 1), size(gcampSignal, 2));
+
+                for index = 1:size(gcampSignal, 1)
+                    smoothedGcampSignal(index,:) = smooth(gcampSignal(index,:)', smoothFactor)';
+                    smoothedJrgecoSignal(index,:) = smooth(jrgecoSignal(index,:)', smoothFactor)';
+                end
+                
+                gcampSignal = downsample(smoothedGcampSignal', downsampleFactor)';
+                jrgecoSignal = downsample(smoothedJrgecoSignal', downsampleFactor)';
+                fs = fs / downsampleFactor;
             end
-            
-            rows = size(gcampLowered,1);
-            cols = size(gcampLowered, 2);
-            gcampXjrgeco = zeros(rows, cols * 2 - 1);
-            
-            for index = 1:rows
-                gcampXjrgeco(index,:) = xcorr(gcampLowered(index,:), jrgecoLowered(index,:));
-            end
-            gcampXjrgeco = sum(gcampXjrgeco) / rows;
-            plot(ax, timeVector, gcampXjrgeco)
         end
         
     end
