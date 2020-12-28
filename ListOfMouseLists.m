@@ -115,6 +115,61 @@ classdef ListOfMouseLists < handle
 %             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Window Bars\Sliding of all mice groups - " + signalTitle)
 
         end
+        
+        function plotCorrVsSliding(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            AmountOfGroups = 3;
+            
+            fig = figure('Position', [450,109,961,860]);
+            ax = axes;
+            labels = strings(2 * AmountOfGroups);
+            
+            [~, ~, ~, ~, signalTitle] = obj.ListOfLists(1).LoadedMouseList(1).getRawSignals(descriptionVector);
+            
+            for groupIndx = 1:AmountOfGroups
+                group = obj.ListOfLists(groupIndx);
+                amoutOfMiceInGroup = size(group.LoadedMouseList, 2);
+                
+                miceCorrelation = zeros(1, amoutOfMiceInGroup);
+                shuffledCorrelation = zeros(1, amoutOfMiceInGroup);
+                
+                miceSliding = zeros(1, amoutOfMiceInGroup);
+                shuffledSliding = zeros(1, amoutOfMiceInGroup);
+                
+                for mouseIndx = 1:amoutOfMiceInGroup
+                    mouse = group.LoadedMouseList(mouseIndx);
+                    
+                    % Correlation
+                    mouseCorrelation = mouse.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor, false);
+                    miceCorrelation(1, mouseIndx) = mouseCorrelation;
+                    
+                    curShuffleCorrelation = mouse.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor, true);
+                    shuffledCorrelation(1, mouseIndx) = curShuffleCorrelation;
+                    
+                    % Sliding
+                    [mouseSliding, ~] = mouse.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, false);
+                    miceSliding(1, mouseIndx) = mouseSliding;
+                    
+                    [curShuffledSliding, ~] = mouse.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, true);
+                    shuffledSliding(1, mouseIndx) = curShuffledSliding;
+                end
+                xAxe = [groupIndx * 2 - 1 , groupIndx * 2];
+                labels(1, groupIndx * 2 - 1:groupIndx * 2) = ["Correlation of " + group.Type, "Sliding Correlation (median) of " + group.Type];
+                
+                obj.drawTwoBubble(miceCorrelation, shuffledCorrelation, miceSliding, shuffledSliding, xAxe, ax, true)
+            end
+            
+            % Titles
+            legend(ax, 'Mice Mean', 'Shuffled', 'Individuals', 'Location', 'best')
+            
+            title(ax, {"Correlation Vs. Sliding Correlation", signalTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            xlim(ax, [0.75, AmountOfGroups * 2 + 0.25])
+            ax.XTick = [1: AmountOfGroups * 2];
+            ax.XTickLabel = labels';
+            xtickangle(45)
+            ylabel(ax, "Correlation / Median of sliding correlation")
+            
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\Groups Together\" + signalTitle + " - By Groups")
+        end
     end
     
     methods (Static)
@@ -169,5 +224,28 @@ classdef ListOfMouseLists < handle
             ylabel(ax, yLabel + "\fontsize{8} (mean of all mice)")
         end
         
+        function drawTwoBubble(first, firstShuffled, second, secondShuffled, xAxe, ax, plotIndividuals)
+            
+            % Calcl Mean
+            firstMean = mean(first);
+            firstRandomMean = mean(firstShuffled);
+            secondMean = mean(second);
+            secondRandomMean = mean(secondShuffled);
+            
+            % Calc SEM
+            firstRandomSEM = std(firstShuffled)/sqrt(length(firstShuffled));
+            secondRandomSEM =  std(secondShuffled)/sqrt(length(secondShuffled));
+            
+            % Plot
+             plot(ax, xAxe, [firstMean, secondMean], 'd', 'LineWidth', 1, 'color', '#800080', 'MarkerFaceColor', '#800080', 'MarkerSize', 8)
+            hold on
+            errorbar(ax, xAxe, [firstRandomMean, secondRandomMean], [firstRandomSEM, secondRandomSEM],'o', 'LineWidth', 1, 'color', '#C0C0C0', 'MarkerFaceColor', '#C0C0C0', 'MarkerSize', 6, 'CapSize', 12)
+            if plotIndividuals
+                for idx = 1:size(first, 2)
+                    plot(ax, xAxe, [first(idx), second(idx)], 'o-', 'color', 'black', 'MarkerFaceColor', 'black', 'MarkerSize', 4)
+                    hold on
+                end
+            end
+        end
     end
 end

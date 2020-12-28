@@ -159,8 +159,8 @@ classdef MouseList < handle
                 end
             end
             meanMiceCross = mean(allMiceCross, 1);
-            meanMiceAutoFirst = mean(allMiceAutoFirst);
-            meanMiceAutoSecond = mean(allMiceAutoSecond);
+            meanMiceAutoFirst = mean(allMiceAutoFirst, 1);
+            meanMiceAutoSecond = mean(allMiceAutoSecond, 1);
             
             first = mouse.GCAMP;
             second = mouse.JRGECO;
@@ -183,31 +183,35 @@ classdef MouseList < handle
         function plotCorrVsSliding(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor)
             [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
             
-            miceCorrelation = [];
-            shuffledCorrelation = [];
+            amoutOfMice = size(obj.LoadedMouseList, 2);
             
-            miceSliding = [];
-            shuffledSliding = [];
+            miceCorrelation = zeros(1, amoutOfMice);
+            shuffledCorrelation = zeros(1, amoutOfMice);
             
-            miceNames = [];
+            miceSliding = zeros(1, amoutOfMice);
+            shuffledSliding = zeros(1, amoutOfMice);
             
-            for mouse = obj.LoadedMouseList
+            miceNames = zeros(1, amoutOfMice);
+            
+            for mouseIndx = 1:amoutOfMic
+                mouse = obj.LoadedMouseList(mouseIndx);
+                
                 % Correlation
                 mouseCorrelation = mouse.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor, false);
-                miceCorrelation = [miceCorrelation, mouseCorrelation];
+                miceCorrelation(1, mouseIndx) = mouseCorrelation;
                 
                 curShuffleCorrelation = mouse.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor, true);
-                shuffledCorrelation = [shuffledCorrelation, curShuffleCorrelation];
+                shuffledCorrelation(1, mouseIndx) = curShuffleCorrelation;
                 
                 % Sliding
                 [mouseSliding, ~] = mouse.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, false);
-                miceSliding = [miceSliding, mouseSliding];
+                miceSliding(1, mouseIndx) = mouseSliding;
                 
                 [curShuffledSliding, ~] = mouse.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, true);
-                shuffledSliding = [shuffledSliding, curShuffledSliding];
+                shuffledSliding(1, mouseIndx) = curShuffledSliding;
                 
                 % General
-                miceNames = [miceNames, mouse.Name];
+                miceNames(1, mouseIndx) = mouse.Name;
             end
             
             obj.drawRelativeBubbleByMouse(miceCorrelation, miceSliding, miceNames, signalTitle, smoothFactor, downsampleFactor)
@@ -282,6 +286,18 @@ classdef MouseList < handle
             
             title(ax, {"Sliding Window Histogram for all mice type " + obj.Type, signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             
+        end
+        
+        function plotSlidingCorrelationTaskByOutcome(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            descriptionVector = ["Task", straightenedBy];
+            [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
+            
+            for mouse = obj.LoadedMouseList
+                if mouse.signalExists(descriptionVector)
+                    mouse.plotSlidingCorrelationTaskByOutcome(straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
+                     savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task- Outcome\by " + straightenedBy + "\" + obj.Type + "\" + mouse.Name + " - " + timeWindow + " sec")
+                end
+            end
         end
         
         % ============= Helpers =============
@@ -449,19 +465,19 @@ classdef MouseList < handle
             
         end
         
-        function drawTwoBubble(obj, first, firstRandom, second, secondRandom, signalTitle, smoothFactor, downsampleFactor, plotIndividuals)
+        function drawTwoBubble(obj, first, firstShuffled, second, secondShuffled, signalTitle, smoothFactor, downsampleFactor, plotIndividuals)
             
             % Calcl Mean
             firstMean = mean(first);
-            firstRandomMean = mean(firstRandom);
+            firstRandomMean = mean(firstShuffled);
             secondMean = mean(second);
-            secondRandomMean = mean(secondRandom);
+            secondRandomMean = mean(secondShuffled);
             
             % Calc SEM
             firstSEM = std(first)/sqrt(length(first));
-            firstRandomSEM = std(firstRandom)/sqrt(length(firstRandom));
+            firstRandomSEM = std(firstShuffled)/sqrt(length(firstShuffled));
             secondSEM =  std(second)/sqrt(length(second));
-            secondRandomSEM =  std(secondRandom)/sqrt(length(secondRandom));
+            secondRandomSEM =  std(secondShuffled)/sqrt(length(secondShuffled));
             
             % Figure
             fig = figure('Position', [711,425,401,511]);
