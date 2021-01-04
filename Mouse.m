@@ -473,9 +473,12 @@ classdef Mouse < handle
             % Draw
             figureTitle = {"Sliding Window Correlation from " + signalTitle + " for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)};
             obj.drawTaskByOutcome("sliding window", [-5, 15], signalTimeVector, outcomesMeanGcamp, outcomesMeanJrgeco, [-5, 15],  slidingTimeVector, outcomeFullSliding, outcomesMeanSliding, outcomeSlidingAfter, figureTitle, smoothFactor, downsampleFactor)
+            
         end
         
         function plotSlidingCorrelationOmissionLick(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            
+            lickTypesOrder = ["No Lick", "Lick"];
             
             % Get Data
             descriptionVector = ["Task", straightenedBy];
@@ -489,132 +492,41 @@ classdef Mouse < handle
             gcampSignalLick = fullGcampSignal((tInfo.trial_result == outcome) & (~(isnan(tInfo.first_lick))), :);
             jrgecoSignalLick = fullJrgecoSignal((tInfo.trial_result == outcome) & (~(isnan(tInfo.first_lick))), :);
             
-            noLickCorMatrix = [];
+            noLickCorrMatrix = [];
             
             for rowIndx = 1:size(gcampSignalNoLick, 1)
                 [correlationVector, slidingTimeVector] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignalNoLick(rowIndx, :), jrgecoSignalNoLick(rowIndx, :), fs);
-                noLickCorMatrix = [noLickCorMatrix; correlationVector];
+                noLickCorrMatrix = [noLickCorrMatrix; correlationVector];
             end
             
-            lickCorMatrix = [];
+            lickCorrMatrix = [];
             for rowIndx = 1:size(gcampSignalLick, 1)
                 [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignalLick(rowIndx, :), jrgecoSignalLick(rowIndx, :), fs);
-                lickCorMatrix = [lickCorMatrix; correlationVector];
+                lickCorrMatrix = [lickCorrMatrix; correlationVector];
             end
             
             meanGcampNoLick = mean(gcampSignalNoLick,1 );
             meanJrgecoNoLick = mean(jrgecoSignalNoLick, 1);
-            meanSlidingNoLick = mean(noLickCorMatrix, 1);
+            meanSlidingNoLick = mean(noLickCorrMatrix, 1);
             [slidingAfterNoLick, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, meanGcampNoLick, meanJrgecoNoLick, fs);
             
             meanGcampLick = mean(gcampSignalLick);
             meanJrgecoLick = mean(jrgecoSignalLick);
-            meanSlidingLick = mean(lickCorMatrix);
+            meanSlidingLick = mean(lickCorrMatrix);
             [slidingAfterLick, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, meanGcampLick, meanJrgecoLick, fs);
             
             signalTimeVector = linspace(- 5, trialTime - 5, size(fullGcampSignal, 2));
             slidingTimeVector = slidingTimeVector - 5;
             
-            % Draw Plots
-            slidingFigure = figure('position', [551,163,688,757]);
+            % Plot
+            meanGcamp = [meanGcampNoLick; meanGcampLick];
+            meanJrgeco = [meanJrgecoNoLick; meanJrgecoLick];
+            corrFullMatrix = [{noLickCorrMatrix}; {lickCorrMatrix}];
+            meanSliding = [meanSlidingNoLick; meanSlidingLick];
+            slidingAfter = [slidingAfterNoLick; slidingAfterLick];
             
-            % Signal
-            noLickSignalAx = subplot(4, 2, 1);
-            
-            plot(noLickSignalAx, signalTimeVector, meanGcampNoLick)
-            hold(noLickSignalAx, 'on')
-            plot(noLickSignalAx, signalTimeVector, meanJrgecoNoLick)
-            hold(noLickSignalAx, 'off')
-            legend(noLickSignalAx, ["Gcamp", "JrGeco"])
-            set(noLickSignalAx,'DefaultLegendAutoUpdate','off')
-            
-            title(noLickSignalAx, "Mean signal for omission - no lick", 'Interpreter', 'none')
-            line(noLickSignalAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
-            yl = ylim(noLickSignalAx);
-            line(noLickSignalAx, [0, 0], yl, 'Color', '#C0C0C0')
-            xlim(noLickSignalAx, [-5, 15])
-            ylim(yl)
-            
-            lickSignalAx = subplot(4, 2, 2);
-            
-            plot(lickSignalAx, signalTimeVector, meanGcampLick)
-            hold(lickSignalAx, 'on')
-            plot(lickSignalAx, signalTimeVector, meanJrgecoLick)
-            hold(lickSignalAx, 'off')
-            legend(lickSignalAx, ["Gcamp", "JrGeco"])
-            set(lickSignalAx,'DefaultLegendAutoUpdate','off')
-            
-            title(lickSignalAx, "Mean signal for omission - lick", 'Interpreter', 'none')
-            line(lickSignalAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
-            yl = ylim(lickSignalAx);
-            line(lickSignalAx, [0, 0], yl, 'Color', '#C0C0C0')
-            xlim(lickSignalAx, [-5, 15])
-            ylim(yl)
-            
-            % Heatmap
-            noLickHeatmapAx = subplot(4, 2, 3);
-            
-            title(noLickHeatmapAx, "Heatmap for no lick", 'Interpreter', 'none')
-            im = imagesc(noLickHeatmapAx, noLickCorMatrix);
-            im.XData = linspace(-5, 15, size(noLickCorMatrix, 2));
-            xlim(noLickHeatmapAx, [-5, 15]);
-            ylim(noLickHeatmapAx, [0, size(noLickCorMatrix, 1)]);
-            hold on
-            line(noLickHeatmapAx, [0 0], [0 size(noLickCorMatrix, 1)], 'Color', 'black')
-            hold off
-            
-            lickHeatmapAx = subplot(4, 2, 4);
-            
-            title(lickHeatmapAx, "Heatmap for lick", 'Interpreter', 'none')
-            im = imagesc(lickHeatmapAx, lickCorMatrix);
-            im.XData = linspace(-5, 15, size(lickCorMatrix, 2));
-            xlim(lickHeatmapAx, [-5, 15]);
-            ylim(lickHeatmapAx, [0, size(lickCorMatrix, 1)]);
-            hold on
-            line(lickHeatmapAx, [0 0], [0 size(lickCorMatrix, 1)], 'Color', 'black')
-            hold off
-            
-            % Sliding
-            noLickSlidingAx = subplot(4, 2, 5);
-            plot(noLickSlidingAx, slidingTimeVector, meanSlidingNoLick)
-            
-            title(noLickSlidingAx, "Mean sliding window for omission - no lick", 'Interpreter', 'none')
-            line(noLickSlidingAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
-            xlim(noLickSlidingAx, [-5, 15])
-            ylim(noLickSlidingAx, [-1, 1])
-            line(noLickSlidingAx, [0, 0], [-1, 1], 'Color', '#C0C0C0')
-            
-            lickSlidingAx = subplot(4, 2, 6);
-            plot(lickSlidingAx, slidingTimeVector, meanSlidingLick)
-            
-            title(lickSlidingAx, "Mean sliding window for omission - lick", 'Interpreter', 'none')
-            line(lickSlidingAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
-            xlim(lickSlidingAx, [-5, 15])
-            ylim(lickSlidingAx, [-1, 1])
-            line(lickSlidingAx, [0, 0], [-1, 1], 'Color', '#C0C0C0')
-            
-            % Second Sliding
-            noLickSlidingAfterAx = subplot(4, 2, 7);
-            
-            plot(noLickSlidingAfterAx, slidingTimeVector, slidingAfterNoLick)
-            
-            title(noLickSlidingAfterAx, "Sliding window for omission - no lick", 'Interpreter', 'none')
-            line(noLickSlidingAfterAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
-            xlim(noLickSlidingAfterAx, [-5, 15])
-            ylim(noLickSlidingAfterAx, [-1, 1])
-            line(noLickSlidingAfterAx, [0, 0], [-1, 1], 'Color', '#C0C0C0')
-            
-            lickSlidingAfterAx = subplot(4, 2, 8);
-            
-            plot(lickSlidingAfterAx, slidingTimeVector, slidingAfterLick)
-            
-            title(lickSlidingAfterAx, "Sliding window for omission - lick", 'Interpreter', 'none')
-            line(lickSlidingAfterAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
-            xlim(lickSlidingAfterAx, [-5, 15])
-            ylim(lickSlidingAfterAx, [-1, 1])
-            line(lickSlidingAfterAx, [0, 0], [-1, 1], 'Color', '#C0C0C0')
-            
-            sgtitle({"Omission sliding window correlation from " + signalTitle + " for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}, 'FontWeight', 'bold')
+            figureTitle = {"Omission sliding window correlation from " + signalTitle + " for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)};            
+            obj.drawOmissionLick("Sliding winodw",  lickTypesOrder, [-5, 15], signalTimeVector, meanGcamp, meanJrgeco, [-5, 15], slidingTimeVector, corrFullMatrix, meanSliding, slidingAfter, figureTitle, smoothFactor, downsampleFactor)
         end
         
         % ======= Cross Correlation =======
@@ -695,6 +607,8 @@ classdef Mouse < handle
         
         function plotCrossCorrelationOmissionLick(obj, straightenedBy, smoothFactor, downsampleFactor)
             
+             lickTypesOrder = ["No Lick", "Lick"];
+             
             % Get Data
             descriptionVector = ["Task", straightenedBy];
             [fullGcampSignal, fullJrgecoSignal, signalTitle, trialTime, fs] = obj.getInformationDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor, false);
@@ -709,131 +623,41 @@ classdef Mouse < handle
             gcampSignalLick = fullGcampSignal((tInfo.trial_result == outcome) & (~(isnan(tInfo.first_lick))), :);
             jrgecoSignalLick = fullJrgecoSignal((tInfo.trial_result == outcome) & (~(isnan(tInfo.first_lick))), :);
             
-            noLickCorMatrix = zeros(size(gcampSignalNoLick, 1), xCorrelationLen);
+            noLickCorrMatrix = zeros(size(gcampSignalNoLick, 1), xCorrelationLen);
             
             for rowIndx = 1:size(gcampSignalNoLick, 1)
                 [xCorrelationVector, xCorrTimeVector] = obj.getWholeCrossCorrelation(0, trialTime, gcampSignalNoLick(rowIndx, :), jrgecoSignalNoLick(rowIndx, :), fs);
-                noLickCorMatrix(rowIndx, :) = xCorrelationVector;
+                noLickCorrMatrix(rowIndx, :) = xCorrelationVector;
             end
             
-            lickCorMatrix = zeros(size(gcampSignalLick, 1), xCorrelationLen);
+            lickCorrMatrix = zeros(size(gcampSignalLick, 1), xCorrelationLen);
             
             for rowIndx = 1:size(gcampSignalLick, 1)
                 [xCorrelationVector, ~] = obj.getWholeCrossCorrelation(0, trialTime, gcampSignalLick(rowIndx, :), jrgecoSignalLick(rowIndx, :), fs);
-                lickCorMatrix(rowIndx, :) = xCorrelationVector;
+                lickCorrMatrix(rowIndx, :) = xCorrelationVector;
             end
             
             meanGcampNoLick = mean(gcampSignalNoLick,1 );
             meanJrgecoNoLick = mean(jrgecoSignalNoLick, 1);
-            meanSlidingNoLick = mean(noLickCorMatrix, 1);
+            meanXCorrNoLick = mean(noLickCorrMatrix, 1);
             [xCorrAfterNoLick, ~] = obj.getWholeCrossCorrelation(0, trialTime, meanGcampNoLick, meanJrgecoNoLick, fs);
             
             meanGcampLick = mean(gcampSignalLick);
             meanJrgecoLick = mean(jrgecoSignalLick);
-            meanSlidingLick = mean(lickCorMatrix);
+            meanXCorrLick = mean(lickCorrMatrix);
             [xCorrAfterLick, ~] = obj.getWholeCrossCorrelation(0, trialTime, meanGcampLick, meanJrgecoLick, fs);
             
             signalTimeVector = linspace(- 5, trialTime - 5, size(fullGcampSignal, 2));
             
-            % Draw Plots
-            slidingFigure = figure('position', [551,163,688,757]);
+            % Plot
+            meanGcamp = [meanGcampNoLick; meanGcampLick];
+            meanJrgeco = [meanJrgecoNoLick; meanJrgecoLick];
+            corrFullMatrix = [{noLickCorrMatrix}; {lickCorrMatrix}];
+            meanXCorr = [meanXCorrNoLick; meanXCorrLick];
+            XCorrAfter = [xCorrAfterNoLick; xCorrAfterLick];
             
-            % Signal
-            noLickSignalAx = subplot(4, 2, 1);
-            
-            plot(noLickSignalAx, signalTimeVector, meanGcampNoLick)
-            hold(noLickSignalAx, 'on')
-            plot(noLickSignalAx, signalTimeVector, meanJrgecoNoLick)
-            hold(noLickSignalAx, 'off')
-            
-            title(noLickSignalAx, "Mean signal for omission - no lick", 'Interpreter', 'none')
-            line(noLickSignalAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
-            yl = ylim(noLickSignalAx);
-            line(noLickSignalAx, [0, 0], yl, 'Color', '#C0C0C0')
-            xlim(noLickSignalAx, [-5, 15])
-            ylim(yl)
-            
-            lickSignalAx = subplot(4, 2, 2);
-            
-            plot(lickSignalAx, signalTimeVector, meanGcampLick)
-            hold(lickSignalAx, 'on')
-            plot(lickSignalAx, signalTimeVector, meanJrgecoLick)
-            hold(lickSignalAx, 'off')
-            [gcampType, jrgecoType] = obj.findGcampJrgecoType();
-            legend(lickSignalAx, [gcampType + "\fontsize{7} gcamp", jrgecoType + "\fontsize{7} geco"])
-            set(lickSignalAx,'DefaultLegendAutoUpdate','off')
-            
-            title(lickSignalAx, "Mean signal for omission - lick", 'Interpreter', 'none')
-            line(lickSignalAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
-            yl = ylim(lickSignalAx);
-            line(lickSignalAx, [0, 0], yl, 'Color', '#C0C0C0')
-            xlim(lickSignalAx, [-5, 15])
-            ylim(yl)
-            
-            % Heatmap
-            noLickHeatmapAx = subplot(4, 2, 3);
-            
-            title(noLickHeatmapAx, "Heatmap for no lick", 'Interpreter', 'none')
-            im = imagesc(noLickHeatmapAx, noLickCorMatrix);
-            im.XData = linspace(-20, 20, size(noLickCorMatrix, 2));
-            xlim(noLickHeatmapAx, [-20, 20]);
-            ylim(noLickHeatmapAx, [0, size(noLickCorMatrix, 1)]);
-            hold on
-            line(noLickHeatmapAx, [0 0], [0 size(noLickCorMatrix, 1)], 'Color', 'black')
-            hold off
-            
-            lickHeatmapAx = subplot(4, 2, 4);
-            
-            title(lickHeatmapAx, "Heatmap for lick", 'Interpreter', 'none')
-            im = imagesc(lickHeatmapAx, lickCorMatrix);
-            im.XData = linspace(-20, 20, size(lickCorMatrix, 2));
-            xlim(lickHeatmapAx, [-20, 20]);
-            ylim(lickHeatmapAx, [0, size(lickCorMatrix, 1)]);
-            hold on
-            line(lickHeatmapAx, [0 0], [0 size(lickCorMatrix, 1)], 'Color', 'black')
-            hold off
-            
-            % Sliding
-            noLickSlidingAx = subplot(4, 2, 5);
-            plot(noLickSlidingAx, xCorrTimeVector, meanSlidingNoLick)
-            
-            title(noLickSlidingAx, "Mean cross corr for omission - no lick", 'Interpreter', 'none')
-            line(noLickSlidingAx, [-20, 20], [0 0], 'Color', '#C0C0C0')
-            xlim(noLickSlidingAx, [-20, 20])
-            ylim(noLickSlidingAx, [-1, 1])
-            line(noLickSlidingAx, [0, 0], [-1, 1], 'Color', '#C0C0C0')
-            
-            lickSlidingAx = subplot(4, 2, 6);
-            plot(lickSlidingAx, xCorrTimeVector, meanSlidingLick)
-            
-            title(lickSlidingAx, "Mean cross corr for omission - lick", 'Interpreter', 'none')
-            line(lickSlidingAx, [-20, 20], [0 0], 'Color', '#C0C0C0')
-            xlim(lickSlidingAx, [-20, 20])
-            ylim(lickSlidingAx, [-1, 1])
-            line(lickSlidingAx, [0, 0], [-1, 1], 'Color', '#C0C0C0')
-            
-            % Second Sliding
-            noLickSlidingAfterAx = subplot(4, 2, 7);
-            
-            plot(noLickSlidingAfterAx, xCorrTimeVector, xCorrAfterNoLick)
-            
-            title(noLickSlidingAfterAx, "Cross corr for omission - no lick", 'Interpreter', 'none')
-            line(noLickSlidingAfterAx, [-20, 20], [0 0], 'Color', '#C0C0C0')
-            xlim(noLickSlidingAfterAx, [-20, 20])
-            ylim(noLickSlidingAfterAx, [-1, 1])
-            line(noLickSlidingAfterAx, [0, 0], [-1, 1], 'Color', '#C0C0C0')
-            
-            lickSlidingAfterAx = subplot(4, 2, 8);
-            
-            plot(lickSlidingAfterAx, xCorrTimeVector, xCorrAfterLick)
-            
-            title(lickSlidingAfterAx, "Cross corr for omission - lick", 'Interpreter', 'none')
-            line(lickSlidingAfterAx, [-20, 20], [0 0], 'Color', '#C0C0C0')
-            xlim(lickSlidingAfterAx, [-20, 20])
-            ylim(lickSlidingAfterAx, [-1, 1])
-            line(lickSlidingAfterAx, [0, 0], [-1, 1], 'Color', '#C0C0C0')
-            
-            sgtitle({"Omission cross correlation from " + signalTitle, "Between " + obj.GCAMP + " and " + obj.JRGECO, "Mouse " + obj.Name, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}, 'FontWeight', 'bold')
+            figureTitle = {"Omission cross correlation from " + signalTitle, "Between " + obj.GCAMP + " and " + obj.JRGECO, "Mouse " + obj.Name};            
+            obj.drawOmissionLick("Cross correlation",  lickTypesOrder, [-5, 15], signalTimeVector, meanGcamp, meanJrgeco, [-20, 20], xCorrTimeVector, corrFullMatrix, meanXCorr, XCorrAfter, figureTitle, smoothFactor, downsampleFactor)
         end
         
         % ============= Helpers =============
@@ -1396,7 +1220,7 @@ classdef Mouse < handle
                 
                 if outcomeIndx == outcomesAmount
                     [gcampType, jrgecoType] = obj.findGcampJrgecoType();
-                    legend(signalAx, [gcampType + "\fontsize{7} (gcamp)", jrgecoType + "\fontsize{7} (geco)"])
+                    legend(signalAx, [gcampType + "\fontsize{7} gcamp", jrgecoType + "\fontsize{7} geco"])
                     set(0,'DefaultLegendAutoUpdate','off')
                 end
                 
@@ -1411,7 +1235,7 @@ classdef Mouse < handle
                 currSliding = outcomesFullCorr(outcomeIndx, 1);
                 currSliding = currSliding{:};
                 im = imagesc(heatmapAx, currSliding);
-                im.XData = linspace(-20, 20, size(currSliding, 2));
+                im.XData = linspace(corrLimits(1), corrLimits(2), size(currSliding, 2));
                 
                 title(heatmapAx, "Heatmap of " + corrType + " for " + obj.CONST_TASK_OUTCOMES(outcomeIndx), 'Interpreter', 'none')
                 xlim(heatmapAx, corrLimits);
@@ -1440,7 +1264,75 @@ classdef Mouse < handle
             end
             
             sgtitle([figureTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor], 'FontWeight', 'bold')
+            
+        end
+        
+        function drawOmissionLick(obj, corrType, lickTypesOrder, signalLimits, signalTimeVector, meanGcamp, meanJrgeco, corrLimits, corrTimeVector, corrFullMatrix, meanCorr, corrAfter, figureTitle, smoothFactor, downsampleFactor)
+            % Draw Plots
+            fig = figure('position', [551,163,688,757]);
+            lickTypeAmount = size(lickTypesOrder, 2);                           % Only Lick and No Lick
+            
+            for lickTypeIndx = 1:lickTypeAmount
+                lickType = lickTypesOrder(lickTypeIndx);
+                
+                signalAx = subplot(4, lickTypeAmount, lickTypeIndx);
+                heatmapAx = subplot(4, lickTypeAmount, lickTypeIndx + lickTypeAmount);
+                corrAx = subplot(4, lickTypeAmount, lickTypeIndx + lickTypeAmount * 2);
+                corrAfterAx = subplot(4, lickTypeAmount, lickTypeIndx + lickTypeAmount * 3);
+                
+                % Signal
+                plot(signalAx, signalTimeVector, meanGcamp(lickTypeIndx, :))
+                hold(signalAx, 'on')
+                plot(signalAx, signalTimeVector, meanJrgeco(lickTypeIndx, :))
+                hold(signalAx, 'off')
+                if lickTypeIndx == lickTypeAmount
+                    [gcampType, jrgecoType] = obj.findGcampJrgecoType();
+                    legend(signalAx, [gcampType + "\fontsize{7} gcamp", jrgecoType + "\fontsize{7} geco"])
+                    set(signalAx,'DefaultLegendAutoUpdate','off')
+                end
 
+                title(signalAx, "Mean signal for omission - " + lickType, 'Interpreter', 'none')
+                line(signalAx, signalLimits, [0 0], 'Color', '#C0C0C0')
+                yl = ylim(signalAx);
+                line(signalAx, [0, 0], yl, 'Color', '#C0C0C0')
+                xlim(signalAx, signalLimits)
+                ylim(yl)
+                
+                % Heatmap
+                lickTypeCorrMatrix = corrFullMatrix(lickTypeIndx);
+                lickTypeCorrMatrix = lickTypeCorrMatrix{:};
+                
+                im = imagesc(heatmapAx, lickTypeCorrMatrix);
+                
+                title(heatmapAx, "Heatmap of " + corrType + " for " + lickType, 'Interpreter', 'none')
+                im.XData = linspace(corrLimits(1), corrLimits(2), size(lickTypeCorrMatrix, 2));
+                xlim(heatmapAx, corrLimits);
+                ylim(heatmapAx, [0, size(lickTypeCorrMatrix, 1)]);
+                hold on
+                line(heatmapAx, [0 0], [0 size(lickTypeCorrMatrix, 1)], 'Color', 'black')
+                hold off
+                
+                % Corr
+                plot(corrAx, corrTimeVector, meanCorr(lickTypeIndx, :))
+                
+                title(corrAx, "Mean " + corrType + " for omission - " + lickType, 'Interpreter', 'none')
+                line(corrAx, corrLimits, [0 0], 'Color', '#C0C0C0')
+                xlim(corrAx, corrLimits)
+                ylim(corrAx, [-1, 1])
+                line(corrAx, [0, 0], [-1, 1], 'Color', '#C0C0C0')
+                
+                % After mean corr
+                plot(corrAfterAx, corrTimeVector, corrAfter(lickTypeIndx, :))
+                
+                title(corrAfterAx, corrType + " for omission - " + lickType, 'Interpreter', 'none')
+                line(corrAfterAx, corrLimits, [0 0], 'Color', '#C0C0C0')
+                xlim(corrAfterAx, corrLimits)
+                ylim(corrAfterAx, [-1, 1])
+                line(corrAfterAx, [0, 0], [-1, 1], 'Color', '#C0C0C0')
+                
+            end
+            
+            sgtitle([figureTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor], 'FontWeight', 'bold')
         end
         
         % ======================== General Helpers ========================
