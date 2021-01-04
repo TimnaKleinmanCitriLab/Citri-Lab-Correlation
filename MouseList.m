@@ -295,7 +295,31 @@ classdef MouseList < handle
             for mouse = obj.LoadedMouseList
                 if mouse.signalExists(descriptionVector)
                     mouse.plotSlidingCorrelationTaskByOutcome(straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
-                     savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task- Outcome\by " + straightenedBy + "\" + obj.Type + "\" + mouse.Name + " - " + timeWindow + " sec")
+                     savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Outcome\by " + straightenedBy + "\" + obj.Type + "\" + mouse.Name + " - " + timeWindow + " sec")
+                end
+            end
+        end
+        
+        function plotSlidingCorrelationOmissionLick(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            descriptionVector = ["Task", straightenedBy];
+            [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
+            
+            for mouse = obj.LoadedMouseList
+                if mouse.signalExists(descriptionVector)
+                    mouse.plotSlidingCorrelationOmissionLick(straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
+                     savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Lick vs. No Lick\by " + straightenedBy + "\" + obj.Type + "\" + mouse.Name + " - " + timeWindow + " sec")
+                end
+            end
+        end
+        
+        function plotCrossCorrelationTaskByOutcome(obj, straightenedBy, smoothFactor, downsampleFactor)
+            descriptionVector = ["Task", straightenedBy];
+            [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
+            
+            for mouse = obj.LoadedMouseList
+                if mouse.signalExists(descriptionVector)
+                    mouse.plotCrossCorrelationTaskByOutcome(straightenedBy, smoothFactor, downsampleFactor)
+                     savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross By Task - Outcome\by " + straightenedBy + "\" + obj.Type + "\" + mouse.Name)
                 end
             end
         end

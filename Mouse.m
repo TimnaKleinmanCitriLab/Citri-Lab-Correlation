@@ -477,14 +477,15 @@ classdef Mouse < handle
                 signalAx = subplot(4, outcomesAmount, outcomeIndx);
                 heatmapAx = subplot(4, outcomesAmount, outcomeIndx + outcomesAmount);
                 slidingAx = subplot(4, outcomesAmount, outcomeIndx + outcomesAmount * 2);
-                slidingAx2 = subplot(4, outcomesAmount, outcomeIndx + outcomesAmount * 3);
+                slidingAfterAx = subplot(4, outcomesAmount, outcomeIndx + outcomesAmount * 3);
                 
                 % Signal
                 plot(signalAx, signalTimeVector, outcomesMeanGcamp(outcomeIndx, :))
                 hold(signalAx, 'on')
                 plot(signalAx, signalTimeVector, outcomesMeanJrgeco(outcomeIndx, :))
                 hold(signalAx, 'off')
-                legend(signalAx, ["Gcamp", "JrGeco"])
+                [gcampType, jrgecoType] = obj.findGcampJrgecoType();
+                legend(signalAx, [gcampType + "\fontsize{7} (gcamp)", jrgecoType + "\fontsize{7} (geco)"])
                 set(0,'DefaultLegendAutoUpdate','off')
                 
                 title(signalAx, "Mean signal for " + obj.CONST_TASK_OUTCOMES(outcomeIndx), 'Interpreter', 'none')
@@ -499,6 +500,8 @@ classdef Mouse < handle
                 currSliding = currSliding{:};
                 im = imagesc(heatmapAx, currSliding);
                 im.XData = linspace(-5, 15, size(currSliding, 2));
+                
+                title(heatmapAx, "Heatmap for " + obj.CONST_TASK_OUTCOMES(outcomeIndx), 'Interpreter', 'none')
                 xlim(heatmapAx, [-5, 15]);
                 ylim(heatmapAx, [0, size(currSliding, 1)]);
                 hold on
@@ -515,13 +518,13 @@ classdef Mouse < handle
                 line(slidingAx, [0, 0], [0, 1], 'Color', '#C0C0C0')
                 
                 % Second Sliding
-                plot(slidingAx2, slidingTimeVector, outcomeSlidingAfter(outcomeIndx, :))
+                plot(slidingAfterAx, slidingTimeVector, outcomeSlidingAfter(outcomeIndx, :))
                 
-                title(slidingAx2, "Sliding window for " + obj.CONST_TASK_OUTCOMES(outcomeIndx), 'Interpreter', 'none')
-                line(slidingAx2, [-5, 15], [0 0], 'Color', '#C0C0C0')
-                xlim(slidingAx2, [-5, 15])
-                ylim(slidingAx2, [-1, 1])
-                line(slidingAx2, [0, 0], [-1, 1], 'Color', '#C0C0C0')
+                title(slidingAfterAx, "Sliding window for " + obj.CONST_TASK_OUTCOMES(outcomeIndx), 'Interpreter', 'none')
+                line(slidingAfterAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
+                xlim(slidingAfterAx, [-5, 15])
+                ylim(slidingAfterAx, [-1, 1])
+                line(slidingAfterAx, [0, 0], [-1, 1], 'Color', '#C0C0C0')
             end
             
             sgtitle({"Sliding Window Correlation from " + signalTitle + " for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}, 'FontWeight', 'bold')
@@ -568,17 +571,17 @@ classdef Mouse < handle
             slidingTimeVector = slidingTimeVector - 5;
             
             % Draw Plots
-            slidingFigure = figure('position', [337,127,1068,757]);
+            slidingFigure = figure('position', [551,163,688,757]);
             
             % Signal
-            noLickSignalAx = subplot(3, 2, 1);
+            noLickSignalAx = subplot(4, 2, 1);
             
             plot(noLickSignalAx, signalTimeVector, meanGcampNoLick)
             hold(noLickSignalAx, 'on')
             plot(noLickSignalAx, signalTimeVector, meanJrgecoNoLick)
             hold(noLickSignalAx, 'off')
             legend(noLickSignalAx, ["Gcamp", "JrGeco"])
-            set(0,'DefaultLegendAutoUpdate','off')
+            set(noLickSignalAx,'DefaultLegendAutoUpdate','off')
             
             title(noLickSignalAx, "Mean signal for omission - no lick", 'Interpreter', 'none')
             line(noLickSignalAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
@@ -587,14 +590,14 @@ classdef Mouse < handle
             xlim(noLickSignalAx, [-5, 15])
             ylim(yl)
             
-            lickSignalAx = subplot(3, 2, 2);
+            lickSignalAx = subplot(4, 2, 2);
             
             plot(lickSignalAx, signalTimeVector, meanGcampLick)
             hold(lickSignalAx, 'on')
             plot(lickSignalAx, signalTimeVector, meanJrgecoLick)
             hold(lickSignalAx, 'off')
             legend(lickSignalAx, ["Gcamp", "JrGeco"])
-            set(0,'DefaultLegendAutoUpdate','off')
+            set(lickSignalAx,'DefaultLegendAutoUpdate','off')
             
             title(lickSignalAx, "Mean signal for omission - lick", 'Interpreter', 'none')
             line(lickSignalAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
@@ -603,8 +606,31 @@ classdef Mouse < handle
             xlim(lickSignalAx, [-5, 15])
             ylim(yl)
             
+            % Heatmap
+            noLickHeatmapAx = subplot(4, 2, 3);
+            
+            title(noLickHeatmapAx, "Heatmap for no lick", 'Interpreter', 'none')
+            im = imagesc(noLickHeatmapAx, noLickCorMatrix);
+            im.XData = linspace(-5, 15, size(noLickCorMatrix, 2));
+            xlim(noLickHeatmapAx, [-5, 15]);
+            ylim(noLickHeatmapAx, [0, size(noLickCorMatrix, 1)]);
+            hold on
+            line(noLickHeatmapAx, [0 0], [0 size(noLickCorMatrix, 1)], 'Color', 'black')
+            hold off
+            
+            lickHeatmapAx = subplot(4, 2, 4);
+            
+            title(lickHeatmapAx, "Heatmap for lick", 'Interpreter', 'none')
+            im = imagesc(lickHeatmapAx, lickCorMatrix);
+            im.XData = linspace(-5, 15, size(lickCorMatrix, 2));
+            xlim(lickHeatmapAx, [-5, 15]);
+            ylim(lickHeatmapAx, [0, size(lickCorMatrix, 1)]);
+            hold on
+            line(lickHeatmapAx, [0 0], [0 size(lickCorMatrix, 1)], 'Color', 'black')
+            hold off
+            
             % Sliding
-            noLickSlidingAx = subplot(3, 2, 3);
+            noLickSlidingAx = subplot(4, 2, 5);
             plot(noLickSlidingAx, slidingTimeVector, meanSlidingNoLick)
             
             title(noLickSlidingAx, "Mean sliding window for omission - no lick", 'Interpreter', 'none')
@@ -613,7 +639,7 @@ classdef Mouse < handle
             ylim(noLickSlidingAx, [-1, 1])
             line(noLickSlidingAx, [0, 0], [-1, 1], 'Color', '#C0C0C0')
             
-            lickSlidingAx = subplot(3, 2, 4);
+            lickSlidingAx = subplot(4, 2, 6);
             plot(lickSlidingAx, slidingTimeVector, meanSlidingLick)
             
             title(lickSlidingAx, "Mean sliding window for omission - lick", 'Interpreter', 'none')
@@ -623,25 +649,25 @@ classdef Mouse < handle
             line(lickSlidingAx, [0, 0], [-1, 1], 'Color', '#C0C0C0')
             
             % Second Sliding
-            noLickSlidingAx2 = subplot(3, 2, 5);
+            noLickSlidingAfterAx = subplot(4, 2, 7);
             
-            plot(noLickSlidingAx2, slidingTimeVector, slidingAfterNoLick)
+            plot(noLickSlidingAfterAx, slidingTimeVector, slidingAfterNoLick)
             
-            title(noLickSlidingAx2, "Sliding window for omission - no lick", 'Interpreter', 'none')
-            line(noLickSlidingAx2, [-5, 15], [0 0], 'Color', '#C0C0C0')
-            xlim(noLickSlidingAx2, [-5, 15])
-            ylim(noLickSlidingAx2, [-1, 1])
-            line(noLickSlidingAx2, [0, 0], [-1, 1], 'Color', '#C0C0C0')
+            title(noLickSlidingAfterAx, "Sliding window for omission - no lick", 'Interpreter', 'none')
+            line(noLickSlidingAfterAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
+            xlim(noLickSlidingAfterAx, [-5, 15])
+            ylim(noLickSlidingAfterAx, [-1, 1])
+            line(noLickSlidingAfterAx, [0, 0], [-1, 1], 'Color', '#C0C0C0')
             
-            lickSlidingAx2 = subplot(3, 2, 6);
+            lickSlidingAfterAx = subplot(4, 2, 8);
             
-            plot(lickSlidingAx2, slidingTimeVector, slidingAfterLick)
+            plot(lickSlidingAfterAx, slidingTimeVector, slidingAfterLick)
             
-            title(lickSlidingAx2, "Sliding window for omission - lick", 'Interpreter', 'none')
-            line(lickSlidingAx2, [-5, 15], [0 0], 'Color', '#C0C0C0')
-            xlim(lickSlidingAx2, [-5, 15])
-            ylim(lickSlidingAx2, [-1, 1])
-            line(lickSlidingAx2, [0, 0], [-1, 1], 'Color', '#C0C0C0')
+            title(lickSlidingAfterAx, "Sliding window for omission - lick", 'Interpreter', 'none')
+            line(lickSlidingAfterAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
+            xlim(lickSlidingAfterAx, [-5, 15])
+            ylim(lickSlidingAfterAx, [-1, 1])
+            line(lickSlidingAfterAx, [0, 0], [-1, 1], 'Color', '#C0C0C0')
             
             sgtitle({"Omission sliding window correlation from " + signalTitle + " for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}, 'FontWeight', 'bold')
         end
@@ -671,6 +697,252 @@ classdef Mouse < handle
             [gcampXgcamp, jrgecoXjrgeco, timeVector, signalTitle] = obj.dataForPlotAutoCorrelation(descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape);
             
             obj.drawCrossCorrelation([gcampXgcamp; jrgecoXjrgeco], timeVector, lim, ["Auto Gcamps", "Auto JrGeco"], signalTitle, "Auto Correlation", smoothFactor, downsampleFactor, shouldReshape)
+        end
+        
+        function plotCrossCorrelationTaskByOutcome(obj, straightenedBy, smoothFactor, downsampleFactor)
+            
+            % Get Data
+            descriptionVector = ["Task", straightenedBy];
+            [fullGcampSignal, fullJrgecoSignal, signalTitle, trialTime, fs] = obj.getInformationDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor, false);
+            tInfo = obj.Info.Task.(straightenedBy);
+            
+            outcomesAmount = size(obj.CONST_TASK_OUTCOMES, 2);
+            xCorrelationLen = round(fs * trialTime) * 2 + 1;
+            outcomesMeanGcamp = zeros(outcomesAmount, size(fullGcampSignal, 2));
+            outcomesMeanJrgeco = zeros(outcomesAmount, size(fullGcampSignal, 2));
+            outcomeFullCross = cell(outcomesAmount, 1);
+            outcomesMeanCross = zeros(outcomesAmount, xCorrelationLen);
+            outcomeCrossAfter = zeros(outcomesAmount, xCorrelationLen);
+            
+            for outcomeIndx = 1:outcomesAmount
+                outcome = obj.CONST_TASK_OUTCOMES(outcomeIndx);
+                outcomeGcampSignal = fullGcampSignal(tInfo.trial_result == outcome, :);
+                outcomeJrgecoSignal = fullJrgecoSignal(tInfo.trial_result == outcome, :);
+                
+                outcomeXCorrMatrix = zeros(size(outcomeGcampSignal, 1), xCorrelationLen);
+                
+                for rowIndx = 1:size(outcomeGcampSignal, 1)
+                    [xCorrelationVector, xCorrTimeVector] = obj.getWholeCrossCorrelation(0, trialTime, outcomeGcampSignal(rowIndx, :), outcomeJrgecoSignal(rowIndx, :), fs);
+                    outcomeXCorrMatrix(rowIndx, :) = xCorrelationVector;
+                end
+                
+                outcomesMeanGcamp(outcomeIndx, :) = mean(outcomeGcampSignal);
+                outcomesMeanJrgeco(outcomeIndx, :) = mean(outcomeJrgecoSignal);
+                if size(outcomeXCorrMatrix, 2) == 0
+                    outcomesMeanCross(outcomeIndx, :) = zeros(1, size(outcomesMeanCross, 2));
+                    outcomeFullCross(outcomeIndx, 1) = {zeros(1, size(outcomesMeanCross, 2))};
+                else
+                    outcomesMeanCross(outcomeIndx, :) = mean(outcomeXCorrMatrix);
+                    outcomeFullCross(outcomeIndx, 1) = {outcomeXCorrMatrix};
+                end
+                
+                [genXCorrelationVector, ~] = obj.getWholeCrossCorrelation(0, trialTime, outcomesMeanGcamp(outcomeIndx, :), outcomesMeanJrgeco(outcomeIndx, :), fs);
+                
+                outcomeCrossAfter(outcomeIndx, :) = genXCorrelationVector;
+            end
+            
+            signalTimeVector = linspace(- 5, trialTime - 5, size(fullGcampSignal, 2));
+            
+            % Draw Plots
+            xCorrFigure = figure('position', [337,127,1068,757]);
+            
+            for outcomeIndx = 1:outcomesAmount
+                signalAx = subplot(4, outcomesAmount, outcomeIndx);
+                heatmapAx = subplot(4, outcomesAmount, outcomeIndx + outcomesAmount);
+                xCorrAx = subplot(4, outcomesAmount, outcomeIndx + outcomesAmount * 2);
+                xCorrAfterAx = subplot(4, outcomesAmount, outcomeIndx + outcomesAmount * 3);
+                
+                % Signal
+                plot(signalAx, signalTimeVector, outcomesMeanGcamp(outcomeIndx, :))
+                hold(signalAx, 'on')
+                plot(signalAx, signalTimeVector, outcomesMeanJrgeco(outcomeIndx, :))
+                hold(signalAx, 'off')
+                
+                [gcampType, jrgecoType] = obj.findGcampJrgecoType();
+                legend(signalAx, [gcampType + "\fontsize{7} gcamp", jrgecoType + "\fontsize{7} geco"])
+                set(0,'DefaultLegendAutoUpdate','off')
+                
+                title(signalAx, "Mean signal for " + obj.CONST_TASK_OUTCOMES(outcomeIndx), 'Interpreter', 'none')
+                line(signalAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
+                yl = ylim(signalAx);
+                line(signalAx, [0, 0], yl, 'Color', '#C0C0C0')
+                xlim(signalAx, [-5, 15])
+                ylim(signalAx, yl)
+                
+                % Heatmap
+                currSliding = outcomeFullCross(outcomeIndx, 1);
+                currSliding = currSliding{:};
+                im = imagesc(heatmapAx, currSliding);
+                im.XData = linspace(-20, 20, size(currSliding, 2));
+                
+                title(heatmapAx, "Heatmap for " + obj.CONST_TASK_OUTCOMES(outcomeIndx), 'Interpreter', 'none')
+                xlim(heatmapAx, [-20, 20]);
+                ylim(heatmapAx, [0, size(currSliding, 1)]);
+                hold on
+                line(heatmapAx, [0 0], [0 size(currSliding, 1)], 'Color', 'black')
+                hold off
+                
+                % xCorr
+                plot(xCorrAx, xCorrTimeVector, outcomesMeanCross(outcomeIndx, :))
+                
+                title(xCorrAx, "Mean cross correlation for " + obj.CONST_TASK_OUTCOMES(outcomeIndx), 'Interpreter', 'none')
+                line(xCorrAx, [-20, 20], [0 0], 'Color', '#C0C0C0')
+                xlim(xCorrAx, [-20, 20])
+                ylim(xCorrAx, [-1, 1])
+                line(xCorrAx, [0, 0], [0, 1], 'Color', '#C0C0C0')
+                
+                % After mean xCorr
+                plot(xCorrAfterAx, xCorrTimeVector, outcomeCrossAfter(outcomeIndx, :))
+                
+                title(xCorrAfterAx, "Cross correlation for " + obj.CONST_TASK_OUTCOMES(outcomeIndx), 'Interpreter', 'none')
+                line(xCorrAfterAx, [-20, 20], [0 0], 'Color', '#C0C0C0')
+                xlim(xCorrAfterAx, [-20, 20])
+                ylim(xCorrAfterAx, [-1, 1])
+                line(xCorrAfterAx, [0, 0], [-1, 1], 'Color', '#C0C0C0')
+            end
+            
+            sgtitle({"Cross Correlation from " + signalTitle, "Between " + obj.GCAMP + " and " + obj.JRGECO, "Mouse " + obj.Name, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}, 'FontWeight', 'bold')
+        end
+        
+        function plotCrossCorrelationOmissionLick(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            
+            % Get Data
+            descriptionVector = ["Task", straightenedBy];
+            [fullGcampSignal, fullJrgecoSignal, signalTitle, trialTime, fs] = obj.getInformationDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor, false);
+            tInfo = obj.Info.Task.(straightenedBy);
+            
+            outcome = "omitted";
+            gcampSignalNoLick = fullGcampSignal((tInfo.trial_result == outcome) & (isnan(tInfo.first_lick)), :);
+            jrgecoSignalNoLick = fullJrgecoSignal((tInfo.trial_result == outcome) & (isnan(tInfo.first_lick)), :);
+            
+            gcampSignalLick = fullGcampSignal((tInfo.trial_result == outcome) & (~(isnan(tInfo.first_lick))), :);
+            jrgecoSignalLick = fullJrgecoSignal((tInfo.trial_result == outcome) & (~(isnan(tInfo.first_lick))), :);
+            
+            noLickCorMatrix = [];
+            
+            for rowIndx = 1:size(gcampSignalNoLick, 1)
+                [correlationVector, slidingTimeVector] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignalNoLick(rowIndx, :), jrgecoSignalNoLick(rowIndx, :), fs);
+                noLickCorMatrix = [noLickCorMatrix; correlationVector];
+            end
+            
+            lickCorMatrix = [];
+            for rowIndx = 1:size(gcampSignalLick, 1)
+                [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignalLick(rowIndx, :), jrgecoSignalLick(rowIndx, :), fs);
+                lickCorMatrix = [lickCorMatrix; correlationVector];
+            end
+            
+            meanGcampNoLick = mean(gcampSignalNoLick,1 );
+            meanJrgecoNoLick = mean(jrgecoSignalNoLick, 1);
+            meanSlidingNoLick = mean(noLickCorMatrix, 1);
+            [slidingAfterNoLick, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, meanGcampNoLick, meanJrgecoNoLick, fs);
+            
+            meanGcampLick = mean(gcampSignalLick);
+            meanJrgecoLick = mean(jrgecoSignalLick);
+            meanSlidingLick = mean(lickCorMatrix);
+            [slidingAfterLick, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, meanGcampLick, meanJrgecoLick, fs);
+            
+            signalTimeVector = linspace(- 5, trialTime - 5, size(fullGcampSignal, 2));
+            slidingTimeVector = slidingTimeVector - 5;
+            
+            % Draw Plots
+            slidingFigure = figure('position', [551,163,688,757]);
+            
+            % Signal
+            noLickSignalAx = subplot(4, 2, 1);
+            
+            plot(noLickSignalAx, signalTimeVector, meanGcampNoLick)
+            hold(noLickSignalAx, 'on')
+            plot(noLickSignalAx, signalTimeVector, meanJrgecoNoLick)
+            hold(noLickSignalAx, 'off')
+            [gcampType, jrgecoType] = obj.findGcampJrgecoType();
+            legend(noLickSignalAx, [gcampType + "\fontsize{7} gcamp", jrgecoType + "\fontsize{7} geco"])
+            set(noLickSignalAx,'DefaultLegendAutoUpdate','off')
+            
+            title(noLickSignalAx, "Mean signal for omission - no lick", 'Interpreter', 'none')
+            line(noLickSignalAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
+            yl = ylim(noLickSignalAx);
+            line(noLickSignalAx, [0, 0], yl, 'Color', '#C0C0C0')
+            xlim(noLickSignalAx, [-5, 15])
+            ylim(yl)
+            
+            lickSignalAx = subplot(4, 2, 2);
+            
+            plot(lickSignalAx, signalTimeVector, meanGcampLick)
+            hold(lickSignalAx, 'on')
+            plot(lickSignalAx, signalTimeVector, meanJrgecoLick)
+            hold(lickSignalAx, 'off')
+            legend(lickSignalAx, ["Gcamp", "JrGeco"])
+            set(lickSignalAx,'DefaultLegendAutoUpdate','off')
+            
+            title(lickSignalAx, "Mean signal for omission - lick", 'Interpreter', 'none')
+            line(lickSignalAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
+            yl = ylim(lickSignalAx);
+            line(lickSignalAx, [0, 0], yl, 'Color', '#C0C0C0')
+            xlim(lickSignalAx, [-5, 15])
+            ylim(yl)
+            
+            % Heatmap
+            noLickHeatmapAx = subplot(4, 2, 3);
+            
+            im = imagesc(noLickHeatmapAx, noLickCorMatrix);
+            im.XData = linspace(-5, 15, size(noLickCorMatrix, 2));
+            xlim(noLickHeatmapAx, [-5, 15]);
+            ylim(noLickHeatmapAx, [0, size(noLickCorMatrix, 1)]);
+            hold on
+            line(noLickHeatmapAx, [0 0], [0 size(noLickCorMatrix, 1)], 'Color', 'black')
+            hold off
+            
+            lickHeatmapAx = subplot(4, 2, 4);
+            
+            im = imagesc(lickHeatmapAx, lickCorMatrix);
+            im.XData = linspace(-5, 15, size(lickCorMatrix, 2));
+            xlim(lickHeatmapAx, [-5, 15]);
+            ylim(lickHeatmapAx, [0, size(lickCorMatrix, 1)]);
+            hold on
+            line(lickHeatmapAx, [0 0], [0 size(lickCorMatrix, 1)], 'Color', 'black')
+            hold off
+            
+            % Sliding
+            noLickSlidingAx = subplot(4, 2, 5);
+            plot(noLickSlidingAx, slidingTimeVector, meanSlidingNoLick)
+            
+            title(noLickSlidingAx, "Mean sliding window for omission - no lick", 'Interpreter', 'none')
+            line(noLickSlidingAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
+            xlim(noLickSlidingAx, [-5, 15])
+            ylim(noLickSlidingAx, [-1, 1])
+            line(noLickSlidingAx, [0, 0], [-1, 1], 'Color', '#C0C0C0')
+            
+            lickSlidingAx = subplot(4, 2, 6);
+            plot(lickSlidingAx, slidingTimeVector, meanSlidingLick)
+            
+            title(lickSlidingAx, "Mean sliding window for omission - lick", 'Interpreter', 'none')
+            line(lickSlidingAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
+            xlim(lickSlidingAx, [-5, 15])
+            ylim(lickSlidingAx, [-1, 1])
+            line(lickSlidingAx, [0, 0], [-1, 1], 'Color', '#C0C0C0')
+            
+            % Second Sliding
+            noLickSlidingAx2 = subplot(4, 2, 7);
+            
+            plot(noLickSlidingAx2, slidingTimeVector, slidingAfterNoLick)
+            
+            title(noLickSlidingAx2, "Sliding window for omission - no lick", 'Interpreter', 'none')
+            line(noLickSlidingAx2, [-5, 15], [0 0], 'Color', '#C0C0C0')
+            xlim(noLickSlidingAx2, [-5, 15])
+            ylim(noLickSlidingAx2, [-1, 1])
+            line(noLickSlidingAx2, [0, 0], [-1, 1], 'Color', '#C0C0C0')
+            
+            lickSlidingAx2 = subplot(4, 2, 8);
+            
+            plot(lickSlidingAx2, slidingTimeVector, slidingAfterLick)
+            
+            title(lickSlidingAx2, "Sliding window for omission - lick", 'Interpreter', 'none')
+            line(lickSlidingAx2, [-5, 15], [0 0], 'Color', '#C0C0C0')
+            xlim(lickSlidingAx2, [-5, 15])
+            ylim(lickSlidingAx2, [-1, 1])
+            line(lickSlidingAx2, [0, 0], [-1, 1], 'Color', '#C0C0C0')
+            
+            sgtitle({"Omission sliding window correlation from " + signalTitle + " for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}, 'FontWeight', 'bold')
         end
         
         % ============= Helpers =============
@@ -923,7 +1195,11 @@ classdef Mouse < handle
                 fs = fs / downsampleFactor;
             end
             
-            if maxLag == 0
+            [firstXSecond, timeVector] = getWholeCrossCorrelation(obj, maxLag, trialTime, gcampSignal, jrgecoSignal, fs);
+        end
+        
+        function [firstXSecond, timeVector] = getWholeCrossCorrelation(obj, maxLag, trialTime, gcampSignal, jrgecoSignal, fs)
+           if maxLag == 0
                 maxLag = trialTime;
             end
             
@@ -941,7 +1217,7 @@ classdef Mouse < handle
             for index = 1:rows
                 firstXSecond(index,:) = xcorr(gcampSignal(index,:), jrgecoSignal(index,:), round(fs * maxLag), 'normalized');               % TODO - think if should normalize before or after
             end
-            firstXSecond = sum(firstXSecond, 1) / rows;
+            firstXSecond = sum(firstXSecond, 1) / rows; 
         end
         
         function [firstXfirst, secondXsecond, timeVector, signalTitle, maxLag] = dataForPlotAutoCorrelation(obj, descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
