@@ -324,6 +324,18 @@ classdef MouseList < handle
             end
         end
         
+        function plotCrossCorrelationOmissionLick(obj, straightenedBy, smoothFactor, downsampleFactor)
+            descriptionVector = ["Task", straightenedBy];
+            [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
+            
+            for mouse = obj.LoadedMouseList
+                if mouse.signalExists(descriptionVector)
+                    mouse.plotCrossCorrelationOmissionLick(straightenedBy, smoothFactor, downsampleFactor)
+                     savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross By Task - Lick vs. No Lick\by " + straightenedBy + "\" + obj.Type + "\" + mouse.Name)
+                end
+            end
+        end
+        
         % ============= Helpers =============
         function [correlationMatrix, finalXLabels, mouseNames] = dataForPlotCorrelationBar(obj, smoothFactor, downsampleFactor)
             % Returns the correlation for all the categories, for all the
