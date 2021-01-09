@@ -441,8 +441,6 @@ classdef Mouse < handle
             outcomeFullSliding = cell(outcomesAmount, 1);
             outcomesMeanSliding = [];
             outcomesSEMSliding = [];
-            outcomeSlidingAfter = [];
-            
             
             for outcomeIndx = 1:outcomesAmount
                 outcome = obj.CONST_TASK_OUTCOMES(outcomeIndx);
@@ -453,9 +451,13 @@ classdef Mouse < handle
                 
                 for rowIndx = 1:size(outcomeGcampSignal, 1)
                     [correlationVector, slidingTimeVector] = obj.getSlidingCorrelation(timeWindow, timeShift, outcomeGcampSignal(rowIndx, :), outcomeJrgecoSignal(rowIndx, :), fs);
-%                     correlationVector = smooth(correlationVector', 10)';  % TODO - DELETEEEE!!!!
+                    if timeWindow < 2
+                    correlationVector = smooth(correlationVector', 10)';
+                    end
                     outcomeSlidingCorrMatrix = [outcomeSlidingCorrMatrix; correlationVector];
                 end
+                
+                outcomeSlidingCorrMatrix = obj.sortCorrelationByStraightenedBy(outcomeSlidingCorrMatrix, tInfo(tInfo.trial_result == outcome, :), straightenedBy);
                 
                 outcomesMeanGcamp(outcomeIndx, :) = mean(outcomeGcampSignal);
                 outcomesSEMGcamp(outcomeIndx, :) = std(outcomeGcampSignal, 1)/sqrt(size(outcomeGcampSignal, 1));
@@ -471,10 +473,6 @@ classdef Mouse < handle
                     outcomesSEMSliding = [outcomesSEMSliding; std(outcomeSlidingCorrMatrix, 1)/sqrt(size(outcomeSlidingCorrMatrix, 1))];
                     outcomeFullSliding(outcomeIndx, 1) = {outcomeSlidingCorrMatrix};
                 end
-                
-                [genCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, outcomesMeanGcamp(outcomeIndx, :), outcomesMeanJrgeco(outcomeIndx, :), fs);
-                
-                outcomeSlidingAfter = [outcomeSlidingAfter; genCorrelationVector];
             end
             
             signalTimeVector = linspace(- 5, trialTime - 5, size(fullGcampSignal, 2));
@@ -482,7 +480,7 @@ classdef Mouse < handle
             
             % Draw
             figureTitle = {"Sliding Window Correlation from " + signalTitle + " for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)};
-            obj.drawTaskByOutcome("sliding window", [-5, 15], signalTimeVector, outcomesMeanGcamp, outcomesSEMGcamp, outcomesMeanJrgeco, outcomesSEMJrgeco, [-5, 15],  slidingTimeVector, outcomeFullSliding, outcomesMeanSliding, outcomesSEMSliding, outcomeSlidingAfter, figureTitle, smoothFactor, downsampleFactor)
+            obj.drawTaskByOutcome("sliding window", [-5, 15], signalTimeVector, outcomesMeanGcamp, outcomesSEMGcamp, outcomesMeanJrgeco, outcomesSEMJrgeco, [-5, 15],  slidingTimeVector, outcomeFullSliding, outcomesMeanSliding, outcomesSEMSliding, figureTitle, smoothFactor, downsampleFactor)
         end
         
         function plotSlidingCorrelationOmissionLick(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
@@ -508,11 +506,15 @@ classdef Mouse < handle
                 noLickCorrMatrix = [noLickCorrMatrix; correlationVector];
             end
             
+            noLickCorrMatrix = obj.sortCorrelationByStraightenedBy(noLickCorrMatrix, tInfo((tInfo.trial_result == outcome) & (isnan(tInfo.first_lick)), :), straightenedBy);
+            
             lickCorrMatrix = [];
             for rowIndx = 1:size(gcampSignalLick, 1)
                 [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignalLick(rowIndx, :), jrgecoSignalLick(rowIndx, :), fs);
                 lickCorrMatrix = [lickCorrMatrix; correlationVector];
             end
+            
+            lickCorrMatrix = obj.sortCorrelationByStraightenedBy(lickCorrMatrix, tInfo((tInfo.trial_result == outcome) & (~(isnan(tInfo.first_lick))), :), straightenedBy);
             
             meanGcampNoLick = mean(gcampSignalNoLick,1 );
             SEMGcampNoLick = std(gcampSignalNoLick, 1)/sqrt(size(gcampSignalNoLick, 1));
@@ -520,7 +522,6 @@ classdef Mouse < handle
             SEMJrgecoNoLick = std(jrgecoSignalNoLick, 1)/sqrt(size(jrgecoSignalNoLick, 1));
             meanSlidingNoLick = mean(noLickCorrMatrix, 1);
             SEMSlidingNoLick = std(noLickCorrMatrix, 1)/sqrt(size(noLickCorrMatrix, 1));
-            [slidingAfterNoLick, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, meanGcampNoLick, meanJrgecoNoLick, fs);
             
             meanGcampLick = mean(gcampSignalLick);
             SEMGcampLick = std(gcampSignalLick, 1)/sqrt(size(gcampSignalLick, 1));
@@ -528,7 +529,6 @@ classdef Mouse < handle
             SEMJrgecoLick = std(jrgecoSignalLick, 1)/sqrt(size(jrgecoSignalLick, 1));
             meanSlidingLick = mean(lickCorrMatrix);
             SEMSlidingLick = std(lickCorrMatrix, 1)/sqrt(size(lickCorrMatrix, 1));
-            [slidingAfterLick, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, meanGcampLick, meanJrgecoLick, fs);
             
             signalTimeVector = linspace(- 5, trialTime - 5, size(fullGcampSignal, 2));
             slidingTimeVector = slidingTimeVector - 5;
@@ -541,10 +541,9 @@ classdef Mouse < handle
             corrFullMatrix = [{noLickCorrMatrix}; {lickCorrMatrix}];
             meanSliding = [meanSlidingNoLick; meanSlidingLick];
             SEMSliding = [SEMSlidingNoLick; SEMSlidingLick];
-            slidingAfter = [slidingAfterNoLick; slidingAfterLick];
             
             figureTitle = {"Omission sliding window correlation from " + signalTitle + " for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)};            
-            obj.drawOmissionLick("Sliding winodw",  lickTypesOrder, [-5, 15], signalTimeVector, meanGcamp, SEMGcamp, meanJrgeco, SEMJrgeco, [-5, 15], slidingTimeVector, corrFullMatrix, meanSliding, SEMSliding, slidingAfter, figureTitle, smoothFactor, downsampleFactor)
+            obj.drawOmissionLick("Sliding winodw",  lickTypesOrder, [-5, 15], signalTimeVector, meanGcamp, SEMGcamp, meanJrgeco, SEMJrgeco, [-5, 15], slidingTimeVector, corrFullMatrix, meanSliding, SEMSliding, figureTitle, smoothFactor, downsampleFactor)
         end
         
         % ======= Cross Correlation =======
@@ -590,7 +589,6 @@ classdef Mouse < handle
             outcomesFullCross = cell(outcomesAmount, 1);
             outcomesMeanCross = zeros(outcomesAmount, xCorrelationLen);
             outcomesSEMCross = zeros(outcomesAmount, xCorrelationLen);
-            outcomeCrossAfter = zeros(outcomesAmount, xCorrelationLen);
             
             for outcomeIndx = 1:outcomesAmount
                 outcome = obj.CONST_TASK_OUTCOMES(outcomeIndx);
@@ -603,6 +601,8 @@ classdef Mouse < handle
                     [xCorrelationVector, xCorrTimeVector] = obj.getWholeCrossCorrelation(0, trialTime, outcomeGcampSignal(rowIndx, :), outcomeJrgecoSignal(rowIndx, :), fs);
                     outcomeXCorrMatrix(rowIndx, :) = xCorrelationVector;
                 end
+                
+                outcomeXCorrMatrix = obj.sortCorrelationByStraightenedBy(outcomeXCorrMatrix, tInfo(tInfo.trial_result == outcome, :), straightenedBy);
                 
                 outcomesMeanGcamp(outcomeIndx, :) = mean(outcomeGcampSignal);
                 outcomesSEMGcamp(outcomeIndx, :) = std(outcomeGcampSignal, 1)/sqrt(size(outcomeGcampSignal, 1));        % TODO - ask Gal
@@ -618,17 +618,13 @@ classdef Mouse < handle
                     outcomesSEMCross(outcomeIndx, :) = std(outcomeXCorrMatrix, 1)/sqrt(size(outcomeXCorrMatrix, 1));
                     outcomesFullCross(outcomeIndx, 1) = {outcomeXCorrMatrix};
                 end
-                
-                [genXCorrelationVector, ~] = obj.getWholeCrossCorrelation(0, trialTime, outcomesMeanGcamp(outcomeIndx, :), outcomesMeanJrgeco(outcomeIndx, :), fs);
-                
-                outcomeCrossAfter(outcomeIndx, :) = genXCorrelationVector;
             end
             
             signalTimeVector = linspace(- 5, trialTime - 5, size(fullGcampSignal, 2));
             
             % Draw
             figureTitle = {"Cross Correlation from " + signalTitle, "Between " + obj.GCAMP + " and " + obj.JRGECO, "Mouse " + obj.Name};
-            obj.drawTaskByOutcome("cross correlation", [-5, 15], signalTimeVector, outcomesMeanGcamp, outcomesSEMGcamp, outcomesMeanJrgeco, outcomesSEMJrgeco, [-20, 20],  xCorrTimeVector, outcomesFullCross, outcomesMeanCross, outcomesSEMCross, outcomeCrossAfter, figureTitle, smoothFactor, downsampleFactor)
+            obj.drawTaskByOutcome("cross correlation", [-5, 15], signalTimeVector, outcomesMeanGcamp, outcomesSEMGcamp, outcomesMeanJrgeco, outcomesSEMJrgeco, [-5, 5],  xCorrTimeVector, outcomesFullCross, outcomesMeanCross, outcomesSEMCross, figureTitle, smoothFactor, downsampleFactor)
         end
         
         function plotCrossCorrelationOmissionLick(obj, straightenedBy, smoothFactor, downsampleFactor)
@@ -656,6 +652,8 @@ classdef Mouse < handle
                 noLickCorrMatrix(rowIndx, :) = xCorrelationVector;
             end
             
+            noLickCorrMatrix = obj.sortCorrelationByStraightenedBy(noLickCorrMatrix, tInfo((tInfo.trial_result == outcome) & (isnan(tInfo.first_lick)), :), straightenedBy);
+            
             lickCorrMatrix = zeros(size(gcampSignalLick, 1), xCorrelationLen);
             
             for rowIndx = 1:size(gcampSignalLick, 1)
@@ -663,13 +661,14 @@ classdef Mouse < handle
                 lickCorrMatrix(rowIndx, :) = xCorrelationVector;
             end
             
+            lickCorrMatrix = obj.sortCorrelationByStraightenedBy(lickCorrMatrix, tInfo((tInfo.trial_result == outcome) & (~(isnan(tInfo.first_lick))), :), straightenedBy);
+            
             meanGcampNoLick = mean(gcampSignalNoLick,1 );
             SEMGcampNoLick = std(gcampSignalNoLick, 1)/sqrt(size(gcampSignalNoLick, 1));
             meanJrgecoNoLick = mean(jrgecoSignalNoLick, 1);
             SEMJrgecoNoLick = std(jrgecoSignalNoLick, 1)/sqrt(size(jrgecoSignalNoLick, 1));
             meanXCorrNoLick = mean(noLickCorrMatrix, 1);
             SEMXCorrNoLick = std(noLickCorrMatrix, 1)/sqrt(size(noLickCorrMatrix, 1));
-            [xCorrAfterNoLick, ~] = obj.getWholeCrossCorrelation(0, trialTime, meanGcampNoLick, meanJrgecoNoLick, fs);
             
             meanGcampLick = mean(gcampSignalLick);
             SEMGcampLick = std(gcampSignalLick, 1)/sqrt(size(gcampSignalLick, 1));
@@ -677,7 +676,6 @@ classdef Mouse < handle
             SEMJrgecoLick = std(jrgecoSignalLick, 1)/sqrt(size(jrgecoSignalLick, 1));
             meanXCorrLick = mean(lickCorrMatrix);
             SEMXCorrLick = std(lickCorrMatrix, 1)/sqrt(size(lickCorrMatrix, 1));
-            [xCorrAfterLick, ~] = obj.getWholeCrossCorrelation(0, trialTime, meanGcampLick, meanJrgecoLick, fs);
             
             signalTimeVector = linspace(- 5, trialTime - 5, size(fullGcampSignal, 2));
             
@@ -689,10 +687,9 @@ classdef Mouse < handle
             corrFullMatrix = [{noLickCorrMatrix}; {lickCorrMatrix}];
             meanXCorr = [meanXCorrNoLick; meanXCorrLick];
             SEMXCorr = [SEMXCorrNoLick; SEMXCorrLick];
-            XCorrAfter = [xCorrAfterNoLick; xCorrAfterLick];
             
             figureTitle = {"Omission cross correlation from " + signalTitle, "Between " + obj.GCAMP + " and " + obj.JRGECO, "Mouse " + obj.Name};            
-            obj.drawOmissionLick("Cross correlation",  lickTypesOrder, [-5, 15], signalTimeVector, meanGcamp, SEMGcamp, meanJrgeco, SEMJrgeco, [-20, 20], xCorrTimeVector, corrFullMatrix, meanXCorr, SEMXCorr, XCorrAfter, figureTitle, smoothFactor, downsampleFactor)
+            obj.drawOmissionLick("Cross correlation",  lickTypesOrder, [-5, 15], signalTimeVector, meanGcamp, SEMGcamp, meanJrgeco, SEMJrgeco, [-5, 5], xCorrTimeVector, corrFullMatrix, meanXCorr, SEMXCorr, figureTitle, smoothFactor, downsampleFactor)
         end
         
         function plotCrossCorrelationTaskByOutcomeBeginning(obj, straightenedBy, smoothFactor, downsampleFactor)
@@ -714,7 +711,6 @@ classdef Mouse < handle
             outcomesFullCross = cell(outcomesAmount, 1);
             outcomesMeanCross = zeros(outcomesAmount, xCorrelationLen);
             outcomesSEMCross = zeros(outcomesAmount, xCorrelationLen);
-            outcomeCrossAfter = zeros(outcomesAmount, xCorrelationLen);
             
             for outcomeIndx = 1:outcomesAmount
                 outcome = obj.CONST_TASK_OUTCOMES(outcomeIndx);
@@ -727,6 +723,8 @@ classdef Mouse < handle
                     [xCorrelationVector, xCorrTimeVector] = obj.getWholeCrossCorrelation(0, obj.CONST_TASK_TIME_BEFORE, outcomeGcampSignal(rowIndx, :), outcomeJrgecoSignal(rowIndx, :), fs);
                     outcomeXCorrMatrix(rowIndx, :) = xCorrelationVector;
                 end
+                
+                outcomeXCorrMatrix = obj.sortCorrelationByStraightenedBy(outcomeXCorrMatrix, tInfo(tInfo.trial_result == outcome, :), straightenedBy);
                 
                 outcomesMeanGcamp(outcomeIndx, :) = mean(outcomeGcampSignal);
                 outcomesSEMGcamp(outcomeIndx, :) = std(outcomeGcampSignal, 1)/sqrt(size(outcomeGcampSignal, 1));        % TODO - ask Gal
@@ -742,17 +740,13 @@ classdef Mouse < handle
                     outcomesSEMCross(outcomeIndx, :) = std(outcomeXCorrMatrix, 1)/sqrt(size(outcomeXCorrMatrix, 1));
                     outcomesFullCross(outcomeIndx, 1) = {outcomeXCorrMatrix};
                 end
-                
-                [genXCorrelationVector, ~] = obj.getWholeCrossCorrelation(0, obj.CONST_TASK_TIME_BEFORE, outcomesMeanGcamp(outcomeIndx, :), outcomesMeanJrgeco(outcomeIndx, :), fs);
-                
-                outcomeCrossAfter(outcomeIndx, :) = genXCorrelationVector;
             end
             
             signalTimeVector = linspace(- 5, 0, size(fullGcampSignal, 2));
             
             % Draw
             figureTitle = {"Cross Correlation from " + signalTitle, "Between " + obj.GCAMP + " and " + obj.JRGECO, "Mouse " + obj.Name};
-            obj.drawTaskByOutcome("cross correlation", [-5, 0], signalTimeVector, outcomesMeanGcamp, outcomesSEMGcamp, outcomesMeanJrgeco, outcomesSEMJrgeco, [-5, 5],  xCorrTimeVector, outcomesFullCross, outcomesMeanCross, outcomesSEMCross, outcomeCrossAfter, figureTitle, smoothFactor, downsampleFactor)
+            obj.drawTaskByOutcome("cross correlation", [-5, 0], signalTimeVector, outcomesMeanGcamp, outcomesSEMGcamp, outcomesMeanJrgeco, outcomesSEMJrgeco, [-5, 5],  xCorrTimeVector, outcomesFullCross, outcomesMeanCross, outcomesSEMCross, figureTitle, smoothFactor, downsampleFactor)
         end
         
         function plotCrossCorrelationOmissionLickBeginning(obj, straightenedBy, smoothFactor, downsampleFactor)
@@ -783,6 +777,8 @@ classdef Mouse < handle
                 noLickCorrMatrix(rowIndx, :) = xCorrelationVector;
             end
             
+            noLickCorrMatrix = obj.sortCorrelationByStraightenedBy(noLickCorrMatrix, tInfo((tInfo.trial_result == outcome) & (isnan(tInfo.first_lick)), :), straightenedBy);
+            
             lickCorrMatrix = zeros(size(gcampSignalLick, 1), xCorrelationLen);
             
             for rowIndx = 1:size(gcampSignalLick, 1)
@@ -790,13 +786,14 @@ classdef Mouse < handle
                 lickCorrMatrix(rowIndx, :) = xCorrelationVector;
             end
             
+            lickCorrMatrix = obj.sortCorrelationByStraightenedBy(lickCorrMatrix, tInfo((tInfo.trial_result == outcome) & (~(isnan(tInfo.first_lick))), :), straightenedBy);
+            
             meanGcampNoLick = mean(gcampSignalNoLick,1 );
             SEMGcampNoLick = std(gcampSignalNoLick, 1)/sqrt(size(gcampSignalNoLick, 1));
             meanJrgecoNoLick = mean(jrgecoSignalNoLick, 1);
             SEMJrgecoNoLick = std(jrgecoSignalNoLick, 1)/sqrt(size(jrgecoSignalNoLick, 1));
             meanXCorrNoLick = mean(noLickCorrMatrix, 1);
             SEMXCorrNoLick = std(noLickCorrMatrix, 1)/sqrt(size(noLickCorrMatrix, 1));
-            [xCorrAfterNoLick, ~] = obj.getWholeCrossCorrelation(0, obj.CONST_TASK_TIME_BEFORE, meanGcampNoLick, meanJrgecoNoLick, fs);
             
             meanGcampLick = mean(gcampSignalLick);
             SEMGcampLick = std(gcampSignalLick, 1)/sqrt(size(gcampSignalLick, 1));
@@ -804,7 +801,6 @@ classdef Mouse < handle
             SEMJrgecoLick = std(jrgecoSignalLick, 1)/sqrt(size(jrgecoSignalLick, 1));
             meanXCorrLick = mean(lickCorrMatrix);
             SEMXCorrLick = std(lickCorrMatrix, 1)/sqrt(size(lickCorrMatrix, 1));
-            [xCorrAfterLick, ~] = obj.getWholeCrossCorrelation(0, obj.CONST_TASK_TIME_BEFORE, meanGcampLick, meanJrgecoLick, fs);
             
             signalTimeVector = linspace(- 5, 0, size(fullGcampSignal, 2));
             
@@ -815,11 +811,10 @@ classdef Mouse < handle
             SEMJrgeco = [SEMJrgecoNoLick; SEMJrgecoLick];	
             corrFullMatrix = [{noLickCorrMatrix}; {lickCorrMatrix}];	
             meanXCorr = [meanXCorrNoLick; meanXCorrLick];	
-            SEMXCorr = [SEMXCorrNoLick; SEMXCorrLick];	
-            XCorrAfter = [xCorrAfterNoLick; xCorrAfterLick];
+            SEMXCorr = [SEMXCorrNoLick; SEMXCorrLick];
             
             figureTitle = {"Omission cross correlation from " + signalTitle, "Between " + obj.GCAMP + " and " + obj.JRGECO, "Mouse " + obj.Name};            
-            obj.drawOmissionLick("Cross correlation",  lickTypesOrder, [-5, 0], signalTimeVector, meanGcamp, SEMGcamp, meanJrgeco, SEMJrgeco, [-5, 5], xCorrTimeVector, corrFullMatrix, meanXCorr, SEMXCorr, XCorrAfter, figureTitle, smoothFactor, downsampleFactor)
+            obj.drawOmissionLick("Cross correlation",  lickTypesOrder, [-5, 0], signalTimeVector, meanGcamp, SEMGcamp, meanJrgeco, SEMJrgeco, [-5, 5], xCorrTimeVector, corrFullMatrix, meanXCorr, SEMXCorr, figureTitle, smoothFactor, downsampleFactor)
         end
         
         % ============= Helpers =============
@@ -1364,13 +1359,13 @@ classdef Mouse < handle
             xlim(ax, [-lim, lim])
         end
         
-        function drawTaskByOutcome(obj, corrType, signalLimits, signalTimeVector, outcomesMeanGcamp, outcomesSEMGcamp, outcomesMeanJrgeco, outcomesSEMJrgeco, corrLimits,  corrTimeVector, outcomesFullCorr, outcomesMeanCorr, outcomesSEMCorr, outcomeCorrAfter, figureTitle, smoothFactor, downsampleFactor)
-            fig = figure('position', [337,127,1068,757]);
+        function drawTaskByOutcome(obj, corrType, signalLimits, signalTimeVector, outcomesMeanGcamp, outcomesSEMGcamp, outcomesMeanJrgeco, outcomesSEMJrgeco, corrLimits,  corrTimeVector, outcomesFullCorr, outcomesMeanCorr, outcomesSEMCorr, figureTitle, smoothFactor, downsampleFactor)
+            fig = figure('position', [249,170,1387,757]);
             outcomesAmount = size(obj.CONST_TASK_OUTCOMES, 2);
             
             for outcomeIndx = 1:outcomesAmount
                 % Signal
-                signalAx = subplot(4, outcomesAmount, outcomeIndx);
+                signalAx = subplot(3, outcomesAmount, outcomeIndx);
                 
                 outGcamp = shadedErrorBar(signalTimeVector, outcomesMeanGcamp(outcomeIndx, :), outcomesSEMGcamp(outcomeIndx, :), 'b');
                 hold(signalAx, 'on')
@@ -1391,7 +1386,7 @@ classdef Mouse < handle
                 ylim(signalAx, yl)
                 
                 % Heatmap
-                heatmapAx = subplot(4, outcomesAmount, outcomeIndx + outcomesAmount);
+                heatmapAx = subplot(3, outcomesAmount, outcomeIndx + outcomesAmount);
                 
                 currSliding = outcomesFullCorr(outcomeIndx, 1);
                 currSliding = currSliding{:};
@@ -1406,9 +1401,7 @@ classdef Mouse < handle
                 hold off
                 
                 % Corr
-                corrAfterAx = subplot(4, outcomesAmount, outcomeIndx + outcomesAmount * 3);
-                
-                corrAx = subplot(4, outcomesAmount, outcomeIndx + outcomesAmount * 2);
+                corrAx = subplot(3, outcomesAmount, outcomeIndx + outcomesAmount * 2);
                 
                 shadedErrorBar(corrTimeVector, outcomesMeanCorr(outcomeIndx, :), outcomesSEMCorr(outcomeIndx, :), 'b');
                 
@@ -1417,31 +1410,22 @@ classdef Mouse < handle
                 xlim(corrAx, corrLimits)
                 ylim(corrAx, [-0.5, 0.5])
                 line(corrAx, [0, 0], [-1, 1], 'Color', '#C0C0C0')
-                
-                % After mean corr
-                plot(corrAfterAx, corrTimeVector, outcomeCorrAfter(outcomeIndx, :))
-                
-                title(corrAfterAx, corrType + " for " + obj.CONST_TASK_OUTCOMES(outcomeIndx), 'Interpreter', 'none')
-                line(corrAfterAx, corrLimits, [0 0], 'Color', '#C0C0C0')
-                xlim(corrAfterAx, corrLimits)
-                ylim(corrAfterAx, [-1, 1])
-                line(corrAfterAx, [0, 0], [-1, 1], 'Color', '#C0C0C0')
             end
             
             sgtitle([figureTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor], 'FontWeight', 'bold')
             
         end
         
-        function drawOmissionLick(obj, corrType, lickTypesOrder, signalLimits, signalTimeVector, meanGcamp, SEMGcamp, meanJrgeco, SEMJrgeco, corrLimits, corrTimeVector, corrFullMatrix, meanCorr, SEMCorr, corrAfter, figureTitle, smoothFactor, downsampleFactor)
+        function drawOmissionLick(obj, corrType, lickTypesOrder, signalLimits, signalTimeVector, meanGcamp, SEMGcamp, meanJrgeco, SEMJrgeco, corrLimits, corrTimeVector, corrFullMatrix, meanCorr, SEMCorr, figureTitle, smoothFactor, downsampleFactor)
             % Draw Plots
-            fig = figure('position', [551,163,688,757]);
+            fig = figure('position', [558,165,874,757]);
             lickTypeAmount = size(lickTypesOrder, 2);                           % Only Lick and No Lick
             
             for lickTypeIndx = 1:lickTypeAmount
                 lickType = lickTypesOrder(lickTypeIndx);
                 
                 % Signal
-                signalAx = subplot(4, lickTypeAmount, lickTypeIndx);
+                signalAx = subplot(3, lickTypeAmount, lickTypeIndx);
                 
                 outGcamp = shadedErrorBar(signalTimeVector, meanGcamp(lickTypeIndx, :), SEMGcamp(lickTypeIndx, :), 'b');
                 hold(signalAx, 'on')
@@ -1461,7 +1445,7 @@ classdef Mouse < handle
                 ylim(yl)
                 
                 % Heatmap
-                heatmapAx = subplot(4, lickTypeAmount, lickTypeIndx + lickTypeAmount);
+                heatmapAx = subplot(3, lickTypeAmount, lickTypeIndx + lickTypeAmount);
                 lickTypeCorrMatrix = corrFullMatrix(lickTypeIndx);
                 lickTypeCorrMatrix = lickTypeCorrMatrix{:};
                 
@@ -1476,7 +1460,7 @@ classdef Mouse < handle
                 hold off
                 
                 % Corr
-                corrAx = subplot(4, lickTypeAmount, lickTypeIndx + lickTypeAmount * 2);
+                corrAx = subplot(3, lickTypeAmount, lickTypeIndx + lickTypeAmount * 2);
                 
                 shadedErrorBar(corrTimeVector, meanCorr(lickTypeIndx, :), SEMCorr(lickTypeIndx, :), 'b');
                 
@@ -1485,17 +1469,6 @@ classdef Mouse < handle
                 xlim(corrAx, corrLimits)
                 ylim(corrAx, [-0.5, 0.5])
                 line(corrAx, [0, 0], [-1, 1], 'Color', '#C0C0C0')
-                
-                % After mean corr
-                corrAfterAx = subplot(4, lickTypeAmount, lickTypeIndx + lickTypeAmount * 3);
-                plot(corrAfterAx, corrTimeVector, corrAfter(lickTypeIndx, :))
-                
-                title(corrAfterAx, corrType + " for omission - " + lickType, 'Interpreter', 'none')
-                line(corrAfterAx, corrLimits, [0 0], 'Color', '#C0C0C0')
-                xlim(corrAfterAx, corrLimits)
-                ylim(corrAfterAx, [-1, 1])
-                line(corrAfterAx, [0, 0], [-1, 1], 'Color', '#C0C0C0')
-                
             end
             
             sgtitle([figureTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor], 'FontWeight', 'bold')
@@ -1679,6 +1652,22 @@ classdef Mouse < handle
             
             timeVector = linspace(0, endTime, size(correlationVector, 2));
             timeVector = timeVector + (timeWindow / 2);                    % Correlation will show in the middle of time window and not on beginning
+        end
+        
+        function [sortedCorrelation] = sortCorrelationByStraightenedBy(correlation, fittingTInfo, straightenedBy)
+            switch straightenedBy
+                case "cue"
+                    [~,order] = sort(fittingTInfo.cue_int);
+                    sortedCorrelation = correlation(order, :);
+                case "lick"
+                    [~,order] = sort(fittingTInfo.is_light);
+                    sortedCorrelation = correlation(order, :);
+                case "onset"
+                    [~,order] = sort(fittingTInfo.delay);
+                    sortedCorrelation = correlation(order, :);
+%                 otherwise
+%                     sortedCorrelation = correlation;
+            end
         end
         
     end

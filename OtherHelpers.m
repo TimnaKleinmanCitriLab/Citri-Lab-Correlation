@@ -23,14 +23,14 @@
 for mouseList = loml.ListOfLists
     
     % Sliding by outcome
-    mouseList.plotSlidingCorrelationTaskByOutcome("onset", 0.5, 0.1, 300, 10)
-    mouseList.plotSlidingCorrelationTaskByOutcome("cue", 0.5, 0.1, 300, 10)
-    mouseList.plotSlidingCorrelationTaskByOutcome("lick", 0.5, 0.1, 300, 10)
+    mouseList.plotSlidingCorrelationTaskByOutcome("onset", 3, 0.2, 300, 10)
+    mouseList.plotSlidingCorrelationTaskByOutcome("cue", 3, 0.2, 300, 10)
+    mouseList.plotSlidingCorrelationTaskByOutcome("lick", 3, 0.2, 300, 10)
     close all
     
     % Sliding by lick
-    mouseList.plotSlidingCorrelationOmissionLick("onset", 0.5, 0.1, 300, 10)
-    mouseList.plotSlidingCorrelationOmissionLick("cue", 0.5, 0.1, 300, 10)
+    mouseList.plotSlidingCorrelationOmissionLick("onset", 3, 0.2, 300, 10)
+    mouseList.plotSlidingCorrelationOmissionLick("cue", 3, 0.2, 300, 10)
     close all
     
 %     % Cross by outcome
