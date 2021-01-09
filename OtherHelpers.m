@@ -1,13 +1,62 @@
-listOfLists = [AccInAccOut, AudAcc, AudInAccOut, AudInAudOut, OfcAcc];
-for mouseList = listOfLists
-%     mouseList.plotCrossAndAutoCorrealtionByMouse(["Free", "post"], 0, 300, 10, true)
+% listOfLists = [AccInAccOut, AudAcc, AudInAccOut, AudInAudOut, OfcAcc];
+%     mouseList.plotCrossAndAutoCorrealtionByMouse(["Free", "post"], 0, 20, 300, 10, true)
+%     mouseList.plotCrossAndAutoCorrealtionByMouse(["Task", "onset"], 0, 20, 300, 10, true)
+%     mouseList.plotCrossAndAutoCorrealtionByMouse(["Task", "onset"], 0, 20, 300, 10, false)
+%         mouseList.plotCrossAndAutoCorrealtionByMouse(["Passive", "awake", "BBN", "post"], 0, 20, 300, 10, true)
+%         mouseList.plotCrossAndAutoCorrealtionByMouse(["Passive", "awake", "FS", "post"], 0, 20, 300, 10, true)
 %     mouseList.plotCorrelationBar(300, 10)
 %     mouseList.plotSlidingCorrelationBar(3, 0.2, 300, 10)
 %     mouseList.plotCrossCorrelationLagBar(["Free", "post"], 1.5, 300, 10, true)
 %     mouseList.plotCrossCorrelationLagBar(["Passive", "awake","FS", "post"], 1.5, 300, 10, true)
 %     mouseList.plotCrossCorrelationLagBar(["Passive", "awake","BBN", "post"], 1.5, 300, 10, true)
-    mouseList.plotCorrelationScatterPlot(["Free", "post"], 300, 100)
+%     mouseList.plotCorrelationScatterPlot(["Free", "post"], 300, 100)
+%     mouseList.plotSlidingCorrelationTaskByOutcome("lick", 3, 0.2, 300, 10)
+%     mouseList.plotSlidingCorrelationTaskByOutcome("onset", 3, 0.2, 300, 10)
+%     mouseList.plotSlidingCorrelationTaskByOutcome("cue", 3, 0.2, 300, 10)
+%
+%     mouseList.plotSlidingCorrelationTaskByOutcome("lick", 2, 0.2, 300, 10)
+%     mouseList.plotSlidingCorrelationTaskByOutcome("onset", 2, 0.2, 300, 10)
+%     mouseList.plotSlidingCorrelationTaskByOutcome("cue", 2, 0.2, 300, 10)
+%     mouseList.plotCrossCorrelationOmissionLick("onset", 300, 10)
+%     mouseList.plotCrossCorrelationOmissionLick("cue", 300, 10)
+
+for mouseList = loml.ListOfLists
+    
+    % Sliding by outcome
+    mouseList.plotSlidingCorrelationTaskByOutcome("onset", 0.5, 0.1, 300, 10)
+    mouseList.plotSlidingCorrelationTaskByOutcome("cue", 0.5, 0.1, 300, 10)
+    mouseList.plotSlidingCorrelationTaskByOutcome("lick", 0.5, 0.1, 300, 10)
+    close all
+    
+    % Sliding by lick
+    mouseList.plotSlidingCorrelationOmissionLick("onset", 0.5, 0.1, 300, 10)
+    mouseList.plotSlidingCorrelationOmissionLick("cue", 0.5, 0.1, 300, 10)
+    close all
+    
+%     % Cross by outcome
+%     mouseList.plotCrossCorrelationTaskByOutcome("onset", 300, 10)
+%     mouseList.plotCrossCorrelationTaskByOutcome("cue", 300, 10)
+%     mouseList.plotCrossCorrelationTaskByOutcome("lick", 300, 10)
+%     close all
+%     
+%     % Cross by lick
+%     mouseList.plotCrossCorrelationOmissionLick("onset", 300, 10)
+%     mouseList.plotCrossCorrelationOmissionLick("cue", 300, 10)
+%     close all
+%     
+%     % Beg cross by outcome
+%     mouseList.plotCrossCorrelationTaskByOutcomeBeginning("onset", 300, 10)
+%     mouseList.plotCrossCorrelationTaskByOutcomeBeginning("cue", 300, 10)
+%     mouseList.plotCrossCorrelationTaskByOutcomeBeginning("lick", 300, 10)
+%     
+%     % Beg cross by lick
+%     mouseList.plotCrossCorrelationOmissionLickBeginning("onset", 300, 10)
+%     mouseList.plotCrossCorrelationOmissionLickBeginning("cue", 300, 10)
+%     close all
 end
+
+
+
 
 
 
@@ -116,3 +165,15 @@ legend( "gcamp", "jrgeco", 'Location', 'best', 'Interpreter', 'none')
 xlabel("Time (sec)", 'FontSize', 14)
 ylabel("zscored \DeltaF/F", 'FontSize', 14)
 xlim([0 100])
+
+
+% Sliding by outcome
+loml.OfcAcc.plotSlidingCorrelationTaskByOutcome("onset", 0.5, 0.1, 300, 10)
+loml.OfcAcc.plotSlidingCorrelationTaskByOutcome("cue", 0.5, 0.1, 300, 10)
+loml.OfcAcc.plotSlidingCorrelationTaskByOutcome("lick", 0.5, 0.1, 300, 10)
+close all
+
+% Sliding by lick
+loml.OfcAcc.plotSlidingCorrelationOmissionLick("onset", 0.5, 0.1, 300, 10)
+loml.OfcAcc.plotSlidingCorrelationOmissionLick("cue", 0.5, 0.1, 300, 10)
+close all

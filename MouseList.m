@@ -295,7 +295,7 @@ classdef MouseList < handle
             for mouse = obj.LoadedMouseList
                 if mouse.signalExists(descriptionVector)
                     mouse.plotSlidingCorrelationTaskByOutcome(straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
-                     savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Outcome\by " + straightenedBy + "\" + obj.Type + "\" + mouse.Name + " - " + timeWindow + " sec")
+                     savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Outcome\by " + straightenedBy + "\" + obj.Type + "\" + mouse.Name + " -" + timeWindow + " sec")
                 end
             end
         end
@@ -332,6 +332,30 @@ classdef MouseList < handle
                 if mouse.signalExists(descriptionVector)
                     mouse.plotCrossCorrelationOmissionLick(straightenedBy, smoothFactor, downsampleFactor)
                      savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross By Task - Lick vs. No Lick\by " + straightenedBy + "\" + obj.Type + "\" + mouse.Name)
+                end
+            end
+        end
+        
+        function plotCrossCorrelationTaskByOutcomeBeginning(obj, straightenedBy, smoothFactor, downsampleFactor)
+            descriptionVector = ["Task", straightenedBy];
+            [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
+            
+            for mouse = obj.LoadedMouseList
+                if mouse.signalExists(descriptionVector)
+                    mouse.plotCrossCorrelationTaskByOutcomeBeginning(straightenedBy, smoothFactor, downsampleFactor)
+                     savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross By Task Beginning - Outcome\by " + straightenedBy + "\" + obj.Type + "\" + mouse.Name)
+                end
+            end
+        end
+        
+        function plotCrossCorrelationOmissionLickBeginning(obj, straightenedBy, smoothFactor, downsampleFactor)
+            descriptionVector = ["Task", straightenedBy];
+            [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
+            
+            for mouse = obj.LoadedMouseList
+                if mouse.signalExists(descriptionVector)
+                    mouse.plotCrossCorrelationOmissionLickBeginning(straightenedBy, smoothFactor, downsampleFactor)
+                     savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross By Task Beginning - Lick vs. No Lick\by " + straightenedBy + "\" + obj.Type + "\" + mouse.Name)
                 end
             end
         end
@@ -603,4 +627,3 @@ classdef MouseList < handle
         
     end
 end
-
