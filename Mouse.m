@@ -15,7 +15,7 @@ classdef Mouse < handle
         CONST_DATA_BY_MOVEMENT = "CueInCloud_comb_movement.mat";
         CONST_DATA_BY_ONSET = "CueInCloud_comb_t_onset.mat";
         
-        CONST_TASK_OUTCOMES = ["correct", "late", "omitted", "premature"]
+        CONST_TASK_OUTCOMES = ["premature", "correct", "late", "omitted"]
         
         CONST_TASK_TRIAL_TIME = 20;
         CONST_TASK_TIME_BEFORE = 5;
@@ -465,9 +465,10 @@ classdef Mouse < handle
                 outcomesSEMJrgeco(outcomeIndx, :) = std(outcomeJrgecoSignal, 1)/sqrt(size(outcomeJrgecoSignal, 1));
                 
                 if size(outcomeSlidingCorrMatrix, 2) == 0
-                    outcomesMeanSliding = [outcomesMeanSliding; zeros(1, size(outcomesMeanSliding, 2))];
-                    outcomesSEMSliding = [outcomesSEMSliding; zeros(1, size(outcomesMeanSliding, 2))];
-                    outcomeFullSliding(outcomeIndx, 1) = {zeros(1, size(outcomesMeanSliding, 2))};
+                    slidingWindowSize = 1:round(fs * timeShift):size(fullGcampSignal, 2) - round(fs * timeWindow) + 1;  % Size of sliding window
+                    outcomesMeanSliding = [outcomesMeanSliding; zeros(1, size(slidingWindowSize, 2))];
+                    outcomesSEMSliding = [outcomesSEMSliding; zeros(1, size(slidingWindowSize, 2))];
+                    outcomeFullSliding(outcomeIndx, 1) = {zeros(1, size(slidingWindowSize, 2))};
                 else
                     outcomesMeanSliding = [outcomesMeanSliding; mean(outcomeSlidingCorrMatrix)];
                     outcomesSEMSliding = [outcomesSEMSliding; std(outcomeSlidingCorrMatrix, 1)/sqrt(size(outcomeSlidingCorrMatrix, 1))];

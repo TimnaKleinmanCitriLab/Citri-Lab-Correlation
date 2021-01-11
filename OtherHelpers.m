@@ -22,15 +22,35 @@
 
 for mouseList = loml.ListOfLists
     
-    % Sliding by outcome
-    mouseList.plotSlidingCorrelationTaskByOutcome("onset", 3, 0.2, 300, 10)
-    mouseList.plotSlidingCorrelationTaskByOutcome("cue", 3, 0.2, 300, 10)
-    mouseList.plotSlidingCorrelationTaskByOutcome("lick", 3, 0.2, 300, 10)
+%     % Sliding by outcome
+%     mouseList.plotSlidingCorrelationTaskByOutcome("onset", 1, 0.1, 300, 10)
+%     mouseList.plotSlidingCorrelationTaskByOutcome("cue", 1, 0.1, 300, 10)
+%     mouseList.plotSlidingCorrelationTaskByOutcome("lick", 1, 0.1, 300, 10)
+%     close all
+%     
+%     
+%     mouseList.plotSlidingCorrelationTaskByOutcome("onset", 3, 0.2, 300, 10)
+%     mouseList.plotSlidingCorrelationTaskByOutcome("cue", 3, 0.2, 300, 10)
+%     mouseList.plotSlidingCorrelationTaskByOutcome("lick", 3, 0.2, 300, 10)
+%     close all
+    
+    mouseList.plotSlidingCorrelationTaskByOutcome("onset", 0.5, 0.1, 300, 10)
+    mouseList.plotSlidingCorrelationTaskByOutcome("cue", 0.5, 0.1, 300, 10)
+    mouseList.plotSlidingCorrelationTaskByOutcome("lick", 0.5, 0.1, 300, 10)
     close all
     
-    % Sliding by lick
-    mouseList.plotSlidingCorrelationOmissionLick("onset", 3, 0.2, 300, 10)
-    mouseList.plotSlidingCorrelationOmissionLick("cue", 3, 0.2, 300, 10)
+    
+%     % Sliding by lick
+%     mouseList.plotSlidingCorrelationOmissionLick("onset", 1, 0.1, 300, 10)
+%     mouseList.plotSlidingCorrelationOmissionLick("cue", 1, 0.1, 300, 10)
+%     close all
+%     
+%     mouseList.plotSlidingCorrelationOmissionLick("onset", 3, 0.2, 300, 10)
+%     mouseList.plotSlidingCorrelationOmissionLick("cue", 3, 0.2, 300, 10)
+%     close all
+    
+    mouseList.plotSlidingCorrelationOmissionLick("onset", 0.5, 0.1, 300, 10)
+    mouseList.plotSlidingCorrelationOmissionLick("cue", 0.5, 0.1, 300, 10)
     close all
     
 %     % Cross by outcome
@@ -38,6 +58,7 @@ for mouseList = loml.ListOfLists
 %     mouseList.plotCrossCorrelationTaskByOutcome("cue", 300, 10)
 %     mouseList.plotCrossCorrelationTaskByOutcome("lick", 300, 10)
 %     close all
+%     
 %     
 %     % Cross by lick
 %     mouseList.plotCrossCorrelationOmissionLick("onset", 300, 10)
