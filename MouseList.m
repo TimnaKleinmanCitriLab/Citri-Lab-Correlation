@@ -295,9 +295,76 @@ classdef MouseList < handle
             for mouse = obj.LoadedMouseList
                 if mouse.signalExists(descriptionVector)
                     mouse.plotSlidingCorrelationTaskByOutcome(straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
-                     savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Outcome\by " + straightenedBy + "\" + obj.Type + "\" + mouse.Name + " -" + timeWindow + " sec")
+%                      savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Outcome\by " + straightenedBy + "\" + obj.Type + "\" + mouse.Name + " -" + timeWindow + " sec")
                 end
             end
+        end
+        
+        function plotSlidingCorrelationTaskByOutcomeByTimePeriods(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            
+            checkedStrartTimes = -5:1:14;
+            checkedEndTimes = -4:1:15;
+            
+            % Create ax for each outcome     
+            amountOfOutcomes = size(Mouse.CONST_TASK_OUTCOMES, 2);
+            axByOutcome = [];
+            
+            fig = figure('Position', [450,109,961,860]);
+            for outcomeIndx = 1:amountOfOutcomes
+                ax = subplot(amountOfOutcomes, 1, outcomeIndx);
+                axByOutcome = [axByOutcome, ax];
+            end
+            
+            % Init
+            amountOfTimeChecked = size(checkedStrartTimes, 2);
+            amoutOfMice = size(obj.LoadedMouseList, 2);
+            miceNames = strings(1, amoutOfMice);
+            mousesSliding = zeros(amountOfOutcomes, amountOfTimeChecked);
+            xAxe = 1:amountOfTimeChecked;
+            
+            % Get Data
+            for mouseIndx = 1:amoutOfMice
+                mouse = obj.LoadedMouseList(mouseIndx);
+                miceNames(mouseIndx) = mouse.Name;
+                
+                for timeIndx = 1:amountOfTimeChecked
+                    startTime = checkedStrartTimes(timeIndx);
+                    endTime = checkedEndTimes(timeIndx);
+                    
+                    [~, ~, ~, ~, ~, ~, ~, outcomesMeanSliding, ~, ~, signalTitle]  = mouse.dataForPlotSlidingCorrelationTaskByOutcome(straightenedBy, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    mousesSliding(:, timeIndx) = median(outcomesMeanSliding, 2);
+                end
+                
+                % Plot all mice in group in all different outcome figures
+                for outcomeIndx = 1:amountOfOutcomes
+                    plot(axByOutcome(outcomeIndx), xAxe, mousesSliding(outcomeIndx,:), 'o-')
+                    hold(axByOutcome(outcomeIndx), 'on')
+                end
+            end
+            
+            xLabels = strings(1, amountOfTimeChecked);
+            
+            for timeIndx = 1:amountOfTimeChecked
+                xLabels(timeIndx) = "from " + checkedStrartTimes(timeIndx) + " to " + checkedEndTimes(timeIndx);
+            end
+            
+            % Add Titles
+            legend(axByOutcome(1), miceNames, 'Location', 'best')
+            
+            for outcomeIndx = 1:amountOfOutcomes
+                ax = axByOutcome(outcomeIndx);
+                outcome = Mouse.CONST_TASK_OUTCOMES(outcomeIndx);
+                
+                title(ax, "Sliding Correlation for " + outcome)
+                xlim(ax, [0.75, amountOfTimeChecked + 0.25])
+                ax.XTick = [1: amountOfTimeChecked];
+                ax.XTickLabel = xLabels';
+                ylabel(ax, "Sliding")
+            end
+            
+            sgtitle(fig, {"Sliding in Task by times for " + obj.Type, signalTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Outcome by time\by " + straightenedBy + " - " + obj.Type + " - " + timeWindow + " sec")
+            
         end
         
         function plotSlidingCorrelationOmissionLick(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)

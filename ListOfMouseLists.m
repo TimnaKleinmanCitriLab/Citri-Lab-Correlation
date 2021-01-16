@@ -168,7 +168,113 @@ classdef ListOfMouseLists < handle
             xtickangle(45)
             ylabel(ax, "Correlation / Median of sliding correlation")
             
-            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\Groups Together\" + signalTitle + " - By Groups")
+%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\Groups Together\" + signalTitle + " - By Groups")
+        end
+        
+        function plotSlidingCorrelationTaskByOutcomeBuble(obj, straightenedBy, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            
+            
+            % Create ax for each outcome     
+            amountOfOutcomes = size(Mouse.CONST_TASK_OUTCOMES, 2);
+            axByOutcome = [];
+            
+            fig = figure('Position', [108,113,1670,762]);
+            for outcomeIndx = 1:amountOfOutcomes + 2
+                ax = subplot(1, amountOfOutcomes + 2, outcomeIndx);
+                axByOutcome = [axByOutcome, ax];
+            end
+            
+            % Init
+            AmountOfGroups = 2;
+            labels = strings(AmountOfGroups);
+            
+            for groupIndx = 1:AmountOfGroups
+                group = obj.ListOfLists(groupIndx);
+                amoutOfMiceInGroup = size(group.LoadedMouseList, 2);
+                
+                miceSliding = zeros(amountOfOutcomes + 2, amoutOfMiceInGroup);
+                
+                % Get Data
+                for mouseIndx = 1:amoutOfMiceInGroup
+                    mouse = group.LoadedMouseList(mouseIndx);
+                    
+                    % data for outcomes
+                    [~, ~, ~, ~, ~, ~, ~, outcomesMeanSliding, ~, overallSlidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelationTaskByOutcome(straightenedBy, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    miceSliding(1:amountOfOutcomes, mouseIndx) = median(outcomesMeanSliding, 2);
+                    
+                    % data for overall sliding correlation - first is
+                    % overall forchosen time period, then for -5 to 15 sec
+                    % of trial
+                    miceSliding(amountOfOutcomes + 1, mouseIndx) = median(overallSlidingMeanInTimePeriod, 2);
+                    
+                    slidingMeanInTimePeriod = mouse.getSlidingCorrelationForTimeWindowInTask(["Task", straightenedBy], -5, 15, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    miceSliding(amountOfOutcomes + 2, mouseIndx) = median(slidingMeanInTimePeriod, 2);
+                end
+                
+                labels(1, groupIndx) = group.Type;
+                
+                % Plot all mice in group in all different outcome figures
+                for outcomeIndx = 1:amountOfOutcomes + 2
+                    obj.drawBubbleByGroup(miceSliding(outcomeIndx,:), groupIndx, axByOutcome(outcomeIndx), true)
+                end
+            end
+            
+            % Add Titles
+            legend(axByOutcome(amountOfOutcomes + 2), 'Mice Mean', 'Individuals', 'Location', 'best')
+            yMaxes = zeros(1, amountOfOutcomes + 2);
+            
+            % Titles for outcomes
+            for outcomeIndx = 1:amountOfOutcomes
+                ax = axByOutcome(outcomeIndx);
+                outcome = Mouse.CONST_TASK_OUTCOMES(outcomeIndx);
+                
+                title(ax, "Sliding Correlation for " + outcome)
+                xlim(ax, [0.75, AmountOfGroups + 0.25])
+                ax.XTick = [1: AmountOfGroups];
+                ax.XTickLabel = labels';
+                ylabel(ax, "Median of sliding")
+                
+                yl = ylim(ax);
+                yMaxes(outcomeIndx) = yl(2);
+            end
+            
+            % Titles for overall sliding first is overall for chosen time
+            % period, then for -5 to 15 sec of trial
+            ax = axByOutcome(amountOfOutcomes + 1);
+            
+            title(ax, "Overall Sliding Correlation for all the chosen time")
+            xlim(ax, [0.75, AmountOfGroups + 0.25])
+            ax.XTick = [1: AmountOfGroups];
+            ax.XTickLabel = labels';
+            ylabel(ax, "Median of sliding")
+            
+            yl = ylim(ax);
+            yMaxes(amountOfOutcomes + 1) = yl(2);
+            
+            % Second overall
+            ax = axByOutcome(amountOfOutcomes + 2);
+            
+            title(ax, "Overall Sliding Correlation for all trial")
+            xlim(ax, [0.75, AmountOfGroups + 0.25])
+            ax.XTick = [1: AmountOfGroups];
+            ax.XTickLabel = labels';
+            ylabel(ax, "Median of sliding")
+            
+            yl = ylim(ax);
+            yMaxes(amountOfOutcomes + 2) = yl(2);
+            
+            sgtitle(fig, {"Sliding in task between " + startTime + " and " + endTime, signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            
+            % Set axe limit
+            yMax = max(yMaxes);
+            
+            for outcomeIndx = 1:amountOfOutcomes + 2
+                ax = axByOutcome(outcomeIndx);
+                ylim(ax, [0, yMax])
+            end
+            
+             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Outcome\by " + straightenedBy + "\" + "All Groups - from " + string(startTime) + " to " + string(endTime) + " - " + string(timeWindow) + " sec")
+            
         end
     end
     
@@ -244,6 +350,25 @@ classdef ListOfMouseLists < handle
                 for idx = 1:size(first, 2)
                     plot(ax, xAxe, [first(idx), second(idx)], 'o-', 'color', 'black', 'MarkerFaceColor', 'black', 'MarkerSize', 4)
                     hold on
+                end
+            end
+        end
+        
+        function drawBubbleByGroup(valueList, xAxe, ax, plotIndividuals)
+            
+            % Calcl Mean
+            valuesMean = mean(valueList);
+            
+            % Calc SEM
+%             valuesSEM = std(valueList)/sqrt(length(valueList));
+            
+            % Plot
+            plot(ax, xAxe, valuesMean, 'o', 'LineWidth', 2, 'LineStyle', 'none', 'color', '#800080', 'MarkerFaceColor', '#800080')
+            hold(ax, 'on')
+            if plotIndividuals
+                for idx = 1:size(valueList, 2)
+                    plot(ax, xAxe, valueList(idx), 'o', 'color', 'black', 'MarkerEdgeColor', '#C0C0C0')
+                    hold(ax, 'on')
                 end
             end
         end
