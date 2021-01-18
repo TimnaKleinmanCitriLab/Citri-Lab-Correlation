@@ -482,9 +482,9 @@ classdef MouseList < handle
             miceSliding = zeros(1, amoutOfMice);
             shuffledSliding = zeros(1, amoutOfMice);
             
-            miceNames = zeros(1, amoutOfMice);
+            miceNames = strings(1, amoutOfMice);
             
-            for mouseIndx = 1:amoutOfMic
+            for mouseIndx = 1:amoutOfMice
                 mouse = obj.LoadedMouseList(mouseIndx);
                 
                 % Correlation
@@ -506,9 +506,9 @@ classdef MouseList < handle
             end
             
             obj.drawRelativeBubbleByMouse(miceCorrelation, miceSliding, miceNames, signalTitle, timeWindow, timeShift, smoothFactor, downsampleFactor)
-            %             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding\" + obj.Type + " - " + signalTitle + " - By Mouse")
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\By Group\" + obj.Type + " - " + signalTitle + " - By Mouse")
             obj.drawTwoBubble(miceCorrelation, shuffledCorrelation, miceSliding, shuffledSliding, signalTitle, timeWindow, timeShift, smoothFactor, downsampleFactor, true)
-            %             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding\" + obj.Type + " - " + signalTitle + " - All Mice")
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\By Group\" + obj.Type + " - " + signalTitle + " - All Mice")
             
         end
         
@@ -697,19 +697,22 @@ classdef MouseList < handle
             xAxe = [1, 1.5];
             
             % Plot
-            errorbar(ax, xAxe, [firstMean, secondMean], [firstSEM, secondSEM],'o', 'LineWidth', 1, 'color', 'blue', 'MarkerFaceColor', 'blue', 'MarkerSize', 6, 'CapSize', 12)
+            % errorbar(ax, xAxe, [firstMean, secondMean], [firstSEM, secondSEM],'o', 'LineWidth', 1, 'color', 'blue', 'MarkerFaceColor', 'blue', 'MarkerSize', 6, 'CapSize', 12)
+            plot(ax, xAxe, [firstMean, secondMean], 'd', 'LineWidth', 1, 'color', '#800080', 'MarkerFaceColor', '#800080', 'MarkerSize', 8)
+            
             hold on
-            errorbar(ax, xAxe, [firstRandomMean, secondRandomMean], [firstRandomSEM, secondRandomSEM],'o', 'LineWidth', 1, 'color', 'black', 'MarkerFaceColor', 'black', 'MarkerSize', 6, 'CapSize', 12)
+            plot(ax, xAxe, [firstRandomMean, secondRandomMean],'o', 'LineWidth', 1, 'color', '#C0C0C0', 'MarkerFaceColor', '#C0C0C0', 'MarkerSize', 6)
+            % errorbar(ax, xAxe, [firstRandomMean, secondRandomMean], [firstRandomSEM, secondRandomSEM],'o', 'LineWidth', 1, 'color', 'black', 'MarkerFaceColor', 'black', 'MarkerSize', 6, 'CapSize', 12)
             if plotIndividuals
                 for idx = 1:size(first, 2)
-                    plot(ax, xAxe, [first(idx), second(idx)], 'o-', 'color', '#C0C0C0')
+                    plot(ax, xAxe, [first(idx), second(idx)], 'o-', 'color', 'black', 'MarkerFaceColor', 'black', 'MarkerSize', 4)
                     hold on
                 end
             end
             hold off
             
             % Titles
-            legend(ax, 'Mice', 'Shuffled', 'Individuals', 'Location', 'best')
+            legend(ax, 'Mice Mean', 'Shuffled', 'Individuals', 'Location', 'best')
             
             title(ax, {"Correlation Vs. Sliding Correlation - all mice", obj.Type, signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             xlim(ax, [0.75, 1.75])

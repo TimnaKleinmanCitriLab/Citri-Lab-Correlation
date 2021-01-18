@@ -7,6 +7,7 @@ classdef Mouse < handle
         % General
         CONST_MOUSE_SAVE_PATH = "W:\shared\Timna\Gal Projects\Mice";
         CONST_RAW_FILE_PATH = "\\132.64.59.21\Citri_Lab\gala\Phys data\New Rig";
+        TIMES_TO_SHUFFLE = 10000
         
         % Task
         CONST_DATA_BY_CLOUD = "CueInCloud_comb_cloud.mat";
@@ -825,17 +826,28 @@ classdef Mouse < handle
         function correlation = getWholeSignalCorrelation(obj, descriptionVector, smoothFactor, downsampleFactor, shouldShuffel)
             % Returns the correlation between gcamp and jrgeco for the
             % given description vector. If no signal exists returns zero.
+            % If shouldSuffel is true shuffles TIMES_TO_SHUFFLE times and 
+            % then returns the maximum
+            
             if obj.signalExists(descriptionVector)
                 
                 [gcampSignal, jrgecoSignal, ~, ~, ~] = getInformationDownsampleAndSmooth(obj, descriptionVector, smoothFactor, downsampleFactor, true);
                 
                 if shouldShuffel
-                    idx = randperm(length(gcampSignal));
-                    gcampSignal(idx) = gcampSignal;
-%                     jrgecoSignal(idx) = jrgecoSignal;
+                    correlation = -1;
+                    
+                    for i = 1:obj.TIMES_TO_SHUFFLE
+                        idx = randperm(length(gcampSignal));
+                        gcampSignal(idx) = gcampSignal;
+                        % jrgecoSignal(idx) = jrgecoSignal;
+                        curCorrelation = corr(gcampSignal', jrgecoSignal');
+                        
+                        correlation = max(correlation, curCorrelation);
+                    end
+                    
+                else
+                    correlation = corr(gcampSignal', jrgecoSignal');
                 end
-                
-                correlation = corr(gcampSignal', jrgecoSignal');
                 
             else
                 correlation = 0;
@@ -975,19 +987,33 @@ classdef Mouse < handle
         function [medianSlidingCorrelation, varSlidingCorrelation] = getWholeSignalSlidingMedian(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, shouldShuffel)
             % Returns the mean and median of the sliding window correlation
             % for the given description vector. If no signal exists returns
-            % zero.
+            % zero. If shouldShuffel is true shuffles TIMES_TO_SHUFFLE
+            % times and - returns the maximum correlation and the maximum
+            % variance (even if it isn't from the same shuffle)
+            
             if obj.signalExists(descriptionVector)
                 [gcampSignal, jrgecoSignal, ~, ~, fs] = obj.getInformationDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor, true);
                 
                 if shouldShuffel
-                    idx = randperm(length(gcampSignal));
-                    gcampSignal(idx) = gcampSignal;
-%                     jrgecoSignal(idx) = jrgecoSignal;
+                    medianSlidingCorrelation = -1;
+                    varSlidingCorrelation = 0;
+                    
+                    for i = 1:obj.TIMES_TO_SHUFFLE
+                        idx = randperm(length(gcampSignal));
+                        gcampSignal(idx) = gcampSignal;
+                        % jrgecoSignal(idx) = jrgecoSignal;
+                        
+                        [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
+                        
+                        medianSlidingCorrelation = max(medianSlidingCorrelation, median(correlationVector));
+                        varSlidingCorrelation = max(varSlidingCorrelation, var(correlationVector));
+                    end
+                else
+                    [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
+                    medianSlidingCorrelation = median(correlationVector);
+                    varSlidingCorrelation = var(correlationVector);
                 end
                 
-                [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
-                medianSlidingCorrelation = median(correlationVector); 
-                varSlidingCorrelation = var(correlationVector);
                 
             else
                 medianSlidingCorrelation = 0;
