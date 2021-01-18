@@ -201,7 +201,9 @@ classdef ListOfMouseLists < handle
                     mouse = group.LoadedMouseList(mouseIndx);
                     
                     % data for outcomes
-                    [~, ~, ~, ~, ~, ~, ~, outcomesMeanSliding, ~, overallSlidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelationTaskByOutcome(straightenedBy, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    [~, ~, ~, ~, overallSlidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelationTask(straightenedBy, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    [~, ~, ~, ~, ~, ~, ~, outcomesMeanSliding, ~, ~]  = mouse.dataForPlotSlidingCorrelationTaskByOutcome(straightenedBy, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    
                     miceSliding(1:amountOfOutcomes, mouseIndx) = median(outcomesMeanSliding, 2);
                     
                     % data for overall sliding correlation - first is
@@ -279,78 +281,47 @@ classdef ListOfMouseLists < handle
             
         end
         
-%         function plotSlidingCorrelationTaskByOutcomeByTimePeriods(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
-%             
-%             amountOfOutcomes = size(Mouse.CONST_TASK_OUTCOMES, 2);
-%             axByOutcome = [];
-%             
-%             fig = figure('Position', [108,113,1670,762]);
-%             for outcomeIndx = 1:amountOfOutcomes + 2
-%                 ax = subplot(1, amountOfOutcomes + 2, outcomeIndx);
-%                 axByOutcome = [axByOutcome, ax];
-%             end
-%             
-%             % Create ax for each outcome     
-%             amountOfOutcomes = size(Mouse.CONST_TASK_OUTCOMES, 2);
-%             axByOutcome = [];
-%             
-%             fig = figure('Position', [450,109,961,860]);
-%             for outcomeIndx = 1:amountOfOutcomes
-%                 ax = subplot(amountOfOutcomes, 1, outcomeIndx);
-%                 axByOutcome = [axByOutcome, ax];
-%             end
-%             
-%             % Init
-%             amountOfTimeChecked = size(checkedStrartTimes, 2);
-%             amoutOfMice = size(obj.LoadedMouseList, 2);
-%             miceNames = strings(1, amoutOfMice);
-%             mousesSliding = zeros(amountOfOutcomes, amountOfTimeChecked);
-%             xAxe = 1:amountOfTimeChecked;
-%             
-%             % Get Data
-%             for mouseIndx = 1:amoutOfMice
-%                 mouse = obj.LoadedMouseList(mouseIndx);
-%                 miceNames(mouseIndx) = mouse.Name;
-%                 
-%                 for timeIndx = 1:amountOfTimeChecked
-%                     startTime = checkedStrartTimes(timeIndx);
-%                     endTime = checkedEndTimes(timeIndx);
-%                     
-%                     [~, ~, ~, ~, ~, ~, ~, outcomesMeanSliding, ~, ~, signalTitle]  = mouse.dataForPlotSlidingCorrelationTaskByOutcome(straightenedBy, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor);
-%                     mousesSliding(:, timeIndx) = median(outcomesMeanSliding, 2);
-%                 end
-%                 
-%                 % Plot all mice in group in all different outcome figures
-%                 for outcomeIndx = 1:amountOfOutcomes
-%                     plot(axByOutcome(outcomeIndx), xAxe, mousesSliding(outcomeIndx,:), 'o-')
-%                     hold(axByOutcome(outcomeIndx), 'on')
-%                 end
-%             end
-%             
-%             xLabels = strings(1, amountOfTimeChecked);
-%             
-%             for timeIndx = 1:amountOfTimeChecked
-%                 xLabels(timeIndx) = "from " + checkedStrartTimes(timeIndx) + " to " + checkedEndTimes(timeIndx);
-%             end
-%             
-%             % Add Titles
-%             legend(axByOutcome(1), miceNames, 'Location', 'best')
-%             
-%             for outcomeIndx = 1:amountOfOutcomes
-%                 ax = axByOutcome(outcomeIndx);
-%                 outcome = Mouse.CONST_TASK_OUTCOMES(outcomeIndx);
-%                 
-%                 title(ax, "Sliding Correlation for " + outcome)
-%                 xlim(ax, [0.75, amountOfTimeChecked + 0.25])
-%                 ax.XTick = [1: amountOfTimeChecked];
-%                 ax.XTickLabel = xLabels';
-%                 ylabel(ax, "Sliding")
-%             end
-%             
-%             sgtitle(fig, {"Sliding in Task by times for " + obj.Type, signalTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
-% %             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Outcome by time\by " + straightenedBy + " - " + obj.Type + " - " + timeWindow + " sec")
-%             
-%         end
+        function plotSlidingCorrelationTask(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Plots sliding correaltion in cur task for all mice by group
+            
+            % Create ax for each group
+            AmountOfGroups = 3;                                            % Depending what groups one wants to include
+            axByGroup = [];
+            
+            fig = figure('Position', [450,109,961,860]);
+            for groupIndx = 1:AmountOfGroups
+                ax = subplot(AmountOfGroups, 1, groupIndx);
+                axByGroup = [axByGroup, ax];
+            end
+            
+            % Data + Plot
+            for groupIndx = 1:AmountOfGroups
+                group = obj.ListOfLists(groupIndx);
+                ax = axByGroup(groupIndx);
+                
+                amoutOfMiceInGroup = size(group.LoadedMouseList, 2);
+                miceNames = strings(1,amoutOfMiceInGroup);
+                
+                % Get Data
+                for mouseIndx = 1:amoutOfMiceInGroup
+                    mouse = group.LoadedMouseList(mouseIndx);
+                    miceNames(mouseIndx) = mouse.Name;
+                    
+                    [~, ~, ~, slidingTimeVector, SlidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelationTask(straightenedBy, -5, 15, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    
+                    plot(ax, slidingTimeVector, SlidingMeanInTimePeriod)
+                    hold(ax, 'on')
+                end
+                
+                legend(ax, miceNames)
+                title(ax, "Sliding Correlation for " + group.Type)
+            end
+            
+            sgtitle(fig, {"Sliding in cut task", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            
+             % savefig("" + straightenedBy + "\" + "All Groups - from " + string(startTime) + " to " + string(endTime) + " - " + string(timeWindow) + " sec")
+            
+        end
         
     end
     

@@ -248,7 +248,7 @@ classdef MouseList < handle
                     startTime = checkedStrartTimes(timeIndx);
                     endTime = checkedEndTimes(timeIndx);
                     
-                    [~, ~, ~, ~, ~, ~, ~, outcomesMeanSliding, ~, ~, signalTitle]  = mouse.dataForPlotSlidingCorrelationTaskByOutcome(straightenedBy, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    [~, ~, ~, ~, ~, ~, ~, outcomesMeanSliding, ~, signalTitle]  = mouse.dataForPlotSlidingCorrelationTaskByOutcome(straightenedBy, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor);
                     mousesSliding(:, timeIndx) = median(outcomesMeanSliding, 2);
                 end
                 
@@ -315,7 +315,7 @@ classdef MouseList < handle
                     startTime = checkedStrartTimes(timeIndx);
                     endTime = checkedEndTimes(timeIndx);
                     
-                    [~, ~, ~, ~, ~, ~, ~, outcomesMeanSliding, ~, ~, signalTitle]  = mouse.dataForPlotSlidingCorrelationTaskByOutcome(straightenedBy, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    [~, ~, ~, ~, ~, ~, ~, outcomesMeanSliding, ~, signalTitle]  = mouse.dataForPlotSlidingCorrelationTaskByOutcome(straightenedBy, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor);
                     mousesSliding(:, timeIndx) = median(outcomesMeanSliding, 2);
                 end
                 
