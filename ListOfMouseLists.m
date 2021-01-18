@@ -284,40 +284,118 @@ classdef ListOfMouseLists < handle
         function plotSlidingCorrelationTask(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
             % Plots sliding correaltion in cur task for all mice by group
             
-            % Create ax for each group
+            % Create figures
             AmountOfGroups = 3;                                            % Depending what groups one wants to include
-            axByGroup = [];
+            byMouse = figure('Position', [450,109,961,860]);
+            allMice = figure('Position', [450,109,961,860]); 
             
-            fig = figure('Position', [450,109,961,860]);
-            for groupIndx = 1:AmountOfGroups
-                ax = subplot(AmountOfGroups, 1, groupIndx);
-                axByGroup = [axByGroup, ax];
-            end
             
             % Data + Plot
             for groupIndx = 1:AmountOfGroups
                 group = obj.ListOfLists(groupIndx);
-                ax = axByGroup(groupIndx);
                 
                 amoutOfMiceInGroup = size(group.LoadedMouseList, 2);
                 miceNames = strings(1,amoutOfMiceInGroup);
                 
-                % Get Data
+                % By mouse
+                set(0,'CurrentFigure',byMouse)
+                byMouseAx = subplot(AmountOfGroups, 1, groupIndx);
+                
+                groupMiceSliding = [];
+                
                 for mouseIndx = 1:amoutOfMiceInGroup
                     mouse = group.LoadedMouseList(mouseIndx);
                     miceNames(mouseIndx) = mouse.Name;
                     
                     [~, ~, ~, slidingTimeVector, SlidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelationTask(straightenedBy, -5, 15, timeWindow, timeShift, smoothFactor, downsampleFactor);
                     
-                    plot(ax, slidingTimeVector, SlidingMeanInTimePeriod)
-                    hold(ax, 'on')
+                    groupMiceSliding = [groupMiceSliding; SlidingMeanInTimePeriod];
+                    
+                    plot(byMouseAx, slidingTimeVector, SlidingMeanInTimePeriod)
+                    hold(byMouseAx, 'on')
                 end
                 
-                legend(ax, miceNames)
-                title(ax, "Sliding Correlation for " + group.Type)
+                line(byMouseAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
+                line(byMouseAx, [0, 0], ylim(byMouseAx), 'Color', '#C0C0C0')
+                legend(byMouseAx, miceNames)
+                title(byMouseAx, "Sliding Correlation for " + group.Type)
+                hold(byMouseAx, 'off')
+                
+                % All mice
+                set(0,'CurrentFigure',allMice)
+                allMouseAx = subplot(AmountOfGroups, 1, groupIndx);
+                meanSlidingAllMice = mean(groupMiceSliding, 1);
+                SEMSlidingAllMice = std(groupMiceSliding, 1)/sqrt(size(groupMiceSliding, 1));
+                
+                shadedErrorBar(slidingTimeVector, meanSlidingAllMice, SEMSlidingAllMice, 'b');
+                
+                line(allMouseAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
+                line(allMouseAx, [0, 0], ylim(byMouseAx), 'Color', '#C0C0C0')
+                title(allMouseAx, "Mean Sliding Correlation for " + group.Type)
+                
             end
             
-            sgtitle(fig, {"Sliding in cut task", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            sgtitle(byMouse, {"Sliding in cut task by mouse", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            sgtitle(allMice, {"Sliding in cut task all mice", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            
+             % savefig("" + straightenedBy + "\" + "All Groups - from " + string(startTime) + " to " + string(endTime) + " - " + string(timeWindow) + " sec")
+            
+        end
+        
+        function plotSlidingCorrelationTaskNoLick(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Plots sliding correaltion in cur task for all mice by group
+            
+            % Create figures
+            AmountOfGroups = 3;                                            % Depending what groups one wants to include
+            byMouse = figure('Position', [450,109,961,860]);
+            allMice = figure('Position', [450,109,961,860]);
+            
+            % Data + Plot
+            for groupIndx = 1:AmountOfGroups
+                group = obj.ListOfLists(groupIndx);
+                
+                amoutOfMiceInGroup = size(group.LoadedMouseList, 2);
+                miceNames = strings(1,amoutOfMiceInGroup);
+                
+                % By mouse
+                set(0,'CurrentFigure',byMouse)
+                byMouseAx = subplot(AmountOfGroups, 1, groupIndx);
+                
+                groupMiceSliding = [];
+                
+                for mouseIndx = 1:amoutOfMiceInGroup
+                    mouse = group.LoadedMouseList(mouseIndx);
+                    miceNames(mouseIndx) = mouse.Name;
+                    
+                    [~, ~, ~, slidingTimeVector, SlidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelationTaskNoLick(straightenedBy, -5, 15, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    
+                    groupMiceSliding = [groupMiceSliding; SlidingMeanInTimePeriod];
+                    
+                    plot(byMouseAx, slidingTimeVector, SlidingMeanInTimePeriod)
+                    hold(byMouseAx, 'on')
+                end
+                
+                line(byMouseAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
+                line(byMouseAx, [0, 0], ylim(byMouseAx), 'Color', '#C0C0C0')
+                legend(byMouseAx, miceNames)
+                title(byMouseAx, "Sliding Correlation for " + group.Type)
+                hold(byMouseAx, 'off')
+                
+                % All mice
+                set(0,'CurrentFigure',allMice)
+                allMouseAx = subplot(AmountOfGroups, 1, groupIndx);
+                meanSlidingAllMice = mean(groupMiceSliding, 1);
+                SEMSlidingAllMice = std(groupMiceSliding, 1)/sqrt(size(groupMiceSliding, 1));
+                
+                shadedErrorBar(slidingTimeVector, meanSlidingAllMice, SEMSlidingAllMice, 'b');
+                
+                line(allMouseAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
+                line(allMouseAx, [0, 0], ylim(byMouseAx), 'Color', '#C0C0C0')
+                title(allMouseAx, "Mean Sliding Correlation for " + group.Type)
+            end
+            
+            sgtitle(byMouse, {"Sliding in cut task with no lick by mouse", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            sgtitle(allMice, {"Sliding in cut task with no lick by mouse", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             
              % savefig("" + straightenedBy + "\" + "All Groups - from " + string(startTime) + " to " + string(endTime) + " - " + string(timeWindow) + " sec")
             

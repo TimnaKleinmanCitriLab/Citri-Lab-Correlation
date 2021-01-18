@@ -1088,9 +1088,9 @@ classdef Mouse < handle
             
             for rowIndx = 1:size(cutGcampSignal, 1)
                 [correlationVector, slidingTimeVector] = obj.getSlidingCorrelation(timeWindow, timeShift, cutGcampSignal(rowIndx, :), cutJrgecoSignal(rowIndx, :), fs);
-                if timeWindow < 2
-                    correlationVector = smooth(correlationVector', 10)';
-                end
+%                 if timeWindow < 2
+%                     correlationVector = smooth(correlationVector', 10)';
+%                 end
                 allOutcumesSlidingCorrMatrix = [allOutcumesSlidingCorrMatrix; correlationVector];
             end
             
@@ -1098,6 +1098,42 @@ classdef Mouse < handle
             
             % Time vectors
             signalTimeVector = linspace(- 5, trialTime - 5, size(cutGcampSignal, 2));
+            slidingTimeVector = slidingTimeVector - 5;
+        end
+        
+        function [signalTimeVector, noLickCutGcamp, noLickCutJrgeco, slidingTimeVector, SlidingMeanInTimePeriod, signalTitle]  = dataForPlotSlidingCorrelationTaskNoLick(obj, straightenedBy, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Returns a sliding correlation vector for the time period in
+            % the cut task (meaning somewhere between -5 and 15) only for
+            % trials that have no lick
+            
+            % Get Data
+            descriptionVector = ["Task", straightenedBy];
+            [fullGcampSignal, fullJrgecoSignal, signalTitle, trialTime, fs] = obj.getInformationDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor, false);
+            
+            tInfo = obj.Info.Task.(straightenedBy);
+            
+            SamplesStart = max(round(fs * (startTime + 5)), 1);                    % + 5 cause time starts at -5
+            SamplesEnd = min(round(fs * (endTime + 5)), size(fullGcampSignal , 2));% + 5 cause time starts at -5
+            cutGcampSignal = fullGcampSignal(:, SamplesStart:SamplesEnd);
+            cutJrgecoSignal = fullJrgecoSignal(:, SamplesStart:SamplesEnd);
+            
+            noLickCutGcamp = cutGcampSignal(isnan(tInfo.first_lick), :);
+            noLickCutJrgeco = cutJrgecoSignal(isnan(tInfo.first_lick), :);
+            
+            allOutcumesSlidingCorrMatrix = [];
+            
+            for rowIndx = 1:size(noLickCutGcamp, 1)
+                [correlationVector, slidingTimeVector] = obj.getSlidingCorrelation(timeWindow, timeShift, noLickCutGcamp(rowIndx, :), noLickCutJrgeco(rowIndx, :), fs);
+%                 if timeWindow < 2
+%                     correlationVector = smooth(correlationVector', 10)';
+%                 end
+                allOutcumesSlidingCorrMatrix = [allOutcumesSlidingCorrMatrix; correlationVector];
+            end
+            
+            SlidingMeanInTimePeriod = mean(allOutcumesSlidingCorrMatrix);
+            
+            % Time vectors
+            signalTimeVector = linspace(- 5, trialTime - 5, size(noLickCutGcamp, 2));
             slidingTimeVector = slidingTimeVector - 5;
         end
         
@@ -1136,9 +1172,9 @@ classdef Mouse < handle
                 
                 for rowIndx = 1:size(outcomeGcampSignal, 1)
                     [correlationVector, slidingTimeVector] = obj.getSlidingCorrelation(timeWindow, timeShift, outcomeGcampSignal(rowIndx, :), outcomeJrgecoSignal(rowIndx, :), fs);
-                    if timeWindow < 2
-                        correlationVector = smooth(correlationVector', 10)';
-                    end
+%                     if timeWindow < 2
+%                         correlationVector = smooth(correlationVector', 10)';
+%                     end
                     outcomeSlidingCorrMatrix = [outcomeSlidingCorrMatrix; correlationVector];
                 end
                 
