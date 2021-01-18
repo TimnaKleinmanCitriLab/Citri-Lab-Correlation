@@ -117,6 +117,9 @@ classdef ListOfMouseLists < handle
         end
         
         function plotCorrVsSliding(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Plots the correlation VS sliding correlation for each group
+            % - Shows the single mice as well
+            
             AmountOfGroups = 3;
             
             fig = figure('Position', [450,109,961,860]);
@@ -161,18 +164,17 @@ classdef ListOfMouseLists < handle
             % Titles
             legend(ax, 'Mice Mean', 'Shuffled', 'Individuals', 'Location', 'best')
             
-            title(ax, {"Correlation Vs. Sliding Correlation", signalTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            title(ax, {"Correlation Vs. Sliding Correlation", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             xlim(ax, [0.75, AmountOfGroups * 2 + 0.25])
             ax.XTick = [1: AmountOfGroups * 2];
             ax.XTickLabel = labels';
             xtickangle(45)
             ylabel(ax, "Correlation / Median of sliding correlation")
             
-%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\Groups Together\" + signalTitle + " - By Groups")
+             % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\Groups Together\" + signalTitle + " - By Groups")
         end
         
         function plotSlidingCorrelationTaskByOutcomeBuble(obj, straightenedBy, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor)
-            
             
             % Create ax for each outcome     
             amountOfOutcomes = size(Mouse.CONST_TASK_OUTCOMES, 2);
@@ -273,9 +275,83 @@ classdef ListOfMouseLists < handle
                 ylim(ax, [0, yMax])
             end
             
-             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Outcome\by " + straightenedBy + "\" + "All Groups - from " + string(startTime) + " to " + string(endTime) + " - " + string(timeWindow) + " sec")
+             % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Outcome\by " + straightenedBy + "\" + "All Groups - from " + string(startTime) + " to " + string(endTime) + " - " + string(timeWindow) + " sec")
             
         end
+        
+%         function plotSlidingCorrelationTaskByOutcomeByTimePeriods(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
+%             
+%             amountOfOutcomes = size(Mouse.CONST_TASK_OUTCOMES, 2);
+%             axByOutcome = [];
+%             
+%             fig = figure('Position', [108,113,1670,762]);
+%             for outcomeIndx = 1:amountOfOutcomes + 2
+%                 ax = subplot(1, amountOfOutcomes + 2, outcomeIndx);
+%                 axByOutcome = [axByOutcome, ax];
+%             end
+%             
+%             % Create ax for each outcome     
+%             amountOfOutcomes = size(Mouse.CONST_TASK_OUTCOMES, 2);
+%             axByOutcome = [];
+%             
+%             fig = figure('Position', [450,109,961,860]);
+%             for outcomeIndx = 1:amountOfOutcomes
+%                 ax = subplot(amountOfOutcomes, 1, outcomeIndx);
+%                 axByOutcome = [axByOutcome, ax];
+%             end
+%             
+%             % Init
+%             amountOfTimeChecked = size(checkedStrartTimes, 2);
+%             amoutOfMice = size(obj.LoadedMouseList, 2);
+%             miceNames = strings(1, amoutOfMice);
+%             mousesSliding = zeros(amountOfOutcomes, amountOfTimeChecked);
+%             xAxe = 1:amountOfTimeChecked;
+%             
+%             % Get Data
+%             for mouseIndx = 1:amoutOfMice
+%                 mouse = obj.LoadedMouseList(mouseIndx);
+%                 miceNames(mouseIndx) = mouse.Name;
+%                 
+%                 for timeIndx = 1:amountOfTimeChecked
+%                     startTime = checkedStrartTimes(timeIndx);
+%                     endTime = checkedEndTimes(timeIndx);
+%                     
+%                     [~, ~, ~, ~, ~, ~, ~, outcomesMeanSliding, ~, ~, signalTitle]  = mouse.dataForPlotSlidingCorrelationTaskByOutcome(straightenedBy, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor);
+%                     mousesSliding(:, timeIndx) = median(outcomesMeanSliding, 2);
+%                 end
+%                 
+%                 % Plot all mice in group in all different outcome figures
+%                 for outcomeIndx = 1:amountOfOutcomes
+%                     plot(axByOutcome(outcomeIndx), xAxe, mousesSliding(outcomeIndx,:), 'o-')
+%                     hold(axByOutcome(outcomeIndx), 'on')
+%                 end
+%             end
+%             
+%             xLabels = strings(1, amountOfTimeChecked);
+%             
+%             for timeIndx = 1:amountOfTimeChecked
+%                 xLabels(timeIndx) = "from " + checkedStrartTimes(timeIndx) + " to " + checkedEndTimes(timeIndx);
+%             end
+%             
+%             % Add Titles
+%             legend(axByOutcome(1), miceNames, 'Location', 'best')
+%             
+%             for outcomeIndx = 1:amountOfOutcomes
+%                 ax = axByOutcome(outcomeIndx);
+%                 outcome = Mouse.CONST_TASK_OUTCOMES(outcomeIndx);
+%                 
+%                 title(ax, "Sliding Correlation for " + outcome)
+%                 xlim(ax, [0.75, amountOfTimeChecked + 0.25])
+%                 ax.XTick = [1: amountOfTimeChecked];
+%                 ax.XTickLabel = xLabels';
+%                 ylabel(ax, "Sliding")
+%             end
+%             
+%             sgtitle(fig, {"Sliding in Task by times for " + obj.Type, signalTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+% %             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Outcome by time\by " + straightenedBy + " - " + obj.Type + " - " + timeWindow + " sec")
+%             
+%         end
+        
     end
     
     methods (Static)

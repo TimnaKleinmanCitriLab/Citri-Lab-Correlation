@@ -1499,7 +1499,7 @@ classdef Mouse < handle
             
             sgtitle([figureTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor], 'FontWeight', 'bold')
         end
-        
+         
         % ======================== General Helpers ========================
         function [gcampSignal, jrgecoSignal, trialTime, fs, signalTitle] = getRawSignals(obj, descriptionVector)
             % Returns the raw gcamp and jrGeco signals, along with the

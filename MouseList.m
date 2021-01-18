@@ -57,6 +57,20 @@ classdef MouseList < handle
         
         % ============================= Plot ==============================
         % ============= Plot =============
+        
+        % ==== Separately ====
+        
+        function plotCrossAndAutoCorrealtionByMouse(obj, descriptionVector, maxLag, lim, smoothFactor, downsampleFactor, shouldReshape)
+            [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
+            for mouse = obj.LoadedMouseList
+                if mouse.signalExists(descriptionVector)
+                    mouse.plotCrossAndAutoCorrelation(descriptionVector, maxLag, lim, smoothFactor, downsampleFactor, shouldReshape)
+                    %                     savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross And Auto Correlation\" + signalTitle + "\Concat - " + shouldReshape + "\" +  obj.Type + "\" + mouse.Name + " - " + signalTitle)
+                end
+            end
+        end
+        
+        % ==== Correlation ====
         function plotCorrelationScatterPlot(obj, descriptionVector, smoothFactor, downsampleFactor)
             % Plots scatter plots for all the mice according to the given
             % descriptionVector (empty plot for a mouse that has no
@@ -106,121 +120,6 @@ classdef MouseList < handle
 %             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Bars\" + obj.Type + " Correlation Bar - all")
         end
         
-        function plotSlidingCorrelationBar(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
-            % Plots two graphs - one is of bars where one can see each of
-            % the mice separately, and the other is a summary one with the
-            % mean of all the mice. The bars are the mean / median of
-            % the sliding window values and the categories are all the
-            % possible categories (no bar for a category that has no data,
-            % eg. a mouse that didnt have a pre-awake-FS recording session).
-            % The function first smooths the signals, then down samples them
-            % then calculates the sliding window, and at last calculates
-            % the mean / median of it's values.
-            
-            [medianSlidingCorrelationMatrix, varSlidingCorrelationMatrix, xLabels, mouseNames] = obj.dataForPlotSlidingCorrelationBar(timeWindow, timeShift, smoothFactor, downsampleFactor);
-            
-            obj.drawBarByMouse(medianSlidingCorrelationMatrix, xLabels, mouseNames, "Correlation", {"Median - Sliding window correlation by mouse", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor, true);
-%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Window Bars\Median\" + obj.Type + " Median Sliding Correlation Bar - by mouse")
-            obj.drawBarSummary(medianSlidingCorrelationMatrix, xLabels, "Correlation", {"Median - Sliding window correlation summary for all mice", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor, true);
-%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Window Bars\Median\" + obj.Type + " Median Sliding Correlation Bar - all")
-            
-            
-            obj.drawBarByMouse(varSlidingCorrelationMatrix, xLabels, mouseNames, "Correlation", {"Variance - Sliding window correlation by mouse", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor, false);
-%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Window Bars\Variance\" + obj.Type + " Variance Sliding Correlation Bar - by mouse")
-            obj.drawBarSummary(varSlidingCorrelationMatrix, xLabels, "Correlation", {"Variance - Sliding window correlation summary for all mice", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor, false);
-%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Window Bars\Variance\" + obj.Type + " Variance Sliding Correlation Bar - all")
-        end
-        
-        function plotCrossAndAutoCorrealtionByMouse(obj, descriptionVector, maxLag, lim, smoothFactor, downsampleFactor, shouldReshape)
-            [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
-            for mouse = obj.LoadedMouseList
-                if mouse.signalExists(descriptionVector)
-                    mouse.plotCrossAndAutoCorrelation(descriptionVector, maxLag, lim, smoothFactor, downsampleFactor, shouldReshape)
-%                     savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross And Auto Correlation\" + signalTitle + "\Concat - " + shouldReshape + "\" +  obj.Type + "\" + mouse.Name + " - " + signalTitle)
-                end
-            end
-        end
-        
-        function plotCrossAndAutoCorrealtionAverage(obj, descriptionVector, maxLag, lim, smoothFactor, downsampleFactor, shouldReshape)
-            [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
-            allMiceCross = [];
-            allMiceAutoFirst = [];
-            allMiceAutoSecond = [];
-            
-            for mouse = obj.LoadedMouseList
-                if mouse.signalExists(descriptionVector)
-                    [firstXSecond, timeVector, signalTitle] = mouse.dataForPlotCrossCorrelation(descriptionVector, lim, smoothFactor, downsampleFactor, shouldReshape);
-                    [firstXfirst, secondXsecond, ~, ~] = mouse.dataForPlotAutoCorrelation(descriptionVector, lim, smoothFactor, downsampleFactor, shouldReshape);
-                    
-                    allMiceCross = [allMiceCross; firstXSecond];
-                    allMiceAutoFirst = [allMiceAutoFirst; firstXfirst];
-                    allMiceAutoSecond = [allMiceAutoSecond; secondXsecond];
-                    
-                end
-            end
-            meanMiceCross = mean(allMiceCross, 1);
-            meanMiceAutoFirst = mean(allMiceAutoFirst, 1);
-            meanMiceAutoSecond = mean(allMiceAutoSecond, 1);
-            
-            first = mouse.GCAMP;
-            second = mouse.JRGECO;
-            
-            mouse.drawCrossCorrelation([meanMiceCross; meanMiceAutoFirst], timeVector, lim, ["Cross", "Auto - " + first], signalTitle, "Cross and Auto Correlation Between " + first + " and " + second + " - ALL MICE", smoothFactor, downsampleFactor, shouldReshape)
-        end
-        
-        function plotCrossCorrelationLagBar(obj, descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
-            [signalTitle, firstSignal, secondSignal, timeLagVec, maxHeightVec, mouseNames] = obj.dataForPlotCrossCorrelationLagBar(descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape);
-            
-            % By mouse
-            obj.drawBarByMouse(timeLagVec, mouseNames, firstSignal + " VS. " + secondSignal, "Lag \fontsize{9}(sec)", {"Cross correlation lag - by mouse", signalTitle, "Max lag - " + maxLag}, smoothFactor, downsampleFactor, true);
-%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross Correlation\" + signalTitle + "\Concat - " + shouldReshape + "\" +  obj.Type + "\" + " Cross correlation lag - by mouse")
-
-            obj.drawBarByMouse(maxHeightVec, mouseNames, firstSignal + " VS. " + secondSignal, "Cross correlation \fontsize{9}(normalized)", {"Cross correlation maximum by mouse", signalTitle, "Max lag - " + maxLag}, smoothFactor, downsampleFactor, true);
-%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross Correlation\" + signalTitle + "\Concat - " + shouldReshape + "\" +  obj.Type + "\" + " Cross correlation maximum - by mouse")
-            
-        end
-        
-        function plotCorrVsSliding(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor)
-            [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
-            
-            amoutOfMice = size(obj.LoadedMouseList, 2);
-            
-            miceCorrelation = zeros(1, amoutOfMice);
-            shuffledCorrelation = zeros(1, amoutOfMice);
-            
-            miceSliding = zeros(1, amoutOfMice);
-            shuffledSliding = zeros(1, amoutOfMice);
-            
-            miceNames = zeros(1, amoutOfMice);
-            
-            for mouseIndx = 1:amoutOfMic
-                mouse = obj.LoadedMouseList(mouseIndx);
-                
-                % Correlation
-                mouseCorrelation = mouse.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor, false);
-                miceCorrelation(1, mouseIndx) = mouseCorrelation;
-                
-                curShuffleCorrelation = mouse.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor, true);
-                shuffledCorrelation(1, mouseIndx) = curShuffleCorrelation;
-                
-                % Sliding
-                [mouseSliding, ~] = mouse.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, false);
-                miceSliding(1, mouseIndx) = mouseSliding;
-                
-                [curShuffledSliding, ~] = mouse.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, true);
-                shuffledSliding(1, mouseIndx) = curShuffledSliding;
-                
-                % General
-                miceNames(1, mouseIndx) = mouse.Name;
-            end
-            
-            obj.drawRelativeBubbleByMouse(miceCorrelation, miceSliding, miceNames, signalTitle, smoothFactor, downsampleFactor)
-            %             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding\" + obj.Type + " - " + signalTitle + " - By Mouse")
-            obj.drawTwoBubble(miceCorrelation, shuffledCorrelation, miceSliding, shuffledSliding, signalTitle, smoothFactor, downsampleFactor, true)
-            %             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding\" + obj.Type + " - " + signalTitle + " - All Mice")
-            
-        end
-        
         function plotCorrOnly(obj, descriptionVector, smoothFactor, downsampleFactor)
             [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
             
@@ -246,6 +145,33 @@ classdef MouseList < handle
             obj.drawSingleBubble(miceCorrelation, shuffledCorrelation, signalTitle, smoothFactor, downsampleFactor, true)
 %             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Bubble\" + obj.Type + " - " + signalTitle + " - All Mice")
             
+        end
+        
+        % === Sliding Correlation ===
+        
+        function plotSlidingCorrelationBar(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Plots two graphs - one is of bars where one can see each of
+            % the mice separately, and the other is a summary one with the
+            % mean of all the mice. The bars are the mean / median of
+            % the sliding window values and the categories are all the
+            % possible categories (no bar for a category that has no data,
+            % eg. a mouse that didnt have a pre-awake-FS recording session).
+            % The function first smooths the signals, then down samples them
+            % then calculates the sliding window, and at last calculates
+            % the mean / median of it's values.
+            
+            [medianSlidingCorrelationMatrix, varSlidingCorrelationMatrix, xLabels, mouseNames] = obj.dataForPlotSlidingCorrelationBar(timeWindow, timeShift, smoothFactor, downsampleFactor);
+            
+            obj.drawBarByMouse(medianSlidingCorrelationMatrix, xLabels, mouseNames, "Correlation", {"Median - Sliding window correlation by mouse", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor, true);
+%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Window Bars\Median\" + obj.Type + " Median Sliding Correlation Bar - by mouse")
+            obj.drawBarSummary(medianSlidingCorrelationMatrix, xLabels, "Correlation", {"Median - Sliding window correlation summary for all mice", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor, true);
+%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Window Bars\Median\" + obj.Type + " Median Sliding Correlation Bar - all")
+            
+            
+            obj.drawBarByMouse(varSlidingCorrelationMatrix, xLabels, mouseNames, "Correlation", {"Variance - Sliding window correlation by mouse", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor, false);
+%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Window Bars\Variance\" + obj.Type + " Variance Sliding Correlation Bar - by mouse")
+            obj.drawBarSummary(varSlidingCorrelationMatrix, xLabels, "Correlation", {"Variance - Sliding window correlation summary for all mice", "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)}, smoothFactor, downsampleFactor, false);
+%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Window Bars\Variance\" + obj.Type + " Variance Sliding Correlation Bar - all")
         end
         
         function plotHistogram(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor)
@@ -286,21 +212,12 @@ classdef MouseList < handle
             
             title(ax, {"Sliding Window Histogram for all mice type " + obj.Type, signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             
-        end
-        
-        function plotSlidingCorrelationTaskByOutcome(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
-            descriptionVector = ["Task", straightenedBy];
-            [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
-            
-            for mouse = obj.LoadedMouseList
-                if mouse.signalExists(descriptionVector)
-                    mouse.plotSlidingCorrelationTaskByOutcome(straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
-%                      savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Outcome\by " + straightenedBy + "\" + obj.Type + "\" + mouse.Name + " -" + timeWindow + " sec")
-                end
-            end
-        end
+        end       
         
         function plotSlidingCorrelationTaskByOutcomeByTimePeriods(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Plots the sliding correlation by outcome (one over the other)
+            % and each is broken into points of the median of the sliding
+            % in the time period (1 sec)
             
             checkedStrartTimes = -5:1:14;
             checkedEndTimes = -4:1:15;
@@ -363,8 +280,91 @@ classdef MouseList < handle
             end
             
             sgtitle(fig, {"Sliding in Task by times for " + obj.Type, signalTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
-            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Outcome by time\by " + straightenedBy + " - " + obj.Type + " - " + timeWindow + " sec")
+            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Outcome by time\by " + straightenedBy + " - " + obj.Type + " - " + timeWindow + " sec")
             
+        end
+        
+        function plotSlidingCorrelationTaskByOutcome(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Plots the sliding correlation by outcome (one over the other)
+            % and each is broken into points of the median of the sliding
+            % in the time period (1 sec)
+            
+            % Create ax for each outcome     
+            amountOfOutcomes = size(Mouse.CONST_TASK_OUTCOMES, 2);
+            axByOutcome = [];
+            
+            fig = figure('Position', [450,109,961,860]);
+            for outcomeIndx = 1:amountOfOutcomes
+                ax = subplot(amountOfOutcomes, 1, outcomeIndx);
+                axByOutcome = [axByOutcome, ax];
+            end
+            
+            % Init
+            amountOfTimeChecked = size(checkedStrartTimes, 2);
+            amoutOfMice = size(obj.LoadedMouseList, 2);
+            miceNames = strings(1, amoutOfMice);
+            mousesSliding = zeros(amountOfOutcomes, amountOfTimeChecked);
+            xAxe = 1:amountOfTimeChecked;
+            
+            % Get Data
+            for mouseIndx = 1:amoutOfMice
+                mouse = obj.LoadedMouseList(mouseIndx);
+                miceNames(mouseIndx) = mouse.Name;
+                
+                for timeIndx = 1:amountOfTimeChecked
+                    startTime = checkedStrartTimes(timeIndx);
+                    endTime = checkedEndTimes(timeIndx);
+                    
+                    [~, ~, ~, ~, ~, ~, ~, outcomesMeanSliding, ~, ~, signalTitle]  = mouse.dataForPlotSlidingCorrelationTaskByOutcome(straightenedBy, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    mousesSliding(:, timeIndx) = median(outcomesMeanSliding, 2);
+                end
+                
+                % Plot all mice in group in all different outcome figures
+                for outcomeIndx = 1:amountOfOutcomes
+                    plot(axByOutcome(outcomeIndx), xAxe, mousesSliding(outcomeIndx,:), 'o-')
+                    hold(axByOutcome(outcomeIndx), 'on')
+                end
+            end
+            
+            xLabels = strings(1, amountOfTimeChecked);
+            
+            for timeIndx = 1:amountOfTimeChecked
+                xLabels(timeIndx) = "from " + checkedStrartTimes(timeIndx) + " to " + checkedEndTimes(timeIndx);
+            end
+            
+            % Add Titles
+            legend(axByOutcome(1), miceNames, 'Location', 'best')
+            
+            for outcomeIndx = 1:amountOfOutcomes
+                ax = axByOutcome(outcomeIndx);
+                outcome = Mouse.CONST_TASK_OUTCOMES(outcomeIndx);
+                
+                title(ax, "Sliding Correlation for " + outcome)
+                xlim(ax, [0.75, amountOfTimeChecked + 0.25])
+                ax.XTick = [1: amountOfTimeChecked];
+                ax.XTickLabel = xLabels';
+                ylabel(ax, "Sliding")
+            end
+            
+            sgtitle(fig, {"Sliding in Task by times for " + obj.Type, signalTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Outcome by time\by " + straightenedBy + " - " + obj.Type + " - " + timeWindow + " sec")
+            
+        end
+        
+        % == Separately ==
+        
+        function plotSlidingCorrelationTaskByOutcomeEachMouse(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Plots the sliding correlation of each mouse in a separate
+            % graph
+            descriptionVector = ["Task", straightenedBy];
+            [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
+            
+            for mouse = obj.LoadedMouseList
+                if mouse.signalExists(descriptionVector)
+                    mouse.plotSlidingCorrelationTaskByOutcome(straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
+                    %                      savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Outcome\by " + straightenedBy + "\" + obj.Type + "\" + mouse.Name + " -" + timeWindow + " sec")
+                end
+            end
         end
         
         function plotSlidingCorrelationOmissionLick(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
@@ -374,11 +374,53 @@ classdef MouseList < handle
             for mouse = obj.LoadedMouseList
                 if mouse.signalExists(descriptionVector)
                     mouse.plotSlidingCorrelationOmissionLick(straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
-                     savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Lick vs. No Lick\by " + straightenedBy + "\" + obj.Type + "\" + mouse.Name + " - " + timeWindow + " sec")
+                    savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Lick vs. No Lick\by " + straightenedBy + "\" + obj.Type + "\" + mouse.Name + " - " + timeWindow + " sec")
                 end
             end
         end
         
+        % === Cross Correlation ===
+        
+        function plotCrossAndAutoCorrealtionAverage(obj, descriptionVector, maxLag, lim, smoothFactor, downsampleFactor, shouldReshape)
+            [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
+            allMiceCross = [];
+            allMiceAutoFirst = [];
+            allMiceAutoSecond = [];
+            
+            for mouse = obj.LoadedMouseList
+                if mouse.signalExists(descriptionVector)
+                    [firstXSecond, timeVector, signalTitle] = mouse.dataForPlotCrossCorrelation(descriptionVector, lim, smoothFactor, downsampleFactor, shouldReshape);
+                    [firstXfirst, secondXsecond, ~, ~] = mouse.dataForPlotAutoCorrelation(descriptionVector, lim, smoothFactor, downsampleFactor, shouldReshape);
+                    
+                    allMiceCross = [allMiceCross; firstXSecond];
+                    allMiceAutoFirst = [allMiceAutoFirst; firstXfirst];
+                    allMiceAutoSecond = [allMiceAutoSecond; secondXsecond];
+                    
+                end
+            end
+            meanMiceCross = mean(allMiceCross, 1);
+            meanMiceAutoFirst = mean(allMiceAutoFirst, 1);
+            meanMiceAutoSecond = mean(allMiceAutoSecond, 1);
+            
+            first = mouse.GCAMP;
+            second = mouse.JRGECO;
+            
+            mouse.drawCrossCorrelation([meanMiceCross; meanMiceAutoFirst], timeVector, lim, ["Cross", "Auto - " + first], signalTitle, "Cross and Auto Correlation Between " + first + " and " + second + " - ALL MICE", smoothFactor, downsampleFactor, shouldReshape)
+        end
+        
+        function plotCrossCorrelationLagBar(obj, descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
+            [signalTitle, firstSignal, secondSignal, timeLagVec, maxHeightVec, mouseNames] = obj.dataForPlotCrossCorrelationLagBar(descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape);
+            
+            % By mouse
+            obj.drawBarByMouse(timeLagVec, mouseNames, firstSignal + " VS. " + secondSignal, "Lag \fontsize{9}(sec)", {"Cross correlation lag - by mouse", signalTitle, "Max lag - " + maxLag}, smoothFactor, downsampleFactor, true);
+            %             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross Correlation\" + signalTitle + "\Concat - " + shouldReshape + "\" +  obj.Type + "\" + " Cross correlation lag - by mouse")
+            
+            obj.drawBarByMouse(maxHeightVec, mouseNames, firstSignal + " VS. " + secondSignal, "Cross correlation \fontsize{9}(normalized)", {"Cross correlation maximum by mouse", signalTitle, "Max lag - " + maxLag}, smoothFactor, downsampleFactor, true);
+            %             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross Correlation\" + signalTitle + "\Concat - " + shouldReshape + "\" +  obj.Type + "\" + " Cross correlation maximum - by mouse")
+            
+        end
+        
+        % == Separately ==
         function plotCrossCorrelationTaskByOutcome(obj, straightenedBy, smoothFactor, downsampleFactor)
             descriptionVector = ["Task", straightenedBy];
             [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
@@ -386,7 +428,7 @@ classdef MouseList < handle
             for mouse = obj.LoadedMouseList
                 if mouse.signalExists(descriptionVector)
                     mouse.plotCrossCorrelationTaskByOutcome(straightenedBy, smoothFactor, downsampleFactor)
-                     savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross By Task - Outcome\by " + straightenedBy + "\" + obj.Type + "\" + mouse.Name)
+                    savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross By Task - Outcome\by " + straightenedBy + "\" + obj.Type + "\" + mouse.Name)
                 end
             end
         end
@@ -398,7 +440,7 @@ classdef MouseList < handle
             for mouse = obj.LoadedMouseList
                 if mouse.signalExists(descriptionVector)
                     mouse.plotCrossCorrelationOmissionLick(straightenedBy, smoothFactor, downsampleFactor)
-                     savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross By Task - Lick vs. No Lick\by " + straightenedBy + "\" + obj.Type + "\" + mouse.Name)
+                    savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross By Task - Lick vs. No Lick\by " + straightenedBy + "\" + obj.Type + "\" + mouse.Name)
                 end
             end
         end
@@ -410,7 +452,7 @@ classdef MouseList < handle
             for mouse = obj.LoadedMouseList
                 if mouse.signalExists(descriptionVector)
                     mouse.plotCrossCorrelationTaskByOutcomeBeginning(straightenedBy, smoothFactor, downsampleFactor)
-                     savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross By Task Beginning - Outcome\by " + straightenedBy + "\" + obj.Type + "\" + mouse.Name)
+                    savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross By Task Beginning - Outcome\by " + straightenedBy + "\" + obj.Type + "\" + mouse.Name)
                 end
             end
         end
@@ -422,9 +464,52 @@ classdef MouseList < handle
             for mouse = obj.LoadedMouseList
                 if mouse.signalExists(descriptionVector)
                     mouse.plotCrossCorrelationOmissionLickBeginning(straightenedBy, smoothFactor, downsampleFactor)
-                     savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross By Task Beginning - Lick vs. No Lick\by " + straightenedBy + "\" + obj.Type + "\" + mouse.Name)
+                    savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross By Task Beginning - Lick vs. No Lick\by " + straightenedBy + "\" + obj.Type + "\" + mouse.Name)
                 end
             end
+        end
+        
+        % === Comparison Correlation ===
+        
+        function plotCorrVsSliding(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
+            
+            amoutOfMice = size(obj.LoadedMouseList, 2);
+            
+            miceCorrelation = zeros(1, amoutOfMice);
+            shuffledCorrelation = zeros(1, amoutOfMice);
+            
+            miceSliding = zeros(1, amoutOfMice);
+            shuffledSliding = zeros(1, amoutOfMice);
+            
+            miceNames = zeros(1, amoutOfMice);
+            
+            for mouseIndx = 1:amoutOfMic
+                mouse = obj.LoadedMouseList(mouseIndx);
+                
+                % Correlation
+                mouseCorrelation = mouse.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor, false);
+                miceCorrelation(1, mouseIndx) = mouseCorrelation;
+                
+                curShuffleCorrelation = mouse.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor, true);
+                shuffledCorrelation(1, mouseIndx) = curShuffleCorrelation;
+                
+                % Sliding
+                [mouseSliding, ~] = mouse.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, false);
+                miceSliding(1, mouseIndx) = mouseSliding;
+                
+                [curShuffledSliding, ~] = mouse.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, true);
+                shuffledSliding(1, mouseIndx) = curShuffledSliding;
+                
+                % General
+                miceNames(1, mouseIndx) = mouse.Name;
+            end
+            
+            obj.drawRelativeBubbleByMouse(miceCorrelation, miceSliding, miceNames, signalTitle, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            %             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding\" + obj.Type + " - " + signalTitle + " - By Mouse")
+            obj.drawTwoBubble(miceCorrelation, shuffledCorrelation, miceSliding, shuffledSliding, signalTitle, timeWindow, timeShift, smoothFactor, downsampleFactor, true)
+            %             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding\" + obj.Type + " - " + signalTitle + " - All Mice")
+            
         end
         
         % ============= Helpers =============
@@ -570,7 +655,7 @@ classdef MouseList < handle
             end
         end
         
-        function drawRelativeBubbleByMouse(obj, first, second, miceNames, signalTitle, smoothFactor, downsampleFactor)
+        function drawRelativeBubbleByMouse(obj, first, second, miceNames, signalTitle, timeWindow, timeShift, smoothFactor, downsampleFactor)
             fig = figure('Position', [711,425,401,511]);
             ax = axes;
             
@@ -584,7 +669,7 @@ classdef MouseList < handle
             
             legend(ax, miceNames, 'Location', 'best')           
             
-            title(ax, {"Correlation Vs. Sliding Correlation", obj.Type, signalTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            title(ax, {"Correlation Vs. Sliding Correlation", obj.Type, signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             xlim(ax, [0.75, 1.75])
             ax.XTick = xAxe;
             ax.XTickLabel = ["Correlation", "Sliding Correlation \fontsize{7}(median)"];
@@ -592,7 +677,7 @@ classdef MouseList < handle
             
         end
         
-        function drawTwoBubble(obj, first, firstShuffled, second, secondShuffled, signalTitle, smoothFactor, downsampleFactor, plotIndividuals)
+        function drawTwoBubble(obj, first, firstShuffled, second, secondShuffled, signalTitle, timeWindow, timeShift, smoothFactor, downsampleFactor, plotIndividuals)
             
             % Calcl Mean
             firstMean = mean(first);
@@ -626,7 +711,7 @@ classdef MouseList < handle
             % Titles
             legend(ax, 'Mice', 'Shuffled', 'Individuals', 'Location', 'best')
             
-            title(ax, {"Correlation Vs. Sliding Correlation - all mice", obj.Type, signalTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            title(ax, {"Correlation Vs. Sliding Correlation - all mice", obj.Type, signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             xlim(ax, [0.75, 1.75])
             ax.XTick = xAxe;
             ax.XTickLabel = ["Correlation", "Sliding Correlation \fontsize{7}(median)"];
