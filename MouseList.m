@@ -403,13 +403,14 @@ classdef MouseList < handle
             meanMiceAutoFirst = mean(allMiceAutoFirst, 1);
             SEMMiceAutoFirst = std(allMiceAutoFirst, 1)/sqrt(size(allMiceAutoFirst, 1));
             meanMiceAutoSecond = mean(allMiceAutoSecond, 1);
+            SEMMiceAutoSecond = std(allMiceAutoSecond, 1)/sqrt(size(allMiceAutoSecond, 1));
             
             first = mouse.GCAMP;
             second = mouse.JRGECO;
             
             [~, lagIndex] = max(meanMiceCross);
             
-            obj.drawCrossCorrelation([meanMiceCross; meanMiceAutoFirst], [SEMMiceCross; SEMMiceAutoFirst], timeVector, lim, ["Cross", "Auto - " + first], signalTitle, {"Cross and Auto Correlation Between " + first + " and " + second + ", lag of "+ timeVector(lagIndex), "All Mice Type " + obj.Type}, smoothFactor, downsampleFactor, shouldReshape)
+            obj.drawCrossCorrelation([meanMiceCross; meanMiceAutoFirst; meanMiceAutoSecond], [SEMMiceCross; SEMMiceAutoFirst; SEMMiceAutoSecond], timeVector, lim, ["Cross", "Auto - " + first, "Auto - " + second], signalTitle, {"Cross and Auto Correlation Between " + first + " and " + second + ", lag of "+ timeVector(lagIndex), "All Mice Type " + obj.Type}, smoothFactor, downsampleFactor, shouldReshape)
             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross And Auto Correlation\" + signalTitle + "\Concat - " + shouldReshape + "\" +  obj.Type + "\" + obj.Type + " - average all - " + signalTitle)
         end
         
@@ -476,9 +477,7 @@ classdef MouseList < handle
         
         % === Comparison Correlation ===
         
-        function plotCorrVsSliding(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor)
-            [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
-            
+        function plotCorrVsSliding(obj, straightenedBy, straightenedByForMax, timeWindow, timeShift, smoothFactor, downsampleFactor)
             amoutOfMice = size(obj.LoadedMouseList, 2);
             
             miceCorrelation = zeros(1, amoutOfMice);
@@ -487,7 +486,12 @@ classdef MouseList < handle
             miceSliding = zeros(1, amoutOfMice);
             shuffledSliding = zeros(1, amoutOfMice);
             
+            miceSlidingNotConcat = zeros(1, amoutOfMice);
+            miceMax = zeros(1, amoutOfMice);
+            
             miceNames = strings(1, amoutOfMice);
+            
+            descriptionVector = ["Task", straightenedBy];
             
             for mouseIndx = 1:amoutOfMice
                 mouse = obj.LoadedMouseList(mouseIndx);
@@ -499,18 +503,28 @@ classdef MouseList < handle
                 curShuffleCorrelation = mouse.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor, true);
                 shuffledCorrelation(1, mouseIndx) = curShuffleCorrelation;
                 
-                % Sliding
+                % Sliding concat
                 [mouseSliding, ~] = mouse.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, false);
                 miceSliding(1, mouseIndx) = mouseSliding;
                 
                 [curShuffledSliding, ~] = mouse.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, true);
                 shuffledSliding(1, mouseIndx) = curShuffledSliding;
                 
+                % Sliding not concat
+                [~, ~, ~, slidingTimeVector, slidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelationTask(straightenedBy, -5, 15, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                miceSlidingNotConcat(mouseIndx) = median(slidingMeanInTimePeriod);
+                
+                % Max
+                [~, ~, ~, ~, slidingMeanInTimePeriod, ~]  = mouse.dataForPlotSlidingCorrelationTask(straightenedByForMax, -5, 15, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                maxSlidingNearZeroStartIndex = find(slidingTimeVector >= 0 & slidingTimeVector <= 0.1); % find(slidingTimeVector > -1.1 & slidingTimeVector < -0.99); If want to start at 1 sec
+                maxSlidingNearZeroEndIndex = find(slidingTimeVector > 0.99 & slidingTimeVector < 1.1);
+                miceMax(mouseIndx) = max(slidingMeanInTimePeriod(maxSlidingNearZeroStartIndex:maxSlidingNearZeroEndIndex));
+                
                 % General
                 miceNames(1, mouseIndx) = mouse.Name;
             end
             
-            obj.drawRelativeBubbleByMouse(miceCorrelation, miceSliding, miceNames, signalTitle, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            obj.drawRelativeBubbleByMouse(miceCorrelation, miceSliding, miceSlidingNotConcat, miceMax, miceNames, signalTitle, timeWindow, timeShift, smoothFactor, downsampleFactor)
             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\By Group\" + obj.Type + " - " + signalTitle + " - By Mouse")
             obj.drawTwoBubble(miceCorrelation, shuffledCorrelation, miceSliding, shuffledSliding, signalTitle, timeWindow, timeShift, smoothFactor, downsampleFactor, true)
             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\By Group\" + obj.Type + " - " + signalTitle + " - All Mice")
@@ -660,14 +674,14 @@ classdef MouseList < handle
             end
         end
         
-        function drawRelativeBubbleByMouse(obj, first, second, miceNames, signalTitle, timeWindow, timeShift, smoothFactor, downsampleFactor)
-            fig = figure('Position', [711,425,401,511]);
+        function drawRelativeBubbleByMouse(obj, first, second, third, fourth, miceNames, signalTitle, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            fig = figure('Position', [555,407,799,511]);
             ax = axes;
             
-            xAxe = [1, 1.5];
+            xAxe = [1, 1.5, 2, 2.5];
             
             for idx = 1:size(miceNames, 2)
-                plot(ax, xAxe, [first(idx), second(idx)], 'o-')
+                plot(ax, xAxe, [first(idx), second(idx), third(idx), fourth(idx)], 'o-')
                 hold on
             end
             hold off
@@ -675,10 +689,10 @@ classdef MouseList < handle
             legend(ax, miceNames, 'Location', 'best')           
             
             title(ax, {"Correlation Vs. Sliding Correlation", obj.Type, signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
-            xlim(ax, [0.75, 1.75])
+            xlim(ax, [0.75, 2.75])
             ax.XTick = xAxe;
-            ax.XTickLabel = ["Correlation", "Sliding Correlation \fontsize{7}(median)"];
-            ylabel(ax, "Correlation / Median of sliding correlation")
+            ax.XTickLabel = ["Correlation", "Sliding Concat \fontsize{7}(median)", "Sliding Not Concat \fontsize{7}(median)", "Max sliding of 0-1 sec"];
+            ylabel(ax, "Correlation")
             
         end
         
@@ -784,6 +798,7 @@ classdef MouseList < handle
             ax.XTickLabel = ["Correlation"];
             ylabel(ax, "Correlation")
         end
+        
     end
     
     methods (Static)

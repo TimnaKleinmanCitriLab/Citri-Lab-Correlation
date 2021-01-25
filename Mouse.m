@@ -7,7 +7,7 @@ classdef Mouse < handle
         % General
         CONST_MOUSE_SAVE_PATH = "W:\shared\Timna\Gal Projects\Mice";
         CONST_RAW_FILE_PATH = "\\132.64.59.21\Citri_Lab\gala\Phys data\New Rig";
-        TIMES_TO_SHUFFLE = 100;
+        TIMES_TO_SHUFFLE = 1;
         
         % Task
         CONST_DATA_BY_CLOUD = "CueInCloud_comb_cloud.mat";
@@ -280,7 +280,6 @@ classdef Mouse < handle
             % NOTE - 3 last indexes of differences aren't relevant
         end
         
-        
         % ============================= Plot ==============================
         % ============= General =============
         function plotAllSessions(obj, descriptionVector, smoothFactor, downsampleFactor)
@@ -291,9 +290,17 @@ classdef Mouse < handle
             % and at last plots it.
             
             [gcampSignal, jrgecoSignal, timeVector, signalTitle] = obj.dataForPlotAllSessions(descriptionVector, smoothFactor, downsampleFactor);
-            gcampSignal = gcampSignal + 4;
+            % gcampSignal = gcampSignal + 4;                                 % So on can see easier
             
             obj.drawAllSessions(gcampSignal, jrgecoSignal, timeVector, signalTitle, smoothFactor, downsampleFactor)
+        end
+        
+        function plotCutSignal(obj, descriptionVector, smoothFactor, downsampleFactor)
+            [gcampSignal, jrgecoSignal, signalTitle, totalTime, ~] = obj.getInformationDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor, false);
+            timeVector = linspace(0, totalTime, size(gcampSignal, 2));
+            timeVector = timeVector - 5;
+            
+            obj.drawCutSessions(gcampSignal, jrgecoSignal, timeVector, signalTitle, smoothFactor, downsampleFactor)
         end
         
         % =========== Correlation ===========
@@ -988,7 +995,7 @@ classdef Mouse < handle
         
         function [medianSlidingCorrelation, varSlidingCorrelation] = getWholeSignalSlidingMedian(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, shouldShuffel)
             % Returns the mean and median of the sliding window correlation
-            % for the given description vector. If no signal exists returns
+            % for the given description vector CONCAT. If no signal exists returns
             % zero. If shouldShuffel is true shuffles TIMES_TO_SHUFFLE
             % times and - returns the maximum correlation and the maximum
             % variance (even if it isn't from the same shuffle)
@@ -1330,6 +1337,7 @@ classdef Mouse < handle
             slidingTimeVector = slidingTimeVector - 5;
         end
         
+        % Finish this function
         function [slidingTimeVector, attenuationMeanSlidingTimeWindow, signalTitle]  = dataForPlotSlidingCorrelationPassiveByAttenuation(obj, passiveDescriptionVector, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor)
             % Returns a sliding correlation matrix for the time period in
             % passive (meaning somewhere between -5 and 15) for each
@@ -1401,6 +1409,34 @@ classdef Mouse < handle
             xlabel("Time (sec)", 'FontSize', 14)
             ylabel("zscored \DeltaF/F", 'FontSize', 14)
             xlim([0 100])
+            
+        end
+        
+        function drawCutSessions(obj, gcampSignal, jrgecoSignal, timeVector, signalTitle, smoothFactor, downsampleFactor)
+            % Draws the plot for the plotAllSessions function.
+            
+            figure("Name", "Signal from cut sessions of mouse " + obj.Name, "NumberTitle", "off");
+            ax = gca;
+            
+            meanGcamp = mean(gcampSignal, 1);
+            SEMGcamp = std(gcampSignal, 1)/sqrt(size(gcampSignal, 1));
+            
+            meanJrgeco = mean(jrgecoSignal, 1);
+            SEMJrgeco = std(jrgecoSignal, 1)/sqrt(size(jrgecoSignal, 1));
+            
+            gcampLine = shadedErrorBar(timeVector, meanGcamp, SEMGcamp, 'r').mainLine;
+            hold on;
+            jrgecoLine = shadedErrorBar(timeVector, meanJrgeco, SEMJrgeco, 'b').mainLine;
+            hold off;
+            
+            title(ax, {"Cut Signal From: " +  signalTitle, "Mouse: " + obj.Name, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}, 'FontSize', 12) % TODO - Fix
+            
+            [gcampType, jrgecoType] = obj.findGcampJrgecoType();
+            
+            legend([gcampLine, jrgecoLine], gcampType + " (gcamp)", jrgecoType + " (jrgeco)", 'Location', 'best', 'Interpreter', 'none')
+            xlabel("Time (sec)", 'FontSize', 14)
+            ylabel("zscored \DeltaF/F", 'FontSize', 14)
+            xlim([-5 15])
             
         end
         
