@@ -1031,6 +1031,36 @@ classdef Mouse < handle
             end
         end
         
+        function [medianSlidingCorrelation, varSlidingCorrelation] = getWholeSignalSlidingMedianNoLick(obj, timeWindow, timeShift, smoothFactor, downsampleFactor, shouldShuffel)
+            % Returns the mean and median of the sliding window correlation
+            % for the CONCAT task by onset after removing the lick. If no
+            % signal exists returns zero. If shouldShuffel is true shuffles
+            % TIMES_TO_SHUFFLE times and - returns the maximum correlation
+            % and the maximum variance (even if it isn't from the same shuffle)
+            
+            [gcampSignal, jrgecoSignal, fs] = obj.getConcatTaskNoLick(smoothFactor, downsampleFactor);
+            
+            if shouldShuffel
+                medianSlidingCorrelation = -1;
+                varSlidingCorrelation = 0;
+                
+                for i = 1:obj.TIMES_TO_SHUFFLE
+                    idx = randperm(length(gcampSignal));
+                    gcampSignal(idx) = gcampSignal;
+                    
+                    [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
+                    
+                    medianSlidingCorrelation = max(medianSlidingCorrelation, median(correlationVector));
+                    varSlidingCorrelation = max(varSlidingCorrelation, var(correlationVector));
+                end
+            else
+                [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
+                medianSlidingCorrelation = median(correlationVector);
+                varSlidingCorrelation = var(correlationVector);
+            end
+            
+        end
+        
         function [firstXSecond, timeVector, signalTitle, maxLag] = dataForPlotCrossCorrelation(obj, descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
             % Returns the cross correlation between the first signal and
             % the second (reversed gcamp and geco if reversed in mouse)
@@ -1919,6 +1949,47 @@ classdef Mouse < handle
             end
         end
         
+        function [gcampSignal, jrgecoSignal, fs] = getConcatTaskNoLick(obj, smoothFactor, downsampleFactor)
+            % Returns the signals (according to the description vector)
+            % after first concatenating each one to a continuous signal
+            % then smoothing them and then down sampling them.
+            % It also returns basic data about the signals - their title,
+            % the total time (of the continuous signal) and the sampling
+            % per second (fs).
+            % If there is no such signal, raises an error
+            
+            [gcampSignal, jrgecoSignal, ~, fs, ~] = obj.getRawSignals(["Task", "onset"]);
+            
+            SamplesInTimeWindow = round(fs * 1.5);
+            cleanedGcamp = cell(size(gcampSignal, 1), 1);
+            cleanedJrgeco = cell(size(gcampSignal, 1), 1);
+            
+            for trialIdx = 1:size(gcampSignal, 1)
+                lickTime = obj.Info.Task.onset.first_lick(trialIdx);
+                if ~isnan(lickTime)
+                    startLickSample = round(fs * lickTime);
+                    
+                    cleanedGcamp{trialIdx} = [gcampSignal(trialIdx, 1:startLickSample - 1), gcampSignal(trialIdx, startLickSample + SamplesInTimeWindow:end)];
+                    cleanedJrgeco{trialIdx} = [jrgecoSignal(trialIdx, 1:startLickSample - 1), jrgecoSignal(trialIdx, startLickSample + SamplesInTimeWindow:end)];
+                    
+                else        % There was no lick this trial
+                    cleanedGcamp{trialIdx} = gcampSignal(trialIdx, :);
+                    cleanedJrgeco{trialIdx} = jrgecoSignal(trialIdx, :);
+                end
+            end
+            
+            gcampSignal = cat(2, cleanedGcamp{:});
+            jrgecoSignal = cat(2, cleanedJrgeco{:});
+            
+            gcampSignal = smooth(gcampSignal', smoothFactor)';
+            jrgecoSignal = smooth(jrgecoSignal', smoothFactor)';
+            
+            gcampSignal = downsample(gcampSignal, downsampleFactor);
+            jrgecoSignal = downsample(jrgecoSignal, downsampleFactor);
+            
+            fs = fs / downsampleFactor;
+        end
+        
         function slidingMeanInTimePeriod = getSlidingCorrelationForTimeWindowInTask(obj,  descriptionVector, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor)
             
             % Get Data
@@ -1956,16 +2027,16 @@ classdef Mouse < handle
             % sliding correlation, and a time vector that corresponds with
             % it.
             
-            SamplesInTimeWindow = round(fs * timeWindow);
-            SamplesInMovement = round(fs * timeShift);
+            samplesInTimeWindow = round(fs * timeWindow);
+            samplesInMovement = round(fs * timeShift);
             
-            startWindowIndexVector = 1:SamplesInMovement:size(gcampSignal, 2) - SamplesInTimeWindow + 1;  % +1 becuase includes the begining point
+            startWindowIndexVector = 1:samplesInMovement:size(gcampSignal, 2) - samplesInTimeWindow + 1;  % +1 becuase includes the begining point
             correlationVector = zeros(1, size(startWindowIndexVector, 2));
             
             for loopIndex = 1:size(startWindowIndexVector, 2)
                 
                 startIndex = startWindowIndexVector(loopIndex);
-                lastIndex = startIndex + SamplesInTimeWindow - 1;          % -1 becuase includes the begining point
+                lastIndex = startIndex + samplesInTimeWindow - 1;          % -1 becuase includes the begining point
                 
                 gcampVector = gcampSignal(startIndex : lastIndex);
                 jrgecoVector = jrgecoSignal(startIndex : lastIndex);

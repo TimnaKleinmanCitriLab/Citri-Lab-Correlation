@@ -156,7 +156,7 @@ classdef MouseList < handle
             % the sliding window values and the categories are all the
             % possible categories (no bar for a category that has no data,
             % eg. a mouse that didnt have a pre-awake-FS recording session).
-            % The function first smooths the signals, then down samples them
+            % The function first smooths the signals, then downsamples them
             % then calculates the sliding window, and at last calculates
             % the mean / median of it's values.
             
@@ -395,7 +395,6 @@ classdef MouseList < handle
                     allMiceCross = [allMiceCross; firstXSecond];
                     allMiceAutoFirst = [allMiceAutoFirst; firstXfirst];
                     allMiceAutoSecond = [allMiceAutoSecond; secondXsecond];
-                    
                 end
             end
             meanMiceCross = mean(allMiceCross, 1);
@@ -807,7 +806,7 @@ classdef MouseList < handle
             fig = figure();
             ax = gca;
             
-            colors = ['r', 'b'];
+            colors = ['r', 'b', 'g'];
             plots = [];
             
             for idx = 1:size(crossCorrList, 1)
@@ -817,7 +816,7 @@ classdef MouseList < handle
             end
             hold off
             
-            legend(plots(1:2), legendList, 'Location', 'best')
+            legend(plots, legendList, 'Location', 'best', 'AutoUpdate','off')
             set(0,'DefaultLegendAutoUpdate','off')
             
             title(ax, [CrossType,  signalTitle, "\fontsize{9}Concatenated: " + shouldReshape, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor], 'FontSize', 12)
