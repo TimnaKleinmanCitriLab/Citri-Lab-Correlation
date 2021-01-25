@@ -171,7 +171,7 @@ classdef ListOfMouseLists < handle
             xtickangle(45)
             ylabel(ax, "Correlation / Median of sliding correlation")
             
-             % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\Groups Together\" + signalTitle + " - By Groups")
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\Groups Together\" + signalTitle + " - By Groups")
         end
         
         function plotSlidingCorrelationTaskByOutcomeBuble(obj, straightenedBy, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor)
@@ -282,24 +282,31 @@ classdef ListOfMouseLists < handle
         end
         
         function plotSlidingCorrelationTask(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
-            % Plots sliding correaltion in cur task for all mice by group
+            % Plots sliding correaltion in cut task for all mice by group +
+            % Max of the mice 1 sec before and after time 0 (of 
+            % "straightenedBy")
             
             % Create figures
-            AmountOfGroups = 3;                                            % Depending what groups one wants to include
+            amountOfGroups = 3;                                            % Depending what groups one wants to include
             byMouse = figure('Position', [450,109,961,860]);
             allMice = figure('Position', [450,109,961,860]); 
-            
+            maxCorr = figure('Position', [450,109,961,860]); 
             
             % Data + Plot
-            for groupIndx = 1:AmountOfGroups
+            for groupIndx = 1:amountOfGroups
                 group = obj.ListOfLists(groupIndx);
                 
                 amoutOfMiceInGroup = size(group.LoadedMouseList, 2);
                 miceNames = strings(1,amoutOfMiceInGroup);
                 
+                miceMax = zeros(1, amoutOfMiceInGroup);
+                
                 % By mouse
                 set(0,'CurrentFigure',byMouse)
-                byMouseAx = subplot(AmountOfGroups, 1, groupIndx);
+                slidingByMouseAx = subplot(amountOfGroups, 1, groupIndx);
+                
+                set(0,'CurrentFigure',maxCorr)
+                maxByMouseAx = subplot(1, amountOfGroups, groupIndx);
                 
                 groupMiceSliding = [];
                 
@@ -307,30 +314,41 @@ classdef ListOfMouseLists < handle
                     mouse = group.LoadedMouseList(mouseIndx);
                     miceNames(mouseIndx) = mouse.Name;
                     
-                    [~, ~, ~, slidingTimeVector, SlidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelationTask(straightenedBy, -5, 15, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    [~, ~, ~, slidingTimeVector, slidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelationTask(straightenedBy, -5, 15, timeWindow, timeShift, smoothFactor, downsampleFactor);
                     
-                    groupMiceSliding = [groupMiceSliding; SlidingMeanInTimePeriod];
+                    groupMiceSliding = [groupMiceSliding; slidingMeanInTimePeriod];
                     
-                    plot(byMouseAx, slidingTimeVector, SlidingMeanInTimePeriod)
-                    hold(byMouseAx, 'on')
+                    plot(slidingByMouseAx, slidingTimeVector, slidingMeanInTimePeriod)
+                    hold(slidingByMouseAx, 'on')
+                    
+                    maxSlidingNearZeroStartIndex = find(slidingTimeVector >= 0 & slidingTimeVector <= 0.1); % find(slidingTimeVector > -1.1 & slidingTimeVector < -0.99); If want to start at 1 sec
+                    maxSlidingNearZeroEndIndex = find(slidingTimeVector > 0.99 & slidingTimeVector < 1.1);
+                    miceMax(mouseIndx) = max(slidingMeanInTimePeriod(maxSlidingNearZeroStartIndex:maxSlidingNearZeroEndIndex));
+                    plot(maxByMouseAx, [0], [miceMax(mouseIndx)], 'o')
+                    hold(maxByMouseAx, 'on')
                 end
                 
-                line(byMouseAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
-                line(byMouseAx, [0, 0], ylim(byMouseAx), 'Color', '#C0C0C0')
-                legend(byMouseAx, miceNames)
-                title(byMouseAx, "Sliding Correlation for " + group.Type)
-                hold(byMouseAx, 'off')
+                line(slidingByMouseAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
+                line(slidingByMouseAx, [0, 0], ylim(slidingByMouseAx), 'Color', '#C0C0C0')
+                legend(slidingByMouseAx, miceNames, 'Location', 'best')
+                title(slidingByMouseAx, "Sliding Correlation for " + group.Type)
+                hold(slidingByMouseAx, 'off')
+                
+                plot(maxByMouseAx, [0], [mean(miceMax)], '*')
+                legend(maxByMouseAx, [miceNames, "mice mean"], 'Location', 'best')
+                title(maxByMouseAx, "Max sliding for " + group.Type)
+                hold(maxByMouseAx, 'off')
                 
                 % All mice
                 set(0,'CurrentFigure',allMice)
-                allMouseAx = subplot(AmountOfGroups, 1, groupIndx);
+                allMouseAx = subplot(amountOfGroups, 1, groupIndx);
                 meanSlidingAllMice = mean(groupMiceSliding, 1);
                 SEMSlidingAllMice = std(groupMiceSliding, 1)/sqrt(size(groupMiceSliding, 1));
                 
                 shadedErrorBar(slidingTimeVector, meanSlidingAllMice, SEMSlidingAllMice, 'b');
                 
                 line(allMouseAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
-                line(allMouseAx, [0, 0], ylim(byMouseAx), 'Color', '#C0C0C0')
+                line(allMouseAx, [0, 0], ylim(slidingByMouseAx), 'Color', '#C0C0C0')
                 title(allMouseAx, "Mean Sliding Correlation for " + group.Type)
                 
             end
@@ -343,26 +361,37 @@ classdef ListOfMouseLists < handle
             set(0,'CurrentFigure',allMice)
             % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - all groups\Task but by " + straightenedBy + " - all mice")
             
+            sgtitle(maxCorr, {"Sliding max in cut task all mice - between 0 and 1 sec", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            set(0,'CurrentFigure',maxCorr)
+            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - all groups\Task cut by " + straightenedBy + " - max")
         end
         
         function plotSlidingCorrelationTaskNoLick(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
-            % Plots sliding correaltion in cur task for all mice by group
+            % Plots sliding correaltion of trials with no lick, in cut task
+            % for all mice by group + Max of the mice 1 sec before and
+            % after time 0 (of "straightenedBy")
             
             % Create figures
-            AmountOfGroups = 3;                                            % Depending what groups one wants to include
+            amountOfGroups = 3;                                            % Depending what groups one wants to include
             byMouse = figure('Position', [450,109,961,860]);
             allMice = figure('Position', [450,109,961,860]);
+            maxCorr = figure('Position', [450,109,961,860]); 
             
             % Data + Plot
-            for groupIndx = 1:AmountOfGroups
+            for groupIndx = 1:amountOfGroups
                 group = obj.ListOfLists(groupIndx);
                 
                 amoutOfMiceInGroup = size(group.LoadedMouseList, 2);
                 miceNames = strings(1,amoutOfMiceInGroup);
                 
+                miceMax = zeros(1, amoutOfMiceInGroup);
+                
                 % By mouse
                 set(0,'CurrentFigure',byMouse)
-                byMouseAx = subplot(AmountOfGroups, 1, groupIndx);
+                byMouseAx = subplot(amountOfGroups, 1, groupIndx);
+                
+                set(0,'CurrentFigure',maxCorr)
+                maxByMouseAx = subplot(1, amountOfGroups, groupIndx);
                 
                 groupMiceSliding = [];
                 
@@ -370,12 +399,18 @@ classdef ListOfMouseLists < handle
                     mouse = group.LoadedMouseList(mouseIndx);
                     miceNames(mouseIndx) = mouse.Name;
                     
-                    [~, ~, ~, slidingTimeVector, SlidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelationTaskNoLick(straightenedBy, -5, 15, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    [~, ~, ~, slidingTimeVector, slidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelationTaskNoLick(straightenedBy, -5, 15, timeWindow, timeShift, smoothFactor, downsampleFactor);
                     
-                    groupMiceSliding = [groupMiceSliding; SlidingMeanInTimePeriod];
+                    groupMiceSliding = [groupMiceSliding; slidingMeanInTimePeriod];
                     
-                    plot(byMouseAx, slidingTimeVector, SlidingMeanInTimePeriod)
+                    plot(byMouseAx, slidingTimeVector, slidingMeanInTimePeriod)
                     hold(byMouseAx, 'on')
+                    
+                    maxSlidingNearZeroStartIndex = find(slidingTimeVector >= 0 & slidingTimeVector <= 0.1); % find(slidingTimeVector > -1.1 & slidingTimeVector < -0.99); If want to start at 1 sec
+                    maxSlidingNearZeroEndIndex = find(slidingTimeVector > 0.99 & slidingTimeVector < 1.1);
+                    miceMax(mouseIndx) = max(slidingMeanInTimePeriod(maxSlidingNearZeroStartIndex:maxSlidingNearZeroEndIndex));
+                    plot(maxByMouseAx, [0], [miceMax(mouseIndx)], 'o')
+                    hold(maxByMouseAx, 'on')
                 end
                 
                 line(byMouseAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
@@ -384,9 +419,14 @@ classdef ListOfMouseLists < handle
                 title(byMouseAx, "Sliding Correlation for " + group.Type)
                 hold(byMouseAx, 'off')
                 
+                plot(maxByMouseAx, [0], [mean(miceMax)], '*')
+                legend(maxByMouseAx, [miceNames, "mice mean"], 'Location', 'best')
+                title(maxByMouseAx, "Max sliding for " + group.Type)
+                hold(maxByMouseAx, 'off')
+                
                 % All mice
                 set(0,'CurrentFigure',allMice)
-                allMouseAx = subplot(AmountOfGroups, 1, groupIndx);
+                allMouseAx = subplot(amountOfGroups, 1, groupIndx);
                 meanSlidingAllMice = mean(groupMiceSliding, 1);
                 SEMSlidingAllMice = std(groupMiceSliding, 1)/sqrt(size(groupMiceSliding, 1));
                 
@@ -399,13 +439,100 @@ classdef ListOfMouseLists < handle
             
             sgtitle(byMouse, {"Sliding in cut task with no lick by mouse", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             set(0,'CurrentFigure',byMouse)
-            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Lick vs. No Lick\" + straightenedBy + "\" + "All Groups - no lick - by mouse")
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Lick vs. No Lick\by " + straightenedBy + "\All Groups - no lick - by mouse")
             
             sgtitle(allMice, {"Sliding in cut task with no lick by mouse", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             set(0,'CurrentFigure',allMice)
-            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Lick vs. No Lick\" + straightenedBy + "\" + "All Groups - no lick - all mice")
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Lick vs. No Lick\by " + straightenedBy + "\All Groups - no lick - all mice")
             
-             
+            sgtitle(maxCorr, {"Sliding max in cut task all mice", "between 0 and 1 sec", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            set(0,'CurrentFigure',maxCorr)
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Lick vs. No Lick\by " + straightenedBy + "\All Groups - no lick - max")
+            
+        end
+        
+        function plotSlidingCorrelationPassiveByAttenuation(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Plots sliding correaltion of passive by attenuations +
+            % general - for all mice by group + Max of the mice 1 sec before and
+            % after time 0 (of "straightenedBy")
+            
+            % Create figures
+            amountOfGroups = 3;                                            % Depending what groups one wants to include
+            byMouse = figure('Position', [450,109,961,860]);
+            allMice = figure('Position', [450,109,961,860]);
+            maxCorr = figure('Position', [450,109,961,860]); 
+            
+            % Data + Plot
+            for groupIndx = 1:amountOfGroups
+                group = obj.ListOfLists(groupIndx);
+                
+                amoutOfMiceInGroup = size(group.LoadedMouseList, 2);
+                miceNames = strings(1,amoutOfMiceInGroup);
+                
+                miceMax = zeros(1, amoutOfMiceInGroup);
+                
+                % By mouse
+                set(0,'CurrentFigure',byMouse)
+                byMouseAx = subplot(amountOfGroups, 1, groupIndx);
+                
+                set(0,'CurrentFigure',maxCorr)
+                maxByMouseAx = subplot(1, amountOfGroups, groupIndx);
+                
+                groupMiceSliding = [];
+                
+                for mouseIndx = 1:amoutOfMiceInGroup
+                    mouse = group.LoadedMouseList(mouseIndx);
+                    miceNames(mouseIndx) = mouse.Name;
+                    
+                    [~, ~, ~, slidingTimeVector, slidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelationTaskNoLick(straightenedBy, -5, 15, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    
+                    groupMiceSliding = [groupMiceSliding; slidingMeanInTimePeriod];
+                    
+                    plot(byMouseAx, slidingTimeVector, slidingMeanInTimePeriod)
+                    hold(byMouseAx, 'on')
+                    
+                    maxSlidingNearZeroStartIndex = find(slidingTimeVector >= 0 & slidingTimeVector <= 0.1); % find(slidingTimeVector > -1.1 & slidingTimeVector < -0.99); If want to start at 1 sec
+                    maxSlidingNearZeroEndIndex = find(slidingTimeVector > 0.99 & slidingTimeVector < 1.1);
+                    miceMax(mouseIndx) = max(slidingMeanInTimePeriod(maxSlidingNearZeroStartIndex:maxSlidingNearZeroEndIndex));
+                    plot(maxByMouseAx, [0], [miceMax(mouseIndx)], 'o')
+                    hold(maxByMouseAx, 'on')
+                end
+                
+                line(byMouseAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
+                line(byMouseAx, [0, 0], ylim(byMouseAx), 'Color', '#C0C0C0')
+                legend(byMouseAx, miceNames)
+                title(byMouseAx, "Sliding Correlation for " + group.Type)
+                hold(byMouseAx, 'off')
+                
+                plot(maxByMouseAx, [0], [mean(miceMax)], '*')
+                legend(maxByMouseAx, [miceNames, "mice mean"], 'Location', 'best')
+                title(maxByMouseAx, "Max sliding for " + group.Type)
+                hold(maxByMouseAx, 'off')
+                
+                % All mice
+                set(0,'CurrentFigure',allMice)
+                allMouseAx = subplot(amountOfGroups, 1, groupIndx);
+                meanSlidingAllMice = mean(groupMiceSliding, 1);
+                SEMSlidingAllMice = std(groupMiceSliding, 1)/sqrt(size(groupMiceSliding, 1));
+                
+                shadedErrorBar(slidingTimeVector, meanSlidingAllMice, SEMSlidingAllMice, 'b');
+                
+                line(allMouseAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
+                line(allMouseAx, [0, 0], ylim(byMouseAx), 'Color', '#C0C0C0')
+                title(allMouseAx, "Mean Sliding Correlation for " + group.Type)
+            end
+            
+            sgtitle(byMouse, {"Sliding in cut task with no lick by mouse", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            set(0,'CurrentFigure',byMouse)
+            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Lick vs. No Lick\by " + straightenedBy + "\All Groups - no lick - by mouse")
+            
+            sgtitle(allMice, {"Sliding in cut task with no lick by mouse", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            set(0,'CurrentFigure',allMice)
+            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Lick vs. No Lick\by " + straightenedBy + "\All Groups - no lick - all mice")
+            
+            sgtitle(maxCorr, {"Sliding max in cut task all mice", "between 0 and 1 sec", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            set(0,'CurrentFigure',maxCorr)
+            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Lick vs. No Lick\by " + straightenedBy + "\All Groups - no lick - max")
             
         end
         
@@ -466,9 +593,9 @@ classdef ListOfMouseLists < handle
         function drawTwoBubble(first, firstShuffled, second, secondShuffled, xAxe, ax, plotIndividuals)
             
             % Calcl Mean
-            firstMean = mean(first);
+            firstMean = mean(nonzeros(first));
             firstRandomMean = mean(firstShuffled);
-            secondMean = mean(second);
+            secondMean = mean(nonzeros(second));
             secondRandomMean = mean(secondShuffled);
             
             % Calc SEM
@@ -478,7 +605,8 @@ classdef ListOfMouseLists < handle
             % Plot
             plot(ax, xAxe, [firstMean, secondMean], 'd', 'LineWidth', 1, 'color', '#800080', 'MarkerFaceColor', '#800080', 'MarkerSize', 8)
             hold on
-            errorbar(ax, xAxe, [firstRandomMean, secondRandomMean], [firstRandomSEM, secondRandomSEM],'o', 'LineWidth', 1, 'color', '#C0C0C0', 'MarkerFaceColor', '#C0C0C0', 'MarkerSize', 6, 'CapSize', 12)
+            % errorbar(ax, xAxe, [firstRandomMean, secondRandomMean], [firstRandomSEM, secondRandomSEM],'o', 'LineWidth', 1, 'color', '#C0C0C0', 'MarkerFaceColor', '#C0C0C0', 'MarkerSize', 6, 'CapSize', 12)
+            plot(ax, xAxe, [firstRandomMean, secondRandomMean],'o', 'LineWidth', 1, 'color', '#C0C0C0', 'MarkerFaceColor', '#C0C0C0', 'MarkerSize', 6)
             if plotIndividuals
                 for idx = 1:size(first, 2)
                     plot(ax, xAxe, [first(idx), second(idx)], 'o-', 'color', 'black', 'MarkerFaceColor', 'black', 'MarkerSize', 4)

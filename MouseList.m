@@ -389,8 +389,8 @@ classdef MouseList < handle
             
             for mouse = obj.LoadedMouseList
                 if mouse.signalExists(descriptionVector)
-                    [firstXSecond, timeVector, signalTitle] = mouse.dataForPlotCrossCorrelation(descriptionVector, lim, smoothFactor, downsampleFactor, shouldReshape);
-                    [firstXfirst, secondXsecond, ~, ~] = mouse.dataForPlotAutoCorrelation(descriptionVector, lim, smoothFactor, downsampleFactor, shouldReshape);
+                    [firstXSecond, timeVector, signalTitle] = mouse.dataForPlotCrossCorrelation(descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape);
+                    [firstXfirst, secondXsecond, ~, ~] = mouse.dataForPlotAutoCorrelation(descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape);
                     
                     allMiceCross = [allMiceCross; firstXSecond];
                     allMiceAutoFirst = [allMiceAutoFirst; firstXfirst];
@@ -399,13 +399,18 @@ classdef MouseList < handle
                 end
             end
             meanMiceCross = mean(allMiceCross, 1);
+            SEMMiceCross = std(allMiceCross, 1)/sqrt(size(allMiceCross, 1));
             meanMiceAutoFirst = mean(allMiceAutoFirst, 1);
+            SEMMiceAutoFirst = std(allMiceAutoFirst, 1)/sqrt(size(allMiceAutoFirst, 1));
             meanMiceAutoSecond = mean(allMiceAutoSecond, 1);
             
             first = mouse.GCAMP;
             second = mouse.JRGECO;
             
-            mouse.drawCrossCorrelation([meanMiceCross; meanMiceAutoFirst], timeVector, lim, ["Cross", "Auto - " + first], signalTitle, "Cross and Auto Correlation Between " + first + " and " + second + " - ALL MICE", smoothFactor, downsampleFactor, shouldReshape)
+            [~, lagIndex] = max(meanMiceCross);
+            
+            obj.drawCrossCorrelation([meanMiceCross; meanMiceAutoFirst], [SEMMiceCross; SEMMiceAutoFirst], timeVector, lim, ["Cross", "Auto - " + first], signalTitle, {"Cross and Auto Correlation Between " + first + " and " + second + ", lag of "+ timeVector(lagIndex), "All Mice Type " + obj.Type}, smoothFactor, downsampleFactor, shouldReshape)
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross And Auto Correlation\" + signalTitle + "\Concat - " + shouldReshape + "\" +  obj.Type + "\" + obj.Type + " - average all - " + signalTitle)
         end
         
         function plotCrossCorrelationLagBar(obj, descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
@@ -680,9 +685,9 @@ classdef MouseList < handle
         function drawTwoBubble(obj, first, firstShuffled, second, secondShuffled, signalTitle, timeWindow, timeShift, smoothFactor, downsampleFactor, plotIndividuals)
             
             % Calcl Mean
-            firstMean = mean(first);
+            firstMean = mean(nonzeros(first));
             firstRandomMean = mean(firstShuffled);
-            secondMean = mean(second);
+            secondMean = mean(nonzeros(second));
             secondRandomMean = mean(secondShuffled);
             
             % Calc SEM
@@ -778,6 +783,36 @@ classdef MouseList < handle
             ax.XTick = xAxe;
             ax.XTickLabel = ["Correlation"];
             ylabel(ax, "Correlation")
+        end
+    end
+    
+    methods (Static)
+        function drawCrossCorrelation(crossCorrList, SEMList, timeVector, lim, legendList, signalTitle, CrossType, smoothFactor, downsampleFactor, shouldReshape)
+            % Draws the plot for the plotCrossCorrelation function.
+            fig = figure();
+            ax = gca;
+            
+            colors = ['r', 'b'];
+            plots = [];
+            
+            for idx = 1:size(crossCorrList, 1)
+                plots = [plots, shadedErrorBar(timeVector, crossCorrList(idx,:), SEMList(idx, :), colors(idx)).mainLine];
+                % plot(ax, timeVector, crossCorrList(idx,:), 'LineWidth', 1.5);
+                hold on
+            end
+            hold off
+            
+            legend(plots(1:2), legendList, 'Location', 'best')
+            set(0,'DefaultLegendAutoUpdate','off')
+            
+            title(ax, [CrossType,  signalTitle, "\fontsize{9}Concatenated: " + shouldReshape, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor], 'FontSize', 12)
+            
+            xlabel("Time Shift (sec)", 'FontSize', 14)
+            ylabel("Cross Correlation (normalized)", 'FontSize', 14)
+            
+            yline(ax, 0, 'Color', [192, 192, 192]/255)
+            xline(ax, 0, 'Color', [192, 192, 192]/255)
+            xlim(ax, [-lim, lim])
         end
         
     end
