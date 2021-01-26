@@ -70,7 +70,7 @@ classdef Mouse < handle
             obj.createPassiveDataAndInfo();
             
             % Free
-             obj.createAndStrightenFreeData();
+            obj.createAndStrightenFreeData();
             
             save(obj.ObjectPath, "obj");
             obj.addToList(listType);
@@ -248,7 +248,7 @@ classdef Mouse < handle
                     obj.ProcessedRawData.Free.(time).jrgeco = jrgecoData;
                 end
             end
-%             tInfo(tInfo.display <= 0,:) = [];                               % Delete info for rows that aren't displayed
+            %             tInfo(tInfo.display <= 0,:) = [];                               % Delete info for rows that aren't displayed
             obj.Info.Free = tInfo;
             
         end
@@ -388,9 +388,9 @@ classdef Mouse < handle
             
             [gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, signalTitle] = obj.dataForPlotSlidingCorrelationAll(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
             obj.drawSlidingCorrelation(gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift, signalTitle, smoothFactor, downsampleFactor)
-%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Tactical\" + obj.Name + "\Sliding Correlation Zoom - " + signalTitle)
+            %             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Tactical\" + obj.Name + "\Sliding Correlation Zoom - " + signalTitle)
             obj.drawSlidingCorrelationAllHeatmap(gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift, signalTitle, smoothFactor, downsampleFactor)
-%             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Tactical\" + obj.Name + "\Sliding Correlation Heatmap Over Time - " + signalTitle)
+            %             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Tactical\" + obj.Name + "\Sliding Correlation Heatmap Over Time - " + signalTitle)
             
         end
         
@@ -415,7 +415,7 @@ classdef Mouse < handle
             [histogramMatrix, labels] = dataForPlotSlidingCorrelationHeatmap(obj, timeWindow, timeShift, smoothFactor, downsampleFactor);
             obj.drawSlidingCorrelationHeatmap(histogramMatrix, labels, timeWindow, timeShift, smoothFactor, downsampleFactor)
             obj.drawSlidingCorrelationHistogram(histogramMatrix, labels, timeWindow, timeShift, smoothFactor, downsampleFactor)
-%             obj.drawBar(skewness(histogramMatrix), labels, "Skewness of of sliding window correlation values for mouse " + obj.Name, "Skewness", smoothFactor, downsampleFactor, false)
+            %             obj.drawBar(skewness(histogramMatrix), labels, "Skewness of of sliding window correlation values for mouse " + obj.Name, "Skewness", smoothFactor, downsampleFactor, false)
         end
         
         function plotSlidingCorrelationBar(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
@@ -502,7 +502,7 @@ classdef Mouse < handle
             meanSliding = [meanSlidingNoLick; meanSlidingLick];
             SEMSliding = [SEMSlidingNoLick; SEMSlidingLick];
             
-            figureTitle = {"Omission sliding window correlation from " + signalTitle + " for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)};            
+            figureTitle = {"Omission sliding window correlation from " + signalTitle + " for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)};
             obj.drawOmissionLick("Sliding winodw",  lickTypesOrder, [-5, 15], signalTimeVector, meanGcamp, SEMGcamp, meanJrgeco, SEMJrgeco, [-5, 15], slidingTimeVector, corrFullMatrix, meanSliding, SEMSliding, figureTitle, smoothFactor, downsampleFactor)
         end
         
@@ -589,8 +589,8 @@ classdef Mouse < handle
         
         function plotCrossCorrelationOmissionLick(obj, straightenedBy, smoothFactor, downsampleFactor)
             
-             lickTypesOrder = ["No Lick", "Lick"];
-             
+            lickTypesOrder = ["No Lick", "Lick"];
+            
             % Get Data
             descriptionVector = ["Task", straightenedBy];
             [fullGcampSignal, fullJrgecoSignal, signalTitle, trialTime, fs] = obj.getInformationDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor, false);
@@ -648,7 +648,7 @@ classdef Mouse < handle
             meanXCorr = [meanXCorrNoLick; meanXCorrLick];
             SEMXCorr = [SEMXCorrNoLick; SEMXCorrLick];
             
-            figureTitle = {"Omission cross correlation from " + signalTitle, "Between " + obj.GCAMP + " and " + obj.JRGECO, "Mouse " + obj.Name};            
+            figureTitle = {"Omission cross correlation from " + signalTitle, "Between " + obj.GCAMP + " and " + obj.JRGECO, "Mouse " + obj.Name};
             obj.drawOmissionLick("Cross correlation",  lickTypesOrder, [-5, 15], signalTimeVector, meanGcamp, SEMGcamp, meanJrgeco, SEMJrgeco, [-5, 5], xCorrTimeVector, corrFullMatrix, meanXCorr, SEMXCorr, figureTitle, smoothFactor, downsampleFactor)
         end
         
@@ -768,14 +768,14 @@ classdef Mouse < handle
             
             % Plot
             meanGcamp = [meanGcampNoLick; meanGcampLick];
-            SEMGcamp = [SEMGcampNoLick; SEMGcampLick];	
-            meanJrgeco = [meanJrgecoNoLick; meanJrgecoLick];	
-            SEMJrgeco = [SEMJrgecoNoLick; SEMJrgecoLick];	
-            corrFullMatrix = [{noLickCorrMatrix}; {lickCorrMatrix}];	
-            meanXCorr = [meanXCorrNoLick; meanXCorrLick];	
+            SEMGcamp = [SEMGcampNoLick; SEMGcampLick];
+            meanJrgeco = [meanJrgecoNoLick; meanJrgecoLick];
+            SEMJrgeco = [SEMJrgecoNoLick; SEMJrgecoLick];
+            corrFullMatrix = [{noLickCorrMatrix}; {lickCorrMatrix}];
+            meanXCorr = [meanXCorrNoLick; meanXCorrLick];
             SEMXCorr = [SEMXCorrNoLick; SEMXCorrLick];
             
-            figureTitle = {"Omission cross correlation from " + signalTitle, "Between " + obj.GCAMP + " and " + obj.JRGECO, "Mouse " + obj.Name};            
+            figureTitle = {"Omission cross correlation from " + signalTitle, "Between " + obj.GCAMP + " and " + obj.JRGECO, "Mouse " + obj.Name};
             obj.drawOmissionLick("Cross correlation",  lickTypesOrder, [startTime, endTime], signalTimeVector, meanGcamp, SEMGcamp, meanJrgeco, SEMJrgeco, [-(endTime - startTime), (endTime - startTime)], xCorrTimeVector, corrFullMatrix, meanXCorr, SEMXCorr, figureTitle, smoothFactor, downsampleFactor)
         end
         
@@ -835,7 +835,7 @@ classdef Mouse < handle
         function correlation = getWholeSignalCorrelation(obj, descriptionVector, smoothFactor, downsampleFactor, shouldShuffel)
             % Returns the correlation between gcamp and jrgeco for the
             % given description vector. If no signal exists returns zero.
-            % If shouldSuffel is true shuffles TIMES_TO_SHUFFLE times and 
+            % If shouldSuffel is true shuffles TIMES_TO_SHUFFLE times and
             % then returns the maximum
             
             if obj.signalExists(descriptionVector)
@@ -860,6 +860,32 @@ classdef Mouse < handle
                 
             else
                 correlation = 0;
+            end
+        end
+        
+        function correlation = getWholeSignalCorrelationNoLick(obj, smoothFactor, downsampleFactor, shouldShuffel)
+            % Returns the correlation between gcamp and jrgeco for the
+            % CONCAT task by onset after removing the lick. If no signal
+            % exists returns zero.
+            % If shouldSuffel is true shuffles TIMES_TO_SHUFFLE times and
+            % then returns the maximum
+            
+            [gcampSignal, jrgecoSignal, ~] = obj.getConcatTaskNoLick(smoothFactor, downsampleFactor);
+            
+            if shouldShuffel
+                correlation = -1;
+                
+                for i = 1:obj.TIMES_TO_SHUFFLE
+                    idx = randperm(length(gcampSignal));
+                    gcampSignal(idx) = gcampSignal;
+                    % jrgecoSignal(idx) = jrgecoSignal;
+                    curCorrelation = corr(gcampSignal', jrgecoSignal');
+                    
+                    correlation = max(correlation, curCorrelation);
+                end
+                
+            else
+                correlation = corr(gcampSignal', jrgecoSignal');
             end
         end
         
@@ -932,7 +958,7 @@ classdef Mouse < handle
                 if shouldShuffel
                     idx = randperm(length(gcampSignal));
                     gcampSignal(idx) = gcampSignal;
-%                     jrgecoSignal(idx) = jrgecoSignal;
+                    %                     jrgecoSignal(idx) = jrgecoSignal;
                 end
                 
                 [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
@@ -1067,13 +1093,13 @@ classdef Mouse < handle
             
             if shouldReshape
                 [gcampSignal, jrgecoSignal, signalTitle, trialTime, fs] = obj.getInformationDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor, true);
-            
+                
             else
                 [gcampSignal, jrgecoSignal, trialTime, fs, signalTitle] = obj.getRawSignals(descriptionVector);
-
+                
                 smoothedGcampSignal = zeros(size(gcampSignal, 1), size(gcampSignal, 2));
                 smoothedJrgecoSignal = zeros(size(gcampSignal, 1), size(gcampSignal, 2));
-
+                
                 for index = 1:size(gcampSignal, 1)
                     smoothedGcampSignal(index,:) = smooth(gcampSignal(index,:)', smoothFactor)';
                     smoothedJrgecoSignal(index,:) = smooth(jrgecoSignal(index,:)', smoothFactor)';
@@ -1088,7 +1114,7 @@ classdef Mouse < handle
         end
         
         function [firstXSecond, timeVector] = getWholeCrossCorrelation(obj, maxLag, trialTime, gcampSignal, jrgecoSignal, fs)
-           if maxLag == 0
+            if maxLag == 0
                 maxLag = trialTime;
             end
             
@@ -1107,7 +1133,7 @@ classdef Mouse < handle
                 firstXSecond(index,:) = xcorr(gcampSignal(index,:), jrgecoSignal(index,:), round(fs * maxLag), 'normalized');               % TODO - think if should normalize before or after
             end
             
-            firstXSecond = sum(firstXSecond, 1) / rows; 
+            firstXSecond = sum(firstXSecond, 1) / rows;
         end
         
         function [firstXfirst, secondXsecond, timeVector, signalTitle, maxLag] = dataForPlotAutoCorrelation(obj, descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
@@ -1154,9 +1180,9 @@ classdef Mouse < handle
             
             for rowIndx = 1:size(cutGcampSignal, 1)
                 [correlationVector, slidingTimeVector] = obj.getSlidingCorrelation(timeWindow, timeShift, cutGcampSignal(rowIndx, :), cutJrgecoSignal(rowIndx, :), fs);
-%                 if timeWindow < 2
-%                     correlationVector = smooth(correlationVector', 10)';
-%                 end
+                %                 if timeWindow < 2
+                %                     correlationVector = smooth(correlationVector', 10)';
+                %                 end
                 allOutcumesSlidingCorrMatrix = [allOutcumesSlidingCorrMatrix; correlationVector];
             end
             
@@ -1190,9 +1216,9 @@ classdef Mouse < handle
             
             for rowIndx = 1:size(noLickCutGcamp, 1)
                 [correlationVector, slidingTimeVector] = obj.getSlidingCorrelation(timeWindow, timeShift, noLickCutGcamp(rowIndx, :), noLickCutJrgeco(rowIndx, :), fs);
-%                 if timeWindow < 2
-%                     correlationVector = smooth(correlationVector', 10)';
-%                 end
+                %                 if timeWindow < 2
+                %                     correlationVector = smooth(correlationVector', 10)';
+                %                 end
                 allOutcumesSlidingCorrMatrix = [allOutcumesSlidingCorrMatrix; correlationVector];
             end
             
@@ -1238,9 +1264,9 @@ classdef Mouse < handle
                 
                 for rowIndx = 1:size(outcomeGcampSignal, 1)
                     [correlationVector, slidingTimeVector] = obj.getSlidingCorrelation(timeWindow, timeShift, outcomeGcampSignal(rowIndx, :), outcomeJrgecoSignal(rowIndx, :), fs);
-%                     if timeWindow < 2
-%                         correlationVector = smooth(correlationVector', 10)';
-%                     end
+                    %                     if timeWindow < 2
+                    %                         correlationVector = smooth(correlationVector', 10)';
+                    %                     end
                     outcomeSlidingCorrMatrix = [outcomeSlidingCorrMatrix; correlationVector];
                 end
                 
@@ -1292,9 +1318,9 @@ classdef Mouse < handle
             
             for rowIndx = 1:size(noLickCutGcamp, 1)
                 [correlationVector, slidingTimeVector] = obj.getSlidingCorrelation(timeWindow, timeShift, noLickCutGcamp(rowIndx, :), noLickCutJrgeco(rowIndx, :), fs);
-%                 if timeWindow < 2
-%                     correlationVector = smooth(correlationVector', 10)';
-%                 end
+                %                 if timeWindow < 2
+                %                     correlationVector = smooth(correlationVector', 10)';
+                %                 end
                 allOutcumesSlidingCorrMatrix = [allOutcumesSlidingCorrMatrix; correlationVector];
             end
             
@@ -1337,9 +1363,9 @@ classdef Mouse < handle
                 
                 for rowIndx = 1:size(outcomeGcampSignal, 1)
                     [correlationVector, slidingTimeVector] = obj.getSlidingCorrelation(timeWindow, timeShift, outcomeGcampSignal(rowIndx, :), outcomeJrgecoSignal(rowIndx, :), fs);
-%                     if timeWindow < 2
-%                         correlationVector = smooth(correlationVector', 10)';
-%                     end
+                    %                     if timeWindow < 2
+                    %                         correlationVector = smooth(correlationVector', 10)';
+                    %                     end
                     outcomeSlidingCorrMatrix = [outcomeSlidingCorrMatrix; correlationVector];
                 end
                 
@@ -1406,9 +1432,9 @@ classdef Mouse < handle
             
             for rowIndx = 1:size(noLickCutGcamp, 1)
                 [correlationVector, slidingTimeVector] = obj.getSlidingCorrelation(timeWindow, timeShift, noLickCutGcamp(rowIndx, :), noLickCutJrgeco(rowIndx, :), fs);
-%                 if timeWindow < 2
-%                     correlationVector = smooth(correlationVector', 10)';
-%                 end
+                %                 if timeWindow < 2
+                %                     correlationVector = smooth(correlationVector', 10)';
+                %                 end
                 allOutcumesSlidingCorrMatrix = [allOutcumesSlidingCorrMatrix; correlationVector];
             end
             
@@ -1418,7 +1444,7 @@ classdef Mouse < handle
             signalTimeVector = linspace(- 5, trialTime - 5, size(noLickCutGcamp, 2));
             slidingTimeVector = slidingTimeVector - 5;
         end
-            
+        
         % ==== draw ====
         function drawAllSessions(obj, gcampSignal, jrgecoSignal, timeVector, signalTitle, smoothFactor, downsampleFactor)
             % Draws the plot for the plotAllSessions function.
@@ -1482,10 +1508,10 @@ classdef Mouse < handle
                 [gcampType, jrgecoType] = obj.findGcampJrgecoType();
                 
                 % Test - wasn't worth it
-%                 gcampSignal = gcampSignal';
-%                 jrgecoSignal = jrgecoSignal';
-%                 tbl = table(gcampSignal,jrgecoSignal);
-%                 scatterhistogram(tbl, 'gcampSignal','jrgecoSignal',  'MarkerStyle', '.')
+                %                 gcampSignal = gcampSignal';
+                %                 jrgecoSignal = jrgecoSignal';
+                %                 tbl = table(gcampSignal,jrgecoSignal);
+                %                 scatterhistogram(tbl, 'gcampSignal','jrgecoSignal',  'MarkerStyle', '.')
                 
                 scatter(curPlot, gcampSignal, jrgecoSignal, 5,'filled');
                 
@@ -1764,7 +1790,7 @@ classdef Mouse < handle
                     legend(signalAx, [outGcamp.mainLine, outJrgeco.mainLine], [gcampType + "\fontsize{7} gcamp", jrgecoType + "\fontsize{7} geco"])
                     set(0,'DefaultLegendAutoUpdate','off')
                 end
-
+                
                 title(signalAx, "Mean signal for omission - " + lickType, 'Interpreter', 'none')
                 line(signalAx, signalLimits, [0 0], 'Color', '#C0C0C0')
                 yl = ylim(signalAx);
@@ -1792,7 +1818,7 @@ classdef Mouse < handle
                 
                 shadedErrorBar(corrTimeVector, meanCorr(lickTypeIndx, :), SEMCorr(lickTypeIndx, :), 'b');
                 
-               [~, lagIndex] = max(meanCorr(lickTypeIndx, :));
+                [~, lagIndex] = max(meanCorr(lickTypeIndx, :));
                 
                 title(corrAx, {"Mean " + corrType + " for omission - " + lickType, "Lag of - " + corrTimeVector(lagIndex)},'Interpreter', 'none')
                 line(corrAx, corrLimits, [0 0], 'Color', '#C0C0C0')
@@ -1803,7 +1829,7 @@ classdef Mouse < handle
             
             sgtitle([figureTitle, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor], 'FontWeight', 'bold')
         end
-         
+        
         % ======================== General Helpers ========================
         function [gcampSignal, jrgecoSignal, trialTime, fs, signalTitle] = getRawSignals(obj, descriptionVector)
             % Returns the raw gcamp and jrGeco signals, along with the
@@ -1838,7 +1864,7 @@ classdef Mouse < handle
                 elseif descriptionVector(1) == "Free"                      % Free
                     time = descriptionVector(2);
                     gcampSignal = obj.ProcessedRawData.Free.(time).gcamp;
-                    jrgecoSignal = obj.ProcessedRawData.Free.(time).jrgeco;                   
+                    jrgecoSignal = obj.ProcessedRawData.Free.(time).jrgeco;
                     fs = obj.Info.Free.fs(1);                              % All fs are suppoed to be the same - change if not!
                     trialTime = round(size(gcampSignal, 2) / fs);
                     signalTitle = "Free - " +  time;
@@ -2061,8 +2087,8 @@ classdef Mouse < handle
                 case "onset"
                     [~,order] = sort(fittingTInfo.delay);
                     sortedCorrelation = correlation(order, :);
-%                 otherwise
-%                     sortedCorrelation = correlation;
+                    %                 otherwise
+                    %                     sortedCorrelation = correlation;
             end
         end
         
