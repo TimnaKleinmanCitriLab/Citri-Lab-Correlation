@@ -476,24 +476,27 @@ classdef MouseList < handle
         
         % === Comparison Correlation ===
         
-        function plotCorrVsSliding(obj, straightenedBy, straightenedByForMax, timeWindow, timeShift, smoothFactor, downsampleFactor)
+        function plotCorrVsSliding(obj, straightenedBy, timeToRemove, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            descriptionVector = ["Task", straightenedBy];
+            [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
+            
             amoutOfMice = size(obj.LoadedMouseList, 2);
             
+            miceCorrelationNoLick = zeros(1, amoutOfMice);
             miceCorrelation = zeros(1, amoutOfMice);
             shuffledCorrelation = zeros(1, amoutOfMice);
             
             miceSliding = zeros(1, amoutOfMice);
             shuffledSliding = zeros(1, amoutOfMice);
             
-            miceSlidingNotConcat = zeros(1, amoutOfMice);
-            miceMax = zeros(1, amoutOfMice);
-            
             miceNames = strings(1, amoutOfMice);
-            
-            descriptionVector = ["Task", straightenedBy];
             
             for mouseIndx = 1:amoutOfMice
                 mouse = obj.LoadedMouseList(mouseIndx);
+                
+                % Correlation Lick Removed
+                mouseCorrelationNoLick = mouse.getWholeSignalCorrelationNoLick(timeToRemove, smoothFactor, downsampleFactor, false);
+                miceCorrelationNoLick(1, mouseIndx) = mouseCorrelationNoLick;
                 
                 % Correlation
                 mouseCorrelation = mouse.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor, false);
@@ -509,24 +512,14 @@ classdef MouseList < handle
                 [curShuffledSliding, ~] = mouse.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, true);
                 shuffledSliding(1, mouseIndx) = curShuffledSliding;
                 
-                % Sliding not concat
-                [~, ~, ~, slidingTimeVector, slidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelationTask(straightenedBy, -5, 15, timeWindow, timeShift, smoothFactor, downsampleFactor);
-                miceSlidingNotConcat(mouseIndx) = median(slidingMeanInTimePeriod);
-                
-                % Max
-                [~, ~, ~, ~, slidingMeanInTimePeriod, ~]  = mouse.dataForPlotSlidingCorrelationTask(straightenedByForMax, -5, 15, timeWindow, timeShift, smoothFactor, downsampleFactor);
-                maxSlidingNearZeroStartIndex = find(slidingTimeVector >= 0 & slidingTimeVector <= 0.1); % find(slidingTimeVector > -1.1 & slidingTimeVector < -0.99); If want to start at 1 sec
-                maxSlidingNearZeroEndIndex = find(slidingTimeVector > 0.99 & slidingTimeVector < 1.1);
-                miceMax(mouseIndx) = max(slidingMeanInTimePeriod(maxSlidingNearZeroStartIndex:maxSlidingNearZeroEndIndex));
-                
                 % General
                 miceNames(1, mouseIndx) = mouse.Name;
             end
             
-            obj.drawRelativeBubbleByMouse(miceCorrelation, miceSliding, miceSlidingNotConcat, miceMax, miceNames, signalTitle, timeWindow, timeShift, smoothFactor, downsampleFactor)
-            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\By Group\" + obj.Type + " - " + signalTitle + " - By Mouse")
-            obj.drawTwoBubble(miceCorrelation, shuffledCorrelation, miceSliding, shuffledSliding, signalTitle, timeWindow, timeShift, smoothFactor, downsampleFactor, true)
-            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\By Group\" + obj.Type + " - " + signalTitle + " - All Mice")
+            obj.drawRelativeBubbleByMouse(miceCorrelationNoLick, miceCorrelation, miceSliding, miceNames, signalTitle, timeToRemove, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\By Group\" + obj.Type + " - " + signalTitle + " - By Mouse, Cut by " + timeToRemove)
+            obj.drawTwoBubble(miceCorrelationNoLick, miceCorrelation, shuffledCorrelation, miceSliding, shuffledSliding, signalTitle, timeToRemove, timeWindow, timeShift, smoothFactor, downsampleFactor, true)
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\By Group\" + obj.Type + " - " + signalTitle + " - All Mice, Cut by " + timeToRemove)
             
         end
         
@@ -673,57 +666,60 @@ classdef MouseList < handle
             end
         end
         
-        function drawRelativeBubbleByMouse(obj, first, second, third, fourth, miceNames, signalTitle, timeWindow, timeShift, smoothFactor, downsampleFactor)
+        function drawRelativeBubbleByMouse(obj, first, second, third, miceNames, signalTitle, timeToRemove, timeWindow, timeShift, smoothFactor, downsampleFactor)
             fig = figure('Position', [555,407,799,511]);
             ax = axes;
             
-            xAxe = [1, 1.5, 2, 2.5];
+            xAxe = [1, 1.5, 2];
             
             for idx = 1:size(miceNames, 2)
-                plot(ax, xAxe, [first(idx), second(idx), third(idx), fourth(idx)], 'o-')
+                plot(ax, xAxe, [first(idx), second(idx), third(idx)], 'o-')
                 hold on
             end
             hold off
             
             legend(ax, miceNames, 'Location', 'best')           
             
-            title(ax, {"Correlation Vs. Sliding Correlation", obj.Type, signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
-            xlim(ax, [0.75, 2.75])
+            title(ax, {"Correlation Vs. Sliding Correlation", obj.Type, signalTitle, "Time removed: " + timeToRemove + ", Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            xlim(ax, [0.75, 2.25])
             ax.XTick = xAxe;
-            ax.XTickLabel = ["Correlation", "Sliding Concat \fontsize{7}(median)", "Sliding Not Concat \fontsize{7}(median)", "Max sliding of 0-1 sec"];
+            ax.XTickLabel = ["Correlation No Lick", "Correlation", "Sliding Concat \fontsize{7}(median)"];
             ylabel(ax, "Correlation")
             
         end
         
-        function drawTwoBubble(obj, first, firstShuffled, second, secondShuffled, signalTitle, timeWindow, timeShift, smoothFactor, downsampleFactor, plotIndividuals)
+        function drawTwoBubble(obj, first, second, secondShuffled, third, thirdShuffled, signalTitle, timeToRemove, timeWindow, timeShift, smoothFactor, downsampleFactor, plotIndividuals)
             
             % Calcl Mean
             firstMean = mean(nonzeros(first));
-            firstRandomMean = mean(firstShuffled);
             secondMean = mean(nonzeros(second));
             secondRandomMean = mean(secondShuffled);
+            thirdMean = mean(nonzeros(third));
+            thirdRandomMean = mean(thirdShuffled);
+            
             
             % Calc SEM
-            firstSEM = std(first)/sqrt(length(first));
-            firstRandomSEM = std(firstShuffled)/sqrt(length(firstShuffled));
-            secondSEM =  std(second)/sqrt(length(second));
-            secondRandomSEM =  std(secondShuffled)/sqrt(length(secondShuffled));
+            firstSEM = std(second)/sqrt(length(second));
+            firstRandomSEM = std(secondShuffled)/sqrt(length(secondShuffled));
+            secondSEM =  std(third)/sqrt(length(third));
+            secondRandomSEM =  std(thirdShuffled)/sqrt(length(thirdShuffled));
             
             % Figure
             fig = figure('Position', [711,425,401,511]);
             ax = axes;
-            xAxe = [1, 1.5];
+            xAxe = [1, 1.5, 2];
+            randXAxe = [1.5, 2];
             
             % Plot
             % errorbar(ax, xAxe, [firstMean, secondMean], [firstSEM, secondSEM],'o', 'LineWidth', 1, 'color', 'blue', 'MarkerFaceColor', 'blue', 'MarkerSize', 6, 'CapSize', 12)
-            plot(ax, xAxe, [firstMean, secondMean], 'd', 'LineWidth', 1, 'color', '#800080', 'MarkerFaceColor', '#800080', 'MarkerSize', 8)
+            plot(ax, xAxe, [firstMean, secondMean, thirdMean], 'd', 'LineWidth', 1, 'color', '#800080', 'MarkerFaceColor', '#800080', 'MarkerSize', 8)
             
             hold on
-            plot(ax, xAxe, [firstRandomMean, secondRandomMean],'o', 'LineWidth', 1, 'color', '#C0C0C0', 'MarkerFaceColor', '#C0C0C0', 'MarkerSize', 6)
+            plot(ax, randXAxe, [secondRandomMean, thirdRandomMean],'o', 'LineWidth', 1, 'color', '#C0C0C0', 'MarkerFaceColor', '#C0C0C0', 'MarkerSize', 6)
             % errorbar(ax, xAxe, [firstRandomMean, secondRandomMean], [firstRandomSEM, secondRandomSEM],'o', 'LineWidth', 1, 'color', 'black', 'MarkerFaceColor', 'black', 'MarkerSize', 6, 'CapSize', 12)
             if plotIndividuals
-                for idx = 1:size(first, 2)
-                    plot(ax, xAxe, [first(idx), second(idx)], 'o-', 'color', 'black', 'MarkerFaceColor', 'black', 'MarkerSize', 4)
+                for idx = 1:size(second, 2)
+                    plot(ax, xAxe, [first(idx), second(idx), third(idx)], 'o-', 'color', 'black', 'MarkerFaceColor', 'black', 'MarkerSize', 4)
                     hold on
                 end
             end
@@ -732,10 +728,10 @@ classdef MouseList < handle
             % Titles
             legend(ax, 'Mice Mean', 'Shuffled', 'Individuals', 'Location', 'best')
             
-            title(ax, {"Correlation Vs. Sliding Correlation - all mice", obj.Type, signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
-            xlim(ax, [0.75, 1.75])
+            title(ax, {"Correlation Vs. Sliding Correlation - all mice", obj.Type, signalTitle,  "Time removed: " + timeToRemove + " ,Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            xlim(ax, [0.75, 2.25])
             ax.XTick = xAxe;
-            ax.XTickLabel = ["Correlation", "Sliding Correlation \fontsize{7}(median)"];
+            ax.XTickLabel = ["Correlation No Lick", "Correlation", "Sliding Correlation \fontsize{7}(median)"];
             ylabel(ax, "Correlation / Median of sliding correlation")
         end
         

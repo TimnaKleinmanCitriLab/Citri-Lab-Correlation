@@ -863,14 +863,14 @@ classdef Mouse < handle
             end
         end
         
-        function correlation = getWholeSignalCorrelationNoLick(obj, smoothFactor, downsampleFactor, shouldShuffel)
+        function correlation = getWholeSignalCorrelationNoLick(obj, timeToRemove, smoothFactor, downsampleFactor, shouldShuffel)
             % Returns the correlation between gcamp and jrgeco for the
             % CONCAT task by onset after removing the lick. If no signal
             % exists returns zero.
             % If shouldSuffel is true shuffles TIMES_TO_SHUFFLE times and
             % then returns the maximum
             
-            [gcampSignal, jrgecoSignal, ~] = obj.getConcatTaskNoLick(smoothFactor, downsampleFactor);
+            [gcampSignal, jrgecoSignal, ~] = obj.getConcatTaskNoLick(timeToRemove, smoothFactor, downsampleFactor);
             
             if shouldShuffel
                 correlation = -1;
@@ -1975,7 +1975,7 @@ classdef Mouse < handle
             end
         end
         
-        function [gcampSignal, jrgecoSignal, fs] = getConcatTaskNoLick(obj, smoothFactor, downsampleFactor)
+        function [gcampSignal, jrgecoSignal, fs] = getConcatTaskNoLick(obj, timeToRemove, smoothFactor, downsampleFactor)
             % Returns the signals (according to the description vector)
             % after first concatenating each one to a continuous signal
             % then smoothing them and then down sampling them.
@@ -1986,17 +1986,18 @@ classdef Mouse < handle
             
             [gcampSignal, jrgecoSignal, ~, fs, ~] = obj.getRawSignals(["Task", "onset"]);
             
-            SamplesInTimeWindow = round(fs * 1.5);
+            SamplesInTimeWindow = round(fs * timeToRemove);
             cleanedGcamp = cell(size(gcampSignal, 1), 1);
             cleanedJrgeco = cell(size(gcampSignal, 1), 1);
             
             for trialIdx = 1:size(gcampSignal, 1)
                 lickTime = obj.Info.Task.onset.first_lick(trialIdx);
                 if ~isnan(lickTime)
-                    startLickSample = round(fs * lickTime);
+                    startLickSample = min(round(fs * (lickTime + 5)), size(gcampSignal, 2));
+                    endLickSample = min(startLickSample + SamplesInTimeWindow, size(gcampSignal, 2));
                     
-                    cleanedGcamp{trialIdx} = [gcampSignal(trialIdx, 1:startLickSample - 1), gcampSignal(trialIdx, startLickSample + SamplesInTimeWindow:end)];
-                    cleanedJrgeco{trialIdx} = [jrgecoSignal(trialIdx, 1:startLickSample - 1), jrgecoSignal(trialIdx, startLickSample + SamplesInTimeWindow:end)];
+                    cleanedGcamp{trialIdx} = [gcampSignal(trialIdx, 1:startLickSample - 1), gcampSignal(trialIdx, endLickSample:end)];
+                    cleanedJrgeco{trialIdx} = [jrgecoSignal(trialIdx, 1:startLickSample - 1), jrgecoSignal(trialIdx, endLickSample:end)];
                     
                 else        % There was no lick this trial
                     cleanedGcamp{trialIdx} = gcampSignal(trialIdx, :);
