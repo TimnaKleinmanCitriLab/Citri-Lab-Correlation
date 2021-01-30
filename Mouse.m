@@ -1209,16 +1209,16 @@ classdef Mouse < handle
             cutGcampSignal = fullGcampSignal(:, SamplesStart:SamplesEnd);
             cutJrgecoSignal = fullJrgecoSignal(:, SamplesStart:SamplesEnd);
             
-            noLickCutGcamp = cutGcampSignal(isnan(tInfo.first_lick), :);
-            noLickCutJrgeco = cutJrgecoSignal(isnan(tInfo.first_lick), :);
+            noLickCutGcamp = cutGcampSignal(isnan(tInfo.first_lick), :); % Optional -  & tInfo.cue_int == 1
+            noLickCutJrgeco = cutJrgecoSignal(isnan(tInfo.first_lick), :); % Optional -  & tInfo.cue_int == 1
             
             allOutcumesSlidingCorrMatrix = [];
             
             for rowIndx = 1:size(noLickCutGcamp, 1)
                 [correlationVector, slidingTimeVector] = obj.getSlidingCorrelation(timeWindow, timeShift, noLickCutGcamp(rowIndx, :), noLickCutJrgeco(rowIndx, :), fs);
-                %                 if timeWindow < 2
-                %                     correlationVector = smooth(correlationVector', 10)';
-                %                 end
+                % if timeWindow < 2
+                % correlationVector = smooth(correlationVector', 10)';
+                % end
                 allOutcumesSlidingCorrMatrix = [allOutcumesSlidingCorrMatrix; correlationVector];
             end
             
@@ -1975,7 +1975,7 @@ classdef Mouse < handle
             end
         end
         
-        function [gcampSignal, jrgecoSignal, fs] = getConcatTaskNoLick(obj, timeToRemove, smoothFactor, downsampleFactor)
+        function [gcampSignal, jrgecoSignal, fs] = getConcatTaskNoLickOld(obj, timeToRemove, smoothFactor, downsampleFactor)
             % Returns the signals (according to the description vector)
             % after first concatenating each one to a continuous signal
             % then smoothing them and then down sampling them.
@@ -2015,6 +2015,55 @@ classdef Mouse < handle
             jrgecoSignal = downsample(jrgecoSignal, downsampleFactor);
             
             fs = fs / downsampleFactor;
+        end
+        
+        function [gcampSignal, jrgecoSignal, fs] = getConcatTaskNoLick(obj, timeToRemove, smoothFactor, downsampleFactor)
+            % Returns the signals (according to the description vector)
+            % after first concatenating each one to a continuous signal
+            % then smoothing them and then down sampling them.
+            % It also returns basic data about the signals - their title,
+            % the total time (of the continuous signal) and the sampling
+            % per second (fs).
+            % If there is no such signal, raises an error
+            
+            % Get data
+            [gcampSignal, jrgecoSignal, ~, fs, ~] = obj.getRawSignals(["Task", "onset"]);
+            amountOfTrials = size(gcampSignal, 1);
+            samplesInTrial = size(gcampSignal, 2);
+            samplesInTimeWindow = round(fs * timeToRemove);
+             
+            % Concat and get data ready
+            gcampSignal = reshape(gcampSignal', 1, []);
+            jrgecoSignal = reshape(jrgecoSignal', 1, []);
+            
+            gcampSignal = smooth(gcampSignal', smoothFactor)';
+            jrgecoSignal = smooth(jrgecoSignal', smoothFactor)';
+            
+            cleanedGcamp = cell(amountOfTrials, 1);
+            cleanedJrgeco = cell(amountOfTrials, 1);
+            
+            trialBegSample = 1;
+            lastEndOfLickSample = 0;
+            
+            for trialIdx = 1:amountOfTrials
+                lickTime = obj.Info.Task.onset.first_lick(trialIdx);
+                if ~isnan(lickTime)
+                    startLickSample = trialBegSample + round(fs * (lickTime + 5));
+                    cleanedGcamp{trialIdx} = gcampSignal(lastEndOfLickSample + 1:startLickSample - 1);
+                    cleanedJrgeco{trialIdx} = jrgecoSignal(lastEndOfLickSample + 1:startLickSample - 1);
+                    
+                    lastEndOfLickSample = startLickSample + samplesInTimeWindow;
+                end
+                trialBegSample = trialBegSample + samplesInTrial;
+            end
+            
+            gcampSignal = cat(2, cleanedGcamp{:});
+            jrgecoSignal = cat(2, cleanedJrgeco{:});
+            
+            gcampSignal = downsample(gcampSignal, downsampleFactor);
+            jrgecoSignal = downsample(jrgecoSignal, downsampleFactor);
+            fs = fs / downsampleFactor;
+            
         end
         
         function slidingMeanInTimePeriod = getSlidingCorrelationForTimeWindowInTask(obj,  descriptionVector, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor)
