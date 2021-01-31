@@ -1507,12 +1507,6 @@ classdef Mouse < handle
                 
                 [gcampType, jrgecoType] = obj.findGcampJrgecoType();
                 
-                % Test - wasn't worth it
-                %                 gcampSignal = gcampSignal';
-                %                 jrgecoSignal = jrgecoSignal';
-                %                 tbl = table(gcampSignal,jrgecoSignal);
-                %                 scatterhistogram(tbl, 'gcampSignal','jrgecoSignal',  'MarkerStyle', '.')
-                
                 scatter(curPlot, gcampSignal, jrgecoSignal, 5,'filled');
                 
                 % Best fit line
@@ -1992,9 +1986,9 @@ classdef Mouse < handle
             
             for trialIdx = 1:size(gcampSignal, 1)
                 lickTime = obj.Info.Task.onset.first_lick(trialIdx);
-                if ~isnan(lickTime)
-                    startLickSample = min(round(fs * (lickTime + 5)), size(gcampSignal, 2));
-                    endLickSample = min(startLickSample + SamplesInTimeWindow, size(gcampSignal, 2));
+                if ~isnan(lickTime) && lickTime<14
+                    startLickSample = round(fs * (lickTime + 5));
+                    endLickSample = startLickSample + SamplesInTimeWindow;
                     
                     cleanedGcamp{trialIdx} = [gcampSignal(trialIdx, 1:startLickSample - 1), gcampSignal(trialIdx, endLickSample:end)];
                     cleanedJrgeco{trialIdx} = [jrgecoSignal(trialIdx, 1:startLickSample - 1), jrgecoSignal(trialIdx, endLickSample:end)];
@@ -2008,13 +2002,13 @@ classdef Mouse < handle
             gcampSignal = cat(2, cleanedGcamp{:});
             jrgecoSignal = cat(2, cleanedJrgeco{:});
             
-            gcampSignal = smooth(gcampSignal', smoothFactor)';
-            jrgecoSignal = smooth(jrgecoSignal', smoothFactor)';
-            
-            gcampSignal = downsample(gcampSignal, downsampleFactor);
-            jrgecoSignal = downsample(jrgecoSignal, downsampleFactor);
-            
-            fs = fs / downsampleFactor;
+             gcampSignal = smooth(gcampSignal', smoothFactor)';
+             jrgecoSignal = smooth(jrgecoSignal', smoothFactor)';
+             
+             % gcampSignal = downsample(gcampSignal, downsampleFactor);
+             % jrgecoSignal = downsample(jrgecoSignal, downsampleFactor);
+             
+             fs = fs / downsampleFactor;
         end
         
         function [gcampSignal, jrgecoSignal, fs] = getConcatTaskNoLick(obj, timeToRemove, smoothFactor, downsampleFactor)
@@ -2026,11 +2020,13 @@ classdef Mouse < handle
             % per second (fs).
             % If there is no such signal, raises an error
             
+            windowBefore = 0.25;
+            
             % Get data
             [gcampSignal, jrgecoSignal, ~, fs, ~] = obj.getRawSignals(["Task", "onset"]);
             amountOfTrials = size(gcampSignal, 1);
             samplesInTrial = size(gcampSignal, 2);
-            samplesInTimeWindow = round(fs * timeToRemove);
+            samplesInTimeWindow = round(fs * (timeToRemove + windowBefore));
              
             % Concat and get data ready
             gcampSignal = reshape(gcampSignal', 1, []);
@@ -2039,31 +2035,36 @@ classdef Mouse < handle
             gcampSignal = smooth(gcampSignal', smoothFactor)';
             jrgecoSignal = smooth(jrgecoSignal', smoothFactor)';
             
-            cleanedGcamp = cell(amountOfTrials, 1);
-            cleanedJrgeco = cell(amountOfTrials, 1);
+            trialBegSample = 1:samplesInTrial:size(gcampSignal, 2);
+            lickTimes = obj.Info.Task.onset.first_lick;
+            startLickSample = trialBegSample' + round(fs * (lickTimes + 5 - windowBefore));
+            endLickSample = startLickSample + samplesInTimeWindow - 1;
             
-            trialBegSample = 1;
-            lastEndOfLickSample = 0;
+            gcampLickData = zeros(size(lickTimes, 1), samplesInTimeWindow);
+            jrgecoLickData = zeros(size(gcampLickData));
             
             for trialIdx = 1:amountOfTrials
-                lickTime = obj.Info.Task.onset.first_lick(trialIdx);
-                if ~isnan(lickTime)
-                    startLickSample = trialBegSample + round(fs * (lickTime + 5));
-                    cleanedGcamp{trialIdx} = gcampSignal(lastEndOfLickSample + 1:startLickSample - 1);
-                    cleanedJrgeco{trialIdx} = jrgecoSignal(lastEndOfLickSample + 1:startLickSample - 1);
+                if ~isnan(lickTimes(trialIdx))                             % There was a lick
+                    % Save the lick aside
+                    gcampLickData(trialIdx, :) = gcampSignal(1, startLickSample(trialIdx):endLickSample(trialIdx));
+                    jrgecoLickData(trialIdx, :) = jrgecoSignal(1, startLickSample(trialIdx):endLickSample(trialIdx));
                     
-                    lastEndOfLickSample = startLickSample + samplesInTimeWindow;
+                    % Remove the lick
+                    gcampSignal(1, startLickSample(trialIdx):endLickSample(trialIdx)) = nan;
+                    jrgecoSignal(1, startLickSample(trialIdx):endLickSample(trialIdx)) = nan;
+                else
+                    gcampLickData(trialIdx, :) = nan(1, samplesInTimeWindow);
+                    jrgecoLickData(trialIdx, :) = nan(1, samplesInTimeWindow);
                 end
-                trialBegSample = trialBegSample + samplesInTrial;
             end
             
-            gcampSignal = cat(2, cleanedGcamp{:});
-            jrgecoSignal = cat(2, cleanedJrgeco{:});
+            gcampSignal=(gcampSignal(~isnan(gcampSignal)));
+            jrgecoSignal=(jrgecoSignal(~isnan(jrgecoSignal)));
             
             gcampSignal = downsample(gcampSignal, downsampleFactor);
             jrgecoSignal = downsample(jrgecoSignal, downsampleFactor);
-            fs = fs / downsampleFactor;
             
+            fs = fs / downsampleFactor;
         end
         
         function slidingMeanInTimePeriod = getSlidingCorrelationForTimeWindowInTask(obj,  descriptionVector, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor)
