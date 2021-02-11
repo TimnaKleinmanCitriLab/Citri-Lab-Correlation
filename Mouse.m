@@ -10,11 +10,11 @@ classdef Mouse < handle
         TIMES_TO_SHUFFLE = 1;
         
         % Task
-        CONST_DATA_BY_CLOUD = "CueInCloud_comb_cloud.mat";
-        CONST_DATA_BY_CUE = "CueInCloud_comb_cue.mat";
-        CONST_DATA_BY_LICK = "CueInCloud_comb_lick.mat";
-        CONST_DATA_BY_MOVEMENT = "CueInCloud_comb_movement.mat";
-        CONST_DATA_BY_ONSET = "CueInCloud_comb_t_onset.mat";
+        CONST_TASK_DATA_BY_CLOUD = "CueInCloud_comb_cloud.mat";
+        CONST_TASK_DATA_BY_CUE = "CueInCloud_comb_cue.mat";
+        CONST_TASK_DATA_BY_LICK = "CueInCloud_comb_lick.mat";
+        CONST_TASK_DATA_BY_MOVEMENT = "CueInCloud_comb_movement.mat";
+        CONST_TASK_DATA_BY_ONSET = "CueInCloud_comb_t_onset.mat";
         
         CONST_TASK_OUTCOMES = ["premature", "correct", "late", "omitted"]
         
@@ -31,7 +31,8 @@ classdef Mouse < handle
         CONST_PASSIVE_TRIAL_TIME = 5;
         
         % Free
-        CONST_FREE_DATA = "free\Free_comb.mat";
+        CONST_FREE_DATA_CONCAT = "free\Free_comb.mat";
+        CONST_FREE_DATA_BY_MOVEMENT = "free\Free_comb_movement.mat";
         
     end
     
@@ -95,17 +96,18 @@ classdef Mouse < handle
             
             % Task
             fileBeg = obj.CONST_RAW_FILE_PATH + "\" + obj.RawName + "\";
-            obj.RawMatFile.Task.onset = matfile(fileBeg + obj.CONST_DATA_BY_ONSET);
-            obj.RawMatFile.Task.cloud = matfile(fileBeg + obj.CONST_DATA_BY_CLOUD);
-            obj.RawMatFile.Task.cue = matfile(fileBeg + obj.CONST_DATA_BY_CUE);
-            obj.RawMatFile.Task.lick = matfile(fileBeg + obj.CONST_DATA_BY_LICK);
-            obj.RawMatFile.Task.movement = matfile(fileBeg + obj.CONST_DATA_BY_MOVEMENT);
+            obj.RawMatFile.Task.onset = matfile(fileBeg + obj.CONST_TASK_DATA_BY_ONSET);
+            obj.RawMatFile.Task.cloud = matfile(fileBeg + obj.CONST_TASK_DATA_BY_CLOUD);
+            obj.RawMatFile.Task.cue = matfile(fileBeg + obj.CONST_TASK_DATA_BY_CUE);
+            obj.RawMatFile.Task.lick = matfile(fileBeg + obj.CONST_TASK_DATA_BY_LICK);
+            obj.RawMatFile.Task.movement = matfile(fileBeg + obj.CONST_TASK_DATA_BY_MOVEMENT);
             
             % Passive
             obj.RawMatFile.Passive = matfile(fileBeg + obj.CONST_PASSIVE_DATA);
             
             % Free
-            obj.RawMatFile.Free = matfile(fileBeg + obj.CONST_FREE_DATA);
+            obj.RawMatFile.Free.concat = matfile(fileBeg + obj.CONST_FREE_DATA_CONCAT);
+            obj.RawMatFile.Free.movement = matfile(fileBeg + obj.CONST_FREE_DATA_BY_MOVEMENT);
         end
         
         function createTaskInfo(obj)
@@ -225,9 +227,12 @@ classdef Mouse < handle
         end
         
         function createAndStrightenFreeData(obj)
-            tInfo = obj.RawMatFile.Free.t_info;
-            gcampFree = obj.RawMatFile.Free.all_trials;
-            jrgecoFree = obj.RawMatFile.Free.af_trials;
+            
+            % Load Free that is concat
+            
+            tInfo = obj.RawMatFile.Free.concat.t_info;
+            gcampFree = obj.RawMatFile.Free.concat.all_trials;
+            jrgecoFree = obj.RawMatFile.Free.concat.af_trials;
             
             for rowIndex = 1:size(tInfo, 1)
                 if tInfo.display(rowIndex) > 0                             % Should display
@@ -244,12 +249,23 @@ classdef Mouse < handle
                     jrgecoData = jrgecoData - mean(jrgecoData);
                     
                     % Save data
-                    obj.ProcessedRawData.Free.(time).gcamp = gcampData;
-                    obj.ProcessedRawData.Free.(time).jrgeco = jrgecoData;
+                    obj.ProcessedRawData.Free.concat.(time).gcamp = gcampData;
+                    obj.ProcessedRawData.Free.concat.(time).jrgeco = jrgecoData;
                 end
             end
-            %             tInfo(tInfo.display <= 0,:) = [];                               % Delete info for rows that aren't displayed
-            obj.Info.Free = tInfo;
+            % tInfo(tInfo.display <= 0,:) = [];                               % Delete info for rows that aren't displayed
+            obj.Info.Free.general = tInfo;
+            
+            % Load Free by movement
+            obj.Info.Free.movement = obj.RawMatFile.Free.movement.t_info;
+            gcampData = obj.RawMatFile.Free.movement.all_trials;
+            jrgecoData = obj.RawMatFile.Free.movement.af_trials;
+            
+            % Fix jrgeco baseline to zero
+            jrgecoData = jrgecoData - mean(jrgecoData);
+            
+            obj.ProcessedRawData.Free.movement.post.gcamp = gcampData;
+            obj.ProcessedRawData.Free.movement.post.jrgeco = jrgecoData;
             
         end
         
@@ -1857,9 +1873,9 @@ classdef Mouse < handle
                     signalTitle = (time) + " " + (state) + " " + (soundType);
                 elseif descriptionVector(1) == "Free"                      % Free
                     time = descriptionVector(2);
-                    gcampSignal = obj.ProcessedRawData.Free.(time).gcamp;
-                    jrgecoSignal = obj.ProcessedRawData.Free.(time).jrgeco;
-                    fs = obj.Info.Free.fs(1);                              % All fs are suppoed to be the same - change if not!
+                    gcampSignal = obj.ProcessedRawData.Free.concat.(time).gcamp;
+                    jrgecoSignal = obj.ProcessedRawData.Free.concat.(time).jrgeco;
+                    fs = obj.Info.Free.general.fs(1);                              % All fs are suppoed to be the same - change if not!
                     trialTime = round(size(gcampSignal, 2) / fs);
                     signalTitle = "Free - " +  time;
                 end
@@ -1904,7 +1920,7 @@ classdef Mouse < handle
                 end
             elseif descriptionVector(1) == "Free"                          % Free
                 time = descriptionVector(2);
-                if isfield(obj.ProcessedRawData,"Free") && isfield(obj.ProcessedRawData.Free, time)
+                if isfield(obj.ProcessedRawData,"Free") && isfield(obj.ProcessedRawData.Free.concat, time)
                     exists = true;
                 else
                     exists = false;
