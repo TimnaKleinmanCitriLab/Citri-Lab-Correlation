@@ -201,7 +201,7 @@ classdef ListOfMouseLists < handle
                     mouse = group.LoadedMouseList(mouseIndx);
                     
                     % data for outcomes
-                    [~, ~, ~, ~, overallSlidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelationTask(straightenedBy, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    [~, ~, ~, ~, overallSlidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelation(["Task", straightenedBy], startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor);
                     [~, ~, ~, ~, ~, ~, ~, outcomesMeanSliding, ~, ~]  = mouse.dataForPlotSlidingCorrelationTaskByOutcome(straightenedBy, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor);
                     
                     miceSliding(1:amountOfOutcomes, mouseIndx) = median(outcomesMeanSliding, 2);
@@ -314,7 +314,7 @@ classdef ListOfMouseLists < handle
                     mouse = group.LoadedMouseList(mouseIndx);
                     miceNames(mouseIndx) = mouse.Name;
                     
-                    [~, ~, ~, slidingTimeVector, slidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelationTask(straightenedBy, -5, 15, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    [~, ~, ~, slidingTimeVector, slidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelation(["Task", straightenedBy], -5, 15, timeWindow, timeShift, smoothFactor, downsampleFactor);
                     
                     groupMiceSliding = [groupMiceSliding; slidingMeanInTimePeriod];
                     
@@ -366,6 +366,90 @@ classdef ListOfMouseLists < handle
             % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - all groups\Task cut by " + straightenedBy + " - max")
         end
         
+        function plotSlidingCorrelationFreeByMovement(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Plots sliding correaltion in cut free by movement for all mice by group +
+            % Max of the mice 1 sec before and after time 0 (of movement)
+            
+            % Create figures
+            amountOfGroups = 3;                                            % Depending what groups one wants to include
+            byMouse = figure('Position', [450,109,961,860]);
+            allMice = figure('Position', [450,109,961,860]); 
+            maxCorr = figure('Position', [450,109,961,860]); 
+            
+            % Data + Plot
+            for groupIndx = 1:amountOfGroups
+                group = obj.ListOfLists(groupIndx);
+                
+                amoutOfMiceInGroup = size(group.LoadedMouseList, 2);
+                miceNames = strings(1,amoutOfMiceInGroup);
+                
+                miceMax = zeros(1, amoutOfMiceInGroup);
+                
+                % By mouse
+                set(0,'CurrentFigure',byMouse)
+                slidingByMouseAx = subplot(amountOfGroups, 1, groupIndx);
+                
+                set(0,'CurrentFigure',maxCorr)
+                maxByMouseAx = subplot(1, amountOfGroups, groupIndx);
+                
+                groupMiceSliding = [];
+                
+                for mouseIndx = 1:amoutOfMiceInGroup
+                    mouse = group.LoadedMouseList(mouseIndx);
+                    miceNames(mouseIndx) = mouse.Name;
+                    
+                    [~, ~, ~, slidingTimeVector, slidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelation(["Free", "movement", "post"], -5, 15, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    
+                    groupMiceSliding = [groupMiceSliding; slidingMeanInTimePeriod];
+                    
+                    plot(slidingByMouseAx, slidingTimeVector, slidingMeanInTimePeriod)
+                    hold(slidingByMouseAx, 'on')
+                    
+                    maxSlidingNearZeroStartIndex = find(slidingTimeVector >= 0 & slidingTimeVector <= 0.1); % find(slidingTimeVector > -1.1 & slidingTimeVector < -0.99); If want to start at 1 sec
+                    maxSlidingNearZeroEndIndex = find(slidingTimeVector > 0.99 & slidingTimeVector < 1.1);
+                    miceMax(mouseIndx) = max(slidingMeanInTimePeriod(maxSlidingNearZeroStartIndex:maxSlidingNearZeroEndIndex));
+                    plot(maxByMouseAx, [0], [miceMax(mouseIndx)], 'o')
+                    hold(maxByMouseAx, 'on')
+                end
+                
+                line(slidingByMouseAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
+                line(slidingByMouseAx, [0, 0], ylim(slidingByMouseAx), 'Color', '#C0C0C0')
+                legend(slidingByMouseAx, miceNames, 'Location', 'best')
+                title(slidingByMouseAx, "Sliding Correlation for " + group.Type)
+                hold(slidingByMouseAx, 'off')
+                
+                plot(maxByMouseAx, [0], [mean(miceMax)], '*')
+                legend(maxByMouseAx, [miceNames, "mice mean"], 'Location', 'best')
+                title(maxByMouseAx, "Max sliding for " + group.Type)
+                hold(maxByMouseAx, 'off')
+                
+                % All mice
+                set(0,'CurrentFigure',allMice)
+                allMouseAx = subplot(amountOfGroups, 1, groupIndx);
+                meanSlidingAllMice = mean(groupMiceSliding, 1);
+                SEMSlidingAllMice = std(groupMiceSliding, 1)/sqrt(size(groupMiceSliding, 1));
+                
+                shadedErrorBar(slidingTimeVector, meanSlidingAllMice, SEMSlidingAllMice, 'b');
+                
+                line(allMouseAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
+                line(allMouseAx, [0, 0], ylim(slidingByMouseAx), 'Color', '#C0C0C0')
+                title(allMouseAx, "Mean Sliding Correlation for " + group.Type)
+                
+            end
+            
+            sgtitle(byMouse, {"Sliding in free cut by movement - by mouse", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            set(0,'CurrentFigure',byMouse)
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Free Movement - all groups\Free but by movement - by mouse")
+            
+            sgtitle(allMice, {"Sliding in free cut by movement - all mice", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            set(0,'CurrentFigure',allMice)
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Free Movement - all groups\Free but by movement - all mice")
+            
+            sgtitle(maxCorr, {"Sliding max in free cut by movement - all mice - between 0 and 1 sec", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            set(0,'CurrentFigure',maxCorr)
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Free Movement - all groups\Free cut by movement - max")
+        end
+        
         function plotSlidingCorrelationTaskNoLick(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
             % Plots sliding correaltion of trials with no lick, in cut task
             % for all mice by group + Max of the mice 1 sec before and
@@ -375,7 +459,7 @@ classdef ListOfMouseLists < handle
             amountOfGroups = 3;                                            % Depending what groups one wants to include
             byMouse = figure('Position', [450,109,961,860]);
             allMice = figure('Position', [450,109,961,860]);
-            maxCorr = figure('Position', [450,109,961,860]); 
+            maxCorr = figure('Position', [450,109,961,860]);
             
             % Data + Plot
             for groupIndx = 1:amountOfGroups
