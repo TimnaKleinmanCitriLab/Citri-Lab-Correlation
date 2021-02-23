@@ -75,7 +75,7 @@ classdef Mouse < handle
             % Free
             obj.createAndStrightenFreeData();
             
-            save(obj.ObjectPath, "obj");
+            save(obj.ObjectPath, "obj", '-v7.3');
             obj.addToList(listType);
         end
         
@@ -116,13 +116,6 @@ classdef Mouse < handle
             % Organizes info for different task divisions (by cue, cloud,..)
             % and adds information about the day of the task.
             
-            tInfo = obj.RawMatFile.Task.onset.t_info;
-            obj.Info.Task.onset = tInfo;
-            % obj.Info.Task.cloud =                   % TODO - think how to cut by cloud
-            obj.Info.Task.cue = tInfo((tInfo.plot_result ~= -1), :);       % All trials that are not premature
-            obj.Info.Task.lick = tInfo((~isnan(tInfo.first_lick)), :);     % All trials that had a lick (including omissions that had a lick)
-            % obj.Info.Task.movement =                % TODO - think how to cut by movement
-            
             % Add day to info
             tInfo = obj.RawMatFile.Task.onset.t_info;
             sessionBreaks = find(tInfo.trial_number == 1);
@@ -136,11 +129,24 @@ classdef Mouse < handle
             
             recordingDays = categorical(recordingDays');
             
-            obj.Info.Task.onset.day = double(recordingDays);
-            % obj.Info.Task.cloud.day =              % TODO - add after adding info
-            obj.Info.Task.cue.day = double(recordingDays(tInfo.plot_result ~= -1));
-            obj.Info.Task.lick.day = double(recordingDays(~isnan(tInfo.first_lick)));
-            % obj.Info.Task.movement.day =           % TODO - add after adding info
+            tInfo.day = double(recordingDays);
+            
+            % Save Infos
+            obj.Info.Task.onset = tInfo;
+            % obj.Info.Task.cloud =              % TODO - think how to cut by cloud
+            obj.Info.Task.cue = tInfo((tInfo.plot_result ~= -1), :);       % All trials that are not premature
+            obj.Info.Task.lick = tInfo((~isnan(tInfo.first_lick)), :);     % All trials that had a lick (including omissions that had a lick)
+            obj.Info.Task.movement = obj.createTaskMovementInfo();
+        end
+        
+        function finalMovementInfo = createTaskMovementInfo(obj)
+            tInfo = obj.Info.Task.onset;
+            smallMovementInfo = obj.RawMatFile.Task.movement.mov_info;
+            finalMovementInfo = array2table(zeros(0, size(tInfo, 2)), 'VariableNames',tInfo.Properties.VariableNames);
+            
+            for rowIndex = 1:size(smallMovementInfo, 1)
+                finalMovementInfo = [finalMovementInfo; tInfo(smallMovementInfo.closest_trial(rowIndex), :)]; 
+            end
         end
         
         function createPassiveDataAndInfo(obj)
@@ -193,8 +199,8 @@ classdef Mouse < handle
             
             fields = fieldnames(obj.Info.Task);
             
-            for index = 1:numel(fields)
-                divideBy = fields{index};
+            for fieldIndex = 1:numel(fields)
+                divideBy = fields{fieldIndex};
                 info = obj.Info.Task.(divideBy);
                 
                 gcampTrials = obj.RawMatFile.Task.(divideBy).all_trials;
@@ -203,15 +209,31 @@ classdef Mouse < handle
                 normGcampData = gcampTrials - gcampDifference(1);          % subtract intercept (1st day / correct)
                 normJrgecoData = jrgecoTrials - jrgecoDifference(1);       % subtract intercept (1st day / correct)
                 
-                for index = 2:length(unique(info.day))
-                    normGcampData(info.day == index, :) = normGcampData(info.day == index, :) - gcampDifference(index); % remove each days' intercept
-                    normJrgecoData(info.day == index, :) = normJrgecoData(info.day == index, :) - jrgecoDifference(index); % remove each days' intercept
+                for TrialIndex = 2:length(unique(info.day))
+                    normGcampData(info.day == TrialIndex, :) = normGcampData(info.day == TrialIndex, :) - gcampDifference(TrialIndex); % remove each days' intercept
+                    normJrgecoData(info.day == TrialIndex, :) = normJrgecoData(info.day == TrialIndex, :) - jrgecoDifference(TrialIndex); % remove each days' intercept
                 end
                 
                 obj.ProcessedRawData.Task.(divideBy).gcamp = normGcampData;
                 obj.ProcessedRawData.Task.(divideBy).jrgeco = normJrgecoData;
                 
             end
+            
+%             % Add Movement, even though no info file
+%             divideBy = "movement";
+%             gcampTrials = obj.RawMatFile.Task.(divideBy).all_trials;
+%             jrgecoTrials = obj.RawMatFile.Task.(divideBy).af_trials;
+% 
+%             normGcampData = gcampTrials - gcampDifference(1);          % subtract intercept (1st day / correct)
+%             normJrgecoData = jrgecoTrials - jrgecoDifference(1);       % subtract intercept (1st day / correct)
+% 
+% %             for index = 2:length(unique(info.day))
+% %                 normGcampData(info.day == index, :) = normGcampData(info.day == index, :) - gcampDifference(index); % remove each days' intercept
+% %                 normJrgecoData(info.day == index, :) = normJrgecoData(info.day == index, :) - jrgecoDifference(index); % remove each days' intercept
+% %             end
+% 
+%              obj.ProcessedRawData.Task.(divideBy).gcamp = normGcampData;
+%              obj.ProcessedRawData.Task.(divideBy).jrgeco = normJrgecoData;
         end
         
         function addToList(obj, listType)
@@ -263,7 +285,11 @@ classdef Mouse < handle
             obj.Info.Free.general = tInfo;
             
             % Load Free by movement
+            
             obj.Info.Free.movement = obj.RawMatFile.Free.movement.t_info;
+            obj.Info.Free.movement.onset = obj.Info.Free.movement.onset + 0; % +5 because the GUI trims 5 first seconds
+            obj.Info.Free.movement.offset = obj.Info.Free.movement.offset + 0; % +5 because the GUI trims 5 first seconds
+            
             gcampData = obj.RawMatFile.Free.movement.all_trials;
             jrgecoData = obj.RawMatFile.Free.movement.af_trials;
             
@@ -416,6 +442,7 @@ classdef Mouse < handle
             
         end
         
+        % Shouldn't use this function! cause I cut the beg of signal for some mice, but not sure how much and which. better look in GUI
         function plotSlidingCorrelationAllWithMovement(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor)
             % Plots the gcamp and jrgeco signals from all the mouses'
             % sessions according to the description vector (see vectors
@@ -1201,29 +1228,34 @@ classdef Mouse < handle
             secondXsecond = sum(secondXsecond, 1) / rows;
         end
         
-        function [signalTimeVector, cutGcampSignal, cutJrgecoSignal, slidingTimeVector, SlidingMeanInTimePeriod, signalTitle]  = dataForPlotSlidingCorrelation(obj, descriptionVector, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor)
+        function [signalTimeVector, cutGcampSignal, cutJrgecoSignal, slidingTimeVector, slidingCorrMatrix, SlidingMeanInTimePeriod, signalTitle]  = dataForPlotSlidingCorrelation(obj, descriptionVector, filterBy, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor)
             % Returns a sliding correlation vector for a time period in
             % the cut task (meaning somewhere between -5 and 15)
             
             % Get Data
             [fullGcampSignal, fullJrgecoSignal, signalTitle, trialTime, fs] = obj.getInformationDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor, false);
             
+            if filterBy == "no lick"
+                fullGcampSignal = fullGcampSignal(isnan(obj.Info.Task.movement.first_lick), :);
+                fullJrgecoSignal = fullJrgecoSignal(isnan(obj.Info.Task.movement.first_lick), :);
+            end
+            
             SamplesStart = max(round(fs * (startTime + 5)), 1);                    % + 5 cause time starts at -5
             SamplesEnd = min(round(fs * (endTime + 5)), size(fullGcampSignal , 2));% + 5 cause time starts at -5
             cutGcampSignal = fullGcampSignal(:, SamplesStart:SamplesEnd);
             cutJrgecoSignal = fullJrgecoSignal(:, SamplesStart:SamplesEnd);
             
-            allOutcumesSlidingCorrMatrix = [];
+            slidingCorrMatrix = [];
             
             for rowIndx = 1:size(cutGcampSignal, 1)
                 [correlationVector, slidingTimeVector] = obj.getSlidingCorrelation(timeWindow, timeShift, cutGcampSignal(rowIndx, :), cutJrgecoSignal(rowIndx, :), fs);
                 % if timeWindow < 2
                     % correlationVector = smooth(correlationVector', 10)';
                 % end
-                allOutcumesSlidingCorrMatrix = [allOutcumesSlidingCorrMatrix; correlationVector];
+                slidingCorrMatrix = [slidingCorrMatrix; correlationVector];
             end
             
-            SlidingMeanInTimePeriod = mean(allOutcumesSlidingCorrMatrix);
+            SlidingMeanInTimePeriod = mean(slidingCorrMatrix, 1);
             
             % Time vectors
             signalTimeVector = linspace(- 5, trialTime - 5, size(cutGcampSignal, 2));

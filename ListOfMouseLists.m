@@ -201,7 +201,7 @@ classdef ListOfMouseLists < handle
                     mouse = group.LoadedMouseList(mouseIndx);
                     
                     % data for outcomes
-                    [~, ~, ~, ~, overallSlidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelation(["Task", straightenedBy], startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    [~, ~, ~, ~, ~, overallSlidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelation(["Task", straightenedBy], '', startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor);
                     [~, ~, ~, ~, ~, ~, ~, outcomesMeanSliding, ~, ~]  = mouse.dataForPlotSlidingCorrelationTaskByOutcome(straightenedBy, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor);
                     
                     miceSliding(1:amountOfOutcomes, mouseIndx) = median(outcomesMeanSliding, 2);
@@ -281,7 +281,7 @@ classdef ListOfMouseLists < handle
             
         end
         
-        function plotSlidingCorrelationTask(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
+        function plotSlidingCorrelationTaskCutSignal(obj, straightenedBy, filterBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
             % Plots sliding correaltion in cut task for all mice by group +
             % Max of the mice 1 sec before and after time 0 (of 
             % "straightenedBy")
@@ -314,7 +314,7 @@ classdef ListOfMouseLists < handle
                     mouse = group.LoadedMouseList(mouseIndx);
                     miceNames(mouseIndx) = mouse.Name;
                     
-                    [~, ~, ~, slidingTimeVector, slidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelation(["Task", straightenedBy], -5, 15, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    [~, ~, ~, slidingTimeVector, ~, slidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelation(["Task", straightenedBy], filterBy, -5, 15, timeWindow, timeShift, smoothFactor, downsampleFactor);
                     
                     groupMiceSliding = [groupMiceSliding; slidingMeanInTimePeriod];
                     
@@ -355,15 +355,15 @@ classdef ListOfMouseLists < handle
             
             sgtitle(byMouse, {"Sliding in cut task by mouse", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             set(0,'CurrentFigure',byMouse)
-            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - all groups\Task but by " + straightenedBy + " - by mouse")
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - all groups\Task but by " + straightenedBy + " - by mouse")
             
             sgtitle(allMice, {"Sliding in cut task all mice", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             set(0,'CurrentFigure',allMice)
-            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - all groups\Task but by " + straightenedBy + " - all mice")
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - all groups\Task but by " + straightenedBy + " - all mice")
             
             sgtitle(maxCorr, {"Sliding max in cut task all mice - between 0 and 1 sec", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             set(0,'CurrentFigure',maxCorr)
-            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - all groups\Task cut by " + straightenedBy + " - max")
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - all groups\Task cut by " + straightenedBy + " - max")
         end
         
         function plotSlidingCorrelationFreeByMovement(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
@@ -385,7 +385,7 @@ classdef ListOfMouseLists < handle
                 
                 miceMax = zeros(1, amoutOfMiceInGroup);
                 
-                % By mouse
+                % By mouse plot
                 set(0,'CurrentFigure',byMouse)
                 slidingByMouseAx = subplot(amountOfGroups, 1, groupIndx);
                 
@@ -398,7 +398,7 @@ classdef ListOfMouseLists < handle
                     mouse = group.LoadedMouseList(mouseIndx);
                     miceNames(mouseIndx) = mouse.Name;
                     
-                    [~, ~, ~, slidingTimeVector, slidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelation(["Free", "movement", "post"], -5, 15, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    [~, ~, ~, slidingTimeVector, ~, slidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelation(["Free", "movement", "post"], '', -5, 15, timeWindow, timeShift, smoothFactor, downsampleFactor);
                     
                     groupMiceSliding = [groupMiceSliding; slidingMeanInTimePeriod];
                     
@@ -423,7 +423,7 @@ classdef ListOfMouseLists < handle
                 title(maxByMouseAx, "Max sliding for " + group.Type)
                 hold(maxByMouseAx, 'off')
                 
-                % All mice
+                % All mice plot
                 set(0,'CurrentFigure',allMice)
                 allMouseAx = subplot(amountOfGroups, 1, groupIndx);
                 meanSlidingAllMice = mean(groupMiceSliding, 1);
@@ -432,18 +432,18 @@ classdef ListOfMouseLists < handle
                 shadedErrorBar(slidingTimeVector, meanSlidingAllMice, SEMSlidingAllMice, 'b');
                 
                 line(allMouseAx, [-5, 15], [0 0], 'Color', '#C0C0C0')
-                line(allMouseAx, [0, 0], ylim(slidingByMouseAx), 'Color', '#C0C0C0')
+                line(allMouseAx, [0, 0], ylim(allMouseAx), 'Color', '#C0C0C0')
                 title(allMouseAx, "Mean Sliding Correlation for " + group.Type)
                 
             end
             
             sgtitle(byMouse, {"Sliding in free cut by movement - by mouse", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             set(0,'CurrentFigure',byMouse)
-            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Free Movement - all groups\Free but by movement - by mouse")
+            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Free Movement - all groups\Free but by movement - by mouse")
             
             sgtitle(allMice, {"Sliding in free cut by movement - all mice", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             set(0,'CurrentFigure',allMice)
-            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Free Movement - all groups\Free but by movement - all mice")
+            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Free Movement - all groups\Free but by movement - all mice")
             
             sgtitle(maxCorr, {"Sliding max in free cut by movement - all mice - between 0 and 1 sec", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             set(0,'CurrentFigure',maxCorr)
@@ -618,6 +618,83 @@ classdef ListOfMouseLists < handle
             set(0,'CurrentFigure',maxCorr)
             % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding By Task - Lick vs. No Lick\by " + straightenedBy + "\All Groups - no lick - max")
             
+        end
+        
+        function plotSlidingCorrelationHeatmapCutSignal(obj, signalType, straightenedBy, filterBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            
+            % Init
+            amountOfGroups = 3;                                            % Depending what groups one wants to include
+            switch signalType
+                case "Task"
+                    descriptionVector = ["Task", straightenedBy];
+                case "Free"
+                    descriptionVector = ["Free", straightenedBy, "post"];
+            end
+            corrLimits = [-5, 15];
+            
+            
+            % Create figures
+            allMiceAllGroups = figure('Position', [256,109,1349,860]);
+            
+            % Collect data and plot
+            for groupIndx = 1:amountOfGroups
+                group = obj.ListOfLists(groupIndx);
+                
+                amoutOfMiceInGroup = size(group.LoadedMouseList, 2);
+                miceNames = strings(1,amoutOfMiceInGroup);
+                
+                % By mouse
+                groupByMouse = figure('Position', [247,579,1367,388]);
+                groupMiceSliding = [];
+                
+                for mouseIndx = 1:amoutOfMiceInGroup
+                    set(0,'CurrentFigure',groupByMouse)
+                    currentMouseSubplot = subplot(1, amoutOfMiceInGroup, mouseIndx);
+                    
+                    mouse = group.LoadedMouseList(mouseIndx);
+                    miceNames(mouseIndx) = mouse.Name;
+                    
+                    [~, ~, ~, slidingTimeVector, slidingCorrMatrix, ~, signalTitle]  = mouse.dataForPlotSlidingCorrelation(descriptionVector, filterBy, -5, 15, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    
+                    % Save for all mice in group
+                    groupMiceSliding = [groupMiceSliding; slidingCorrMatrix];
+                    
+                    % Plot
+                    im = imagesc(currentMouseSubplot, slidingCorrMatrix);
+
+                    title(currentMouseSubplot, "Heatmap of mouse " + mouse.Name, 'Interpreter', 'none')
+                    im.XData = linspace(corrLimits(1), corrLimits(2), size(slidingCorrMatrix, 2));
+                    xlim(currentMouseSubplot, corrLimits);
+                    ylim(currentMouseSubplot, [0, size(slidingCorrMatrix, 1)]);
+                    hold on
+                    line(currentMouseSubplot, [0 0], [0 size(slidingCorrMatrix, 1)], 'Color', 'black')
+                    hold off
+                end
+                
+                % All mice
+                set(0,'CurrentFigure', allMiceAllGroups)
+                allMiceInGroupSubplot = subplot(1, amountOfGroups, groupIndx);
+                
+                % Plot
+                im = imagesc(allMiceInGroupSubplot, groupMiceSliding);
+
+                title(allMiceInGroupSubplot , "Heatmap of concat mice from group " + group.Type, 'Interpreter', 'none')
+                im.XData = linspace(corrLimits(1), corrLimits(2), size(groupMiceSliding, 2));
+                xlim(allMiceInGroupSubplot, corrLimits);
+                ylim(allMiceInGroupSubplot, [0, size(groupMiceSliding, 1)]);
+                hold on
+                line(allMiceInGroupSubplot, [0 0], [0 size(groupMiceSliding, 1)], 'Color', 'black')
+                hold off
+                
+                % Titles
+                sgtitle(groupByMouse, {"Sliding heatmap for mice of group " + group.Type, signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+                set(0,'CurrentFigure',groupByMouse)
+                savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Heatmap - " + signalType + " - " + straightenedBy + "\" + group.Type + " - time window of " + timeWindow)
+            end
+            
+            sgtitle(allMiceAllGroups, {"Sliding heatmap for all groups", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            set(0,'CurrentFigure',allMiceAllGroups)
+            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Heatmap - " + signalType + " - " + straightenedBy + "\All Groups - time window of " + timeWindow)
         end
         
     end
