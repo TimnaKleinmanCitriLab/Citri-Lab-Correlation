@@ -20,6 +20,7 @@ classdef Mouse < handle
         
         CONST_TASK_TRIAL_TIME = 20;
         CONST_TASK_TIME_BEFORE = 5;
+        CONST_TASK_TRIAL_LIMS = {-5, 15};
         
         % Passive
         CONST_PASSIVE_DATA = "passive\Passive_comb.mat";
@@ -29,12 +30,16 @@ classdef Mouse < handle
         CONST_PASSIVE_TIMES = ["pre", "post"];
         
         CONST_PASSIVE_TRIAL_TIME = 5;
+        CONST_PASSIVE_TIME_BEFORE = 1;
+        CONST_PASSIVE_TRIAL_LIMS = {-1, 4};
         
         % Free
         CONST_FREE_DATA_CONCAT = "free\Free_comb.mat";
         CONST_FREE_DATA_BY_MOVEMENT = "free\Free_comb_movement.mat";
         
-        CONST_CUT_FREE_TIME = 20;
+        CONST_FREE_TRIAL_TIME = 20;
+        CONST_FREE_TIME_BEFORE = 5;
+        CONST_FREE_TRIAL_LIMS = {-5, 15};
         
     end
     
@@ -1235,13 +1240,44 @@ classdef Mouse < handle
             % Get Data
             [fullGcampSignal, fullJrgecoSignal, signalTitle, trialTime, fs] = obj.getInformationDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor, false);
             
-            if filterBy == "no lick"
-                fullGcampSignal = fullGcampSignal(isnan(obj.Info.Task.movement.first_lick), :);
-                fullJrgecoSignal = fullJrgecoSignal(isnan(obj.Info.Task.movement.first_lick), :);
+            switch filterBy
+                case "no lick"
+                    tInfo = obj.Info.(descriptionVector(1)).(descriptionVector(2));
+                    fullGcampSignal = fullGcampSignal(isnan(tInfo.first_lick), :);
+                    fullJrgecoSignal = fullJrgecoSignal(isnan(tInfo.first_lick), :);
+                case "atten=0"
+                    tInfo = obj.Info.(descriptionVector(1)).(descriptionVector(2)).(descriptionVector(3)).(descriptionVector(4));
+                    fullGcampSignal = fullGcampSignal(tInfo.atten == 0, :);
+                    fullJrgecoSignal = fullJrgecoSignal(tInfo.atten == 0, :);
+                case "atten=0/10"
+                    tInfo = obj.Info.(descriptionVector(1)).(descriptionVector(2)).(descriptionVector(3)).(descriptionVector(4));
+                    fullGcampSignal = fullGcampSignal(tInfo.atten == 0 | tInfo.atten == 10, :);
+                    fullJrgecoSignal = fullJrgecoSignal(tInfo.atten == 0 | tInfo.atten == 10, :);
+                case "0<freq<5000"
+                    tInfo = obj.Info.(descriptionVector(1)).(descriptionVector(2)).(descriptionVector(3)).(descriptionVector(4));
+                    fullGcampSignal = fullGcampSignal(0<=tInfo.freq & tInfo.freq<5000 & tInfo.atten == 0, :);
+                    fullJrgecoSignal = fullJrgecoSignal(0<=tInfo.freq & tInfo.freq<5000 & tInfo.atten == 0, :);
+                case "5000<freq<10000"
+                    tInfo = obj.Info.(descriptionVector(1)).(descriptionVector(2)).(descriptionVector(3)).(descriptionVector(4));
+                    fullGcampSignal = fullGcampSignal(5000<=tInfo.freq & tInfo.freq<10000 & tInfo.atten == 0, :);
+                    fullJrgecoSignal = fullJrgecoSignal(5000<=tInfo.freq & tInfo.freq<10000 & tInfo.atten == 0, :);
+                case "10000<freq"
+                    tInfo = obj.Info.(descriptionVector(1)).(descriptionVector(2)).(descriptionVector(3)).(descriptionVector(4));
+                    fullGcampSignal = fullGcampSignal(10000<=tInfo.freq & tInfo.atten == 0, :);
+                    fullJrgecoSignal = fullJrgecoSignal(10000<=tInfo.freq & tInfo.atten == 0, :);
             end
             
-            SamplesStart = max(round(fs * (startTime + 5)), 1);                    % + 5 cause time starts at -5
-            SamplesEnd = min(round(fs * (endTime + 5)), size(fullGcampSignal , 2));% + 5 cause time starts at -5
+            switch descriptionVector(1)
+                case "Task"
+                    moveBy = Mouse.CONST_TASK_TIME_BEFORE;
+                case "Passive"
+                    moveBy = Mouse.CONST_PASSIVE_TIME_BEFORE;
+                case "Free"
+                    moveBy = Mouse.CONST_FREE_TIME_BEFORE;
+            end
+            
+            SamplesStart = max(round(fs * (startTime + moveBy)), 1);                    % + moveBy cause time starts at moveBy and not zero
+            SamplesEnd = min(round(fs * (endTime + moveBy)), size(fullGcampSignal , 2));% + moveBy cause time starts at moveBy and not zero
             cutGcampSignal = fullGcampSignal(:, SamplesStart:SamplesEnd);
             cutJrgecoSignal = fullJrgecoSignal(:, SamplesStart:SamplesEnd);
             
@@ -1249,17 +1285,14 @@ classdef Mouse < handle
             
             for rowIndx = 1:size(cutGcampSignal, 1)
                 [correlationVector, slidingTimeVector] = obj.getSlidingCorrelation(timeWindow, timeShift, cutGcampSignal(rowIndx, :), cutJrgecoSignal(rowIndx, :), fs);
-                % if timeWindow < 2
-                    % correlationVector = smooth(correlationVector', 10)';
-                % end
                 slidingCorrMatrix = [slidingCorrMatrix; correlationVector];
             end
             
             SlidingMeanInTimePeriod = mean(slidingCorrMatrix, 1);
             
             % Time vectors
-            signalTimeVector = linspace(- 5, trialTime - 5, size(cutGcampSignal, 2));
-            slidingTimeVector = slidingTimeVector - 5;
+            signalTimeVector = linspace(- moveBy, trialTime - moveBy, size(cutGcampSignal, 2));
+            slidingTimeVector = slidingTimeVector - moveBy;
         end
         
         function [signalTimeVector, noLickCutGcamp, noLickCutJrgeco, slidingTimeVector, SlidingMeanInTimePeriod, signalTitle]  = dataForPlotSlidingCorrelationTaskNoLick(obj, straightenedBy, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor)
@@ -1779,6 +1812,8 @@ classdef Mouse < handle
             %      for example ["Task", "lick"]
             % For Passive signal - ["Passive", "state", "soundType", "time"],
             %         for example ["Passive", "awake", "BBN", "post"]
+            % For Free signal - ["Free", "divideBy", "time"] where divideBy can be concat / movement
+            %         for example ["Free", "movement", "pre"]
             % If there is no such signal, raises an error.
             
             if obj.signalExists(descriptionVector)
@@ -1805,7 +1840,7 @@ classdef Mouse < handle
                     gcampSignal = obj.ProcessedRawData.Free.(cutBy).(time).gcamp;
                     jrgecoSignal = obj.ProcessedRawData.Free.(cutBy).(time).jrgeco;
                     fs = obj.Info.Free.general.fs(1);                              % All fs are suppoed to be the same - change if not!
-                    trialTime = obj.CONST_CUT_FREE_TIME;
+                    trialTime = obj.CONST_FREE_TRIAL_TIME;
                     if (cutBy == "concat")
                         trialTime = round(size(gcampSignal, 2) / fs);
                     end
@@ -1815,7 +1850,11 @@ classdef Mouse < handle
             else
                 error("Problem with given description vector. Should be one of the following:" + newline +...
                     "For Task signals - [Task, divideBy]" +  newline +...
-                    "For Passive signal - [Passive, state, soundType, time]");
+                    "    for example [Task, lick]" +  newline +...
+                    "For Passive signal - [Passive, state, soundType, time]"  +  newline +...
+                    "    for example [Passive, awake, BBN, post]" +  newline +...
+                    "For Free signals - [Free, divideBy, time], where divideBy can be concat / movement") +  newline +...
+                    "    for example [Free, movement, pre]";
             end
         end
         
