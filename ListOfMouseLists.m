@@ -281,7 +281,7 @@ classdef ListOfMouseLists < handle
             
         end
         
-        function plotSlidingCorrelationCutSignal(obj, descriptionVector, filterBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
+        function plotSlidingCorrelationCutSignal(obj, descriptionVector, condition, timeWindow, timeShift, smoothFactor, downsampleFactor)
             % Plots sliding correaltion in cut task for all mice by group +
             % Max of the mice 1 sec before and after time 0 (of 
             % "straightenedBy")
@@ -325,7 +325,7 @@ classdef ListOfMouseLists < handle
                     if mouse.signalExists(descriptionVector)
                         miceNames = [miceNames; mouse.Name];
                         
-                        [~, ~, ~, slidingTimeVector, ~, slidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelation(descriptionVector, filterBy, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                        [~, ~, ~, slidingTimeVector, ~, slidingMeanInTimePeriod, signalTitle]  = mouse.dataForPlotSlidingCorrelation(descriptionVector, condition, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor);
                         
                         groupMiceSliding = [groupMiceSliding; slidingMeanInTimePeriod];
                         
@@ -361,7 +361,7 @@ classdef ListOfMouseLists < handle
                     SEMSlidingAllMice = zeros(1, size(groupMiceSliding, 2));
                 end
                 
-                shadedErrorBar(slidingTimeVector, meanSlidingAllMice, SEMSlidingAllMice, 'b');
+                shadedErrorBar(slidingTimeVector, meanSlidingAllMice, SEMSlidingAllMice, 'lineProps', 'b');
                 
                 line(allMouseAx, [startTime, endTime], [0 0], 'Color', '#C0C0C0')
                 line(allMouseAx, [0, 0], ylim(slidingByMouseAx), 'Color', '#C0C0C0')
@@ -369,19 +369,19 @@ classdef ListOfMouseLists < handle
                 
             end
             
-            sgtitle(byMouse, {"Sliding in cut signal - by mouse", signalTitle, "Filtered by - " + filterBy, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            sgtitle(byMouse, {"Sliding in cut signal - by mouse", signalTitle, "Filtered by - " + condition, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             set(0,'CurrentFigure',byMouse)
-            savedName = strrep(strrep(strrep("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Cut Signal - " + strjoin(descriptionVector, ' - ') + "\By mouse - filtered by - " + filterBy + " - time window of " + timeWindow, '<' ,' lt '), '>', ' ht '), '.', ',');
+            savedName = strrep(strrep(strrep("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Cut Signal - " + strjoin(descriptionVector, ' - ') + "\By mouse - filtered by - " + condition + " - time window of " + timeWindow, '<' ,' lt '), '>', ' ht '), '.', ',');
             savefig(byMouse, savedName)
             
-            sgtitle(allMice, {"Sliding in cut signal - all mice", signalTitle, "Filtered by - " + filterBy, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            sgtitle(allMice, {"Sliding in cut signal - all mice", signalTitle, "Filtered by - " + condition, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             set(0,'CurrentFigure',allMice)
-            savedName = strrep(strrep(strrep("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Cut Signal - " + strjoin(descriptionVector, ' - ') + "\All mice - filtered by - " + filterBy + " - time window of " + string(timeWindow), '<' ,' lt '), '>', ' ht '), '.', ',');
+            savedName = strrep(strrep(strrep("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Cut Signal - " + strjoin(descriptionVector, ' - ') + "\All mice - filtered by - " + condition + " - time window of " + string(timeWindow), '<' ,' lt '), '>', ' ht '), '.', ',');
             savefig(allMice, savedName)
             
-            sgtitle(maxCorr, {"Sliding max in cut signal - all mice - between 0 and 1 sec", signalTitle, "Filtered by - " + filterBy, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            sgtitle(maxCorr, {"Sliding max in cut signal - all mice - between 0 and 1 sec", signalTitle, "Filtered by - " + condition, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             set(0,'CurrentFigure',maxCorr)
-            savedName = strrep(strrep(strrep("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Cut Signal - " + strjoin(descriptionVector, ' - ') + "\Max - filtered by - " + filterBy + " - time window of " + string(timeWindow), '<' ,' lt '), '>', ' ht '), '.', ',');
+            savedName = strrep(strrep(strrep("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Cut Signal - " + strjoin(descriptionVector, ' - ') + "\Max - filtered by - " + condition + " - time window of " + string(timeWindow), '<' ,' lt '), '>', ' ht '), '.', ',');
             savefig(maxCorr, savedName)
         end
         
@@ -470,7 +470,7 @@ classdef ListOfMouseLists < handle
             
         end
         
-        function plotSlidingCorrelationHeatmapCutSignal(obj, descriptionVector, filterBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
+        function plotSlidingCorrelationHeatmapCutSignal(obj, descriptionVector, condition, timeWindow, timeShift, smoothFactor, downsampleFactor)
             
             % Init
             amountOfGroups = 3;                                            % Depending what groups one wants to include
@@ -508,10 +508,11 @@ classdef ListOfMouseLists < handle
                     if mouse.signalExists(descriptionVector)
                         miceNames = [miceNames; mouse.Name];
                         
-                        [~, ~, ~, slidingTimeVector, slidingCorrMatrix, ~, signalTitle]  = mouse.dataForPlotSlidingCorrelation(descriptionVector, filterBy, corrLimits(1), corrLimits(2), timeWindow, timeShift, smoothFactor, downsampleFactor);
+                        [~, ~, ~, slidingTimeVector, slidingCorrMatrix, ~, signalTitle]  = mouse.dataForPlotSlidingCorrelation(descriptionVector, condition, corrLimits(1), corrLimits(2), timeWindow, timeShift, smoothFactor, downsampleFactor);
                         
                         % Save for all mice in group
                         groupMiceSliding = [groupMiceSliding; slidingCorrMatrix];
+                        
                         
                         % Plot
                         im = imagesc(currentMouseSubplot, slidingCorrMatrix);
@@ -533,7 +534,7 @@ classdef ListOfMouseLists < handle
                 % Plot
                 im = imagesc(allMiceInGroupSubplot, groupMiceSliding);
 
-                title(allMiceInGroupSubplot , "Heatmap of concat mice from group " + group.Type, 'Interpreter', 'none')
+                title(allMiceInGroupSubplot , group.Type, 'Interpreter', 'none')
                 im.XData = linspace(corrLimits(1), corrLimits(2), size(groupMiceSliding, 2));
                 xlim(allMiceInGroupSubplot, corrLimits);
                 ylim(allMiceInGroupSubplot, [0, size(groupMiceSliding, 1)]);
@@ -542,19 +543,111 @@ classdef ListOfMouseLists < handle
                 hold off
                 
                 % Titles
-                sgtitle(groupByMouse, {"Sliding heatmap for mice of group " + group.Type, signalTitle, "Filtered by - " + filterBy, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+                sgtitle(groupByMouse, {"Sliding heatmap for mice of group " + group.Type, signalTitle, "Filtered by - " + condition, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
                 set(0,'CurrentFigure',groupByMouse)
-                savedName = strrep(strrep("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Heatmap - " + strjoin(descriptionVector, ' - ') + "\" + group.Type + " - filtered by - " + filterBy + " - time window of " + string(timeWindow), '<' ,' lt '), '>', ' ht ');
+                savedName = strrep(strrep(strrep("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Heatmap - " + strjoin(descriptionVector, ' - ') + "\" + group.Type + " - filtered by - " + condition + " - time window of " + string(timeWindow), '<' ,' lt '), '>', ' ht '), 'tInfo.', '');
                 savefig(groupByMouse, savedName)
                 
             end
             
-            sgtitle(allMiceAllGroups, {"Sliding heatmap for all groups", signalTitle, "Filtered by - " + filterBy, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            sgtitle(allMiceAllGroups, {"Sliding heatmap for all groups", signalTitle, "Filtered by - " + condition, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             set(0,'CurrentFigure', allMiceAllGroups)
-            savedName = strrep(strrep("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Heatmap - " + strjoin(descriptionVector, ' - ') + "\All Groups - filtered by - " + filterBy + " - time window of " + string(timeWindow), '<' ,' lt '), '>', ' ht ');
+            savedName = strrep(strrep(strrep("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Heatmap - " + strjoin(descriptionVector, ' - ') + "\All Groups - filtered by - " + condition + " - time window of " + string(timeWindow), '<' ,' lt '), '>', ' ht '), 'tInfo.', '');
             savefig(allMiceAllGroups, savedName)
         end
         
+        function plotSignalAndSlidingCorrelationHeatpmapCutSignal(obj, descriptionVector, condition, timeWindow, timeShift, smoothFactor, downsampleFactor)           
+            % Create figures
+            amountOfGroups = 3;                                            % Depending what groups one wants to include
+            
+            switch descriptionVector(1)
+                case "Task"
+                    [startTime, endTime] = Mouse.CONST_TASK_TRIAL_LIMS{:};
+                case "Passive"
+                    [startTime, endTime] = Mouse.CONST_PASSIVE_TRIAL_LIMS{:};
+                case "Free"
+                    [startTime, endTime] = Mouse.CONST_FREE_TRIAL_LIMS{:};
+            end
+            corrLimits = [startTime, endTime];
+            
+            % Data + Plot
+            for groupIndx = 1:amountOfGroups
+                group = obj.ListOfLists(groupIndx);
+                
+                amoutOfMiceInGroup = size(group.LoadedMouseList, 2);
+                
+                groupMiceSliding = [];
+                groupMiceGcamp = [];
+                groupMiceGeco = [];
+                amountOfTrials = [];                                       % Used to draw lines between mice
+                
+                for mouseIndx = 1:amoutOfMiceInGroup
+                    mouse = group.LoadedMouseList(mouseIndx);
+                    if mouse.signalExists(descriptionVector)
+                        
+                        [gcampSignal, jrgecoSignal, ~, ~] = mouse.dataOfCutSignal(descriptionVector, condition, smoothFactor, downsampleFactor);
+                        
+                        groupMiceGcamp = [groupMiceGcamp; gcampSignal];
+                        groupMiceGeco = [groupMiceGeco; jrgecoSignal];
+                        
+                        
+                        [~, ~, ~, ~, slidingCorrMatrix, ~, signalTitle]  = mouse.dataForPlotSlidingCorrelation(descriptionVector, condition, corrLimits(1), corrLimits(2), timeWindow, timeShift, smoothFactor, downsampleFactor);
+                        groupMiceSliding = [groupMiceSliding; slidingCorrMatrix];
+                        
+                        amountOfTrials = [amountOfTrials, size(gcampSignal, 1)];
+                    end
+                end
+                
+                % Normalize signal to be between 0 and 1
+                normalizedGroupMiceGcamp = groupMiceGcamp - min(groupMiceGcamp, [], 2);  % Bring all trials to 0
+                normalizedGroupMiceGcamp = normalizedGroupMiceGcamp ./ max(normalizedGroupMiceGcamp, [], 2); % All trials between 0 and 1
+                
+                normalizedGroupMiceGeco = groupMiceGeco - min(groupMiceGeco, [], 2);  % Bring all trials to 0
+                normalizedGroupMiceGeco = normalizedGroupMiceGeco ./ max(normalizedGroupMiceGeco, [], 2); % All trials between 0 and 1
+                
+                % Draw
+                fig = figure('Position', [450,109,961,860]);
+                    % Gcamp
+                gcampSubplot = subplot(1, 3, 1);
+                im = imagesc(gcampSubplot, normalizedGroupMiceGcamp);
+
+                title(gcampSubplot , "Gcamp", 'Interpreter', 'none')
+                im.XData = linspace(corrLimits(1), corrLimits(2), size(normalizedGroupMiceGcamp, 2));
+                xlim(gcampSubplot, corrLimits);
+                ylim(gcampSubplot, [0, size(normalizedGroupMiceGcamp, 1)]);
+                line(gcampSubplot, [0 0], [0 size(normalizedGroupMiceGcamp, 1)], 'Color', 'black')
+                
+                    % Geco
+                jrgecoSubplot = subplot(1, 3, 2);
+                im = imagesc(jrgecoSubplot, normalizedGroupMiceGeco);
+
+                title(jrgecoSubplot , "JrGeco", 'Interpreter', 'none')
+                im.XData = linspace(corrLimits(1), corrLimits(2), size(normalizedGroupMiceGeco, 2));
+                xlim(jrgecoSubplot, corrLimits);
+                ylim(jrgecoSubplot, [0, size(normalizedGroupMiceGeco, 1)]);
+                line(jrgecoSubplot, [0 0], [0 size(normalizedGroupMiceGeco, 1)], 'Color', 'black')
+                
+                    % Sliding
+                slidingSubplot = subplot(1, 3, 3);
+                im = imagesc(slidingSubplot, groupMiceSliding);
+
+                title(slidingSubplot , "Sliding", 'Interpreter', 'none')
+                im.XData = linspace(corrLimits(1), corrLimits(2), size(groupMiceSliding, 2));
+                xlim(slidingSubplot, corrLimits);
+                ylim(slidingSubplot, [0, size(groupMiceSliding, 1)]);
+                line(slidingSubplot, [0 0], [0 size(groupMiceSliding, 1)], 'Color', 'black')
+                
+                currentTrialAmount = 0;
+                for trialAmount = amountOfTrials
+                    currentTrialAmount = currentTrialAmount + trialAmount;
+                    
+                    line(gcampSubplot, corrLimits, [currentTrialAmount, currentTrialAmount], 'Color', 'white')
+                    line(jrgecoSubplot, corrLimits, [currentTrialAmount, currentTrialAmount], 'Color', 'white')
+                    line(slidingSubplot, corrLimits, [currentTrialAmount, currentTrialAmount], 'Color', 'white')         
+                end
+                sgtitle(fig, {"Heatmap for mice of group " + group.Type, signalTitle, "Filtered by - " + condition, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            end
+        end
     end
     
     methods (Static)

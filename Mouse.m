@@ -348,12 +348,40 @@ classdef Mouse < handle
             obj.drawAllSessions(gcampSignal, jrgecoSignal, timeVector, signalTitle, smoothFactor, downsampleFactor)
         end
         
-        function plotCutSignal(obj, descriptionVector, smoothFactor, downsampleFactor)
-            [gcampSignal, jrgecoSignal, signalTitle, totalTime, ~] = obj.getInformationDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor, false);
-            timeVector = linspace(0, totalTime, size(gcampSignal, 2));
-            timeVector = timeVector - 5;
+        function plotCutSignal(obj, descriptionVector, condition, smoothFactor, downsampleFactor)
             
-            obj.drawCutSessions(gcampSignal, jrgecoSignal, timeVector, signalTitle, smoothFactor, downsampleFactor)
+            [gcampSignal, jrgecoSignal, timeVector, signalTitle] = obj.dataOfCutSignal(descriptionVector, condition, smoothFactor, downsampleFactor);
+            
+            switch descriptionVector(1)
+                case "Task"
+                    timeBefore = obj.CONST_TASK_TIME_BEFORE;
+                    limits = [obj.CONST_TASK_TRIAL_LIMS{:}];
+                case "Passive"
+                    timeBefore = obj.CONST_PASSIVE_TIME_BEFORE;
+                    limits = [obj.CONST_PASSIVE_TRIAL_LIMS{:}];
+                case "Free"
+                    timeBefore = obj.CONST_FREE_TIME_BEFORE;
+                    limits = [obj.CONST_FREE_TRIAL_LIMS{:}];
+            end
+            
+            timeVector = timeVector - timeBefore;
+            
+            obj.drawCutSessions(gcampSignal, jrgecoSignal, timeVector, signalTitle, condition, limits, smoothFactor, downsampleFactor)
+        end
+        
+        function plotCutSignalHeatmap(obj, descriptionVector, condition, smoothFactor, downsampleFactor)
+            [gcampSignal, jrgecoSignal, ~, signalTitle] = obj.dataOfCutSignal(descriptionVector, condition, smoothFactor, downsampleFactor);
+            
+            switch descriptionVector(1)
+                case "Task"
+                    limits = [obj.CONST_TASK_TRIAL_LIMS{:}];
+                case "Passive"
+                    limits = [obj.CONST_PASSIVE_TRIAL_LIMS{:}];
+                case "Free"
+                    limits = [obj.CONST_FREE_TRIAL_LIMS{:}];
+            end
+            
+            obj.drawCutSessionsHeatmap(gcampSignal, jrgecoSignal, signalTitle, limits, smoothFactor, downsampleFactor)
         end
         
         % =========== Correlation ===========
@@ -486,6 +514,22 @@ classdef Mouse < handle
             obj.drawSlidingCorrelationHeatmap(histogramMatrix, labels, timeWindow, timeShift, smoothFactor, downsampleFactor)
             obj.drawSlidingCorrelationHistogram(histogramMatrix, labels, timeWindow, timeShift, smoothFactor, downsampleFactor)
             %             obj.drawBar(skewness(histogramMatrix), labels, "Skewness of of sliding window correlation values for mouse " + obj.Name, "Skewness", smoothFactor, downsampleFactor, false)
+        end
+        
+        function plotSlidingCorrelationCutSessionsHeatmap(obj, descriptionVector, condition, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            switch descriptionVector(1)
+                case "Task"
+                    limits = [obj.CONST_TASK_TRIAL_LIMS{:}];
+                case "Passive"
+                    limits = [obj.CONST_PASSIVE_TRIAL_LIMS{:}];
+                case "Free"
+                    limits = [obj.CONST_FREE_TRIAL_LIMS{:}];
+            end
+            
+            [gcampSignal, jrgecoSignal, ~, ~] = obj.dataOfCutSignal(descriptionVector, condition, smoothFactor, downsampleFactor);
+            [~, ~, ~, ~, slidingCorrMatrix, ~, signalTitle]  = obj.dataForPlotSlidingCorrelation(descriptionVector, condition, limits(1), limits(2), timeWindow, timeShift, smoothFactor, downsampleFactor);
+            
+            obj.drawSlidingCorrelationCutSessionsHeatmap(gcampSignal, jrgecoSignal, signalTitle, limits, smoothFactor, downsampleFactor)
         end
         
         function plotSlidingCorrelationBar(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
@@ -860,6 +904,17 @@ classdef Mouse < handle
             timeVector = linspace(0, totalTime, size(gcampSignal, 2));
         end
         
+        function [gcampSignal, jrgecoSignal, timeVector, signalTitle] = dataOfCutSignal(obj, descriptionVector, condition, smoothFactor, downsampleFactor)
+            [gcampSignal, jrgecoSignal, signalTitle, totalTime, ~] = obj.getInformationDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor, false);
+            timeVector = linspace(0, totalTime, size(gcampSignal, 2));
+            
+            tInfo = obj.getTInfo(descriptionVector);
+            if condition ~= ""
+                gcampSignal = gcampSignal(eval(condition),:);
+                jrgecoSignal = jrgecoSignal(eval(condition),:);
+            end
+        end
+        
         function [correlationVec, xLabels] = dataForPlotCorrelationBar(obj, smoothFactor, downsampleFactor)
             % Returns a vector of correlations between the smoothed and
             % down sampled signals for each possible category.
@@ -1004,12 +1059,12 @@ classdef Mouse < handle
             labels = [labels, "Task"];
             
             % Free
-            descriptionVector = ["Free", "pre"];
+            descriptionVector = ["Free", "concat", "pre"];
             binCount = obj.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, false);
             histogramMatrix = [histogramMatrix, binCount'];
             labels = [labels, "Free - pre"];
             
-            descriptionVector = ["Free", "post"];
+            descriptionVector = ["Free", "concat", "post"];
             binCount = obj.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, false);
             histogramMatrix = [histogramMatrix, binCount'];
             labels = [labels, "Free - post"];
@@ -1233,39 +1288,38 @@ classdef Mouse < handle
             secondXsecond = sum(secondXsecond, 1) / rows;
         end
         
-        function [signalTimeVector, cutGcampSignal, cutJrgecoSignal, slidingTimeVector, slidingCorrMatrix, SlidingMeanInTimePeriod, signalTitle]  = dataForPlotSlidingCorrelation(obj, descriptionVector, filterBy, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor)
+        function [signalTimeVector, cutGcampSignal, cutJrgecoSignal, slidingTimeVector, slidingCorrMatrix, SlidingMeanInTimePeriod, signalTitle]  = dataForPlotSlidingCorrelation(obj, descriptionVector, condition, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor)
             % Returns a sliding correlation vector for a time period in
             % the cut task (meaning somewhere between -5 and 15)
             
             % Get Data
             [fullGcampSignal, fullJrgecoSignal, signalTitle, trialTime, fs] = obj.getInformationDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor, false);
-            
-            switch filterBy
-                case "no lick"
-                    tInfo = obj.Info.(descriptionVector(1)).(descriptionVector(2));
-                    fullGcampSignal = fullGcampSignal(isnan(tInfo.first_lick), :);
-                    fullJrgecoSignal = fullJrgecoSignal(isnan(tInfo.first_lick), :);
-                case "atten=0"
-                    tInfo = obj.Info.(descriptionVector(1)).(descriptionVector(2)).(descriptionVector(3)).(descriptionVector(4));
-                    fullGcampSignal = fullGcampSignal(tInfo.atten == 0, :);
-                    fullJrgecoSignal = fullJrgecoSignal(tInfo.atten == 0, :);
-                case "atten=0/10"
-                    tInfo = obj.Info.(descriptionVector(1)).(descriptionVector(2)).(descriptionVector(3)).(descriptionVector(4));
-                    fullGcampSignal = fullGcampSignal(tInfo.atten == 0 | tInfo.atten == 10, :);
-                    fullJrgecoSignal = fullJrgecoSignal(tInfo.atten == 0 | tInfo.atten == 10, :);
-                case "0<freq<5000"
-                    tInfo = obj.Info.(descriptionVector(1)).(descriptionVector(2)).(descriptionVector(3)).(descriptionVector(4));
-                    fullGcampSignal = fullGcampSignal(0<=tInfo.freq & tInfo.freq<5000 & tInfo.atten == 0, :);
-                    fullJrgecoSignal = fullJrgecoSignal(0<=tInfo.freq & tInfo.freq<5000 & tInfo.atten == 0, :);
-                case "5000<freq<10000"
-                    tInfo = obj.Info.(descriptionVector(1)).(descriptionVector(2)).(descriptionVector(3)).(descriptionVector(4));
-                    fullGcampSignal = fullGcampSignal(5000<=tInfo.freq & tInfo.freq<10000 & tInfo.atten == 0, :);
-                    fullJrgecoSignal = fullJrgecoSignal(5000<=tInfo.freq & tInfo.freq<10000 & tInfo.atten == 0, :);
-                case "10000<freq"
-                    tInfo = obj.Info.(descriptionVector(1)).(descriptionVector(2)).(descriptionVector(3)).(descriptionVector(4));
-                    fullGcampSignal = fullGcampSignal(10000<=tInfo.freq & tInfo.atten == 0, :);
-                    fullJrgecoSignal = fullJrgecoSignal(10000<=tInfo.freq & tInfo.atten == 0, :);
+            tInfo = getTInfo(obj, descriptionVector);
+            if condition ~= ""
+                fullGcampSignal = fullGcampSignal(eval(condition),:);
+                fullJrgecoSignal = fullJrgecoSignal(eval(condition),:);
             end
+            
+%             switch filterBy
+%                 case "no lick"
+%                     fullGcampSignal = fullGcampSignal(isnan(tInfo.first_lick), :);
+%                     fullJrgecoSignal = fullJrgecoSignal(isnan(tInfo.first_lick), :);
+%                 case "atten=0"
+%                     fullGcampSignal = fullGcampSignal(tInfo.atten == 0, :);
+%                     fullJrgecoSignal = fullJrgecoSignal(tInfo.atten == 0, :);
+%                 case "atten=0/10"
+%                     fullGcampSignal = fullGcampSignal(tInfo.atten == 0 | tInfo.atten == 10, :);
+%                     fullJrgecoSignal = fullJrgecoSignal(tInfo.atten == 0 | tInfo.atten == 10, :);
+%                 case "0<freq<5000"
+%                     fullGcampSignal = fullGcampSignal(0<=tInfo.freq & tInfo.freq<5000 & tInfo.atten == 0, :);
+%                     fullJrgecoSignal = fullJrgecoSignal(0<=tInfo.freq & tInfo.freq<5000 & tInfo.atten == 0, :);
+%                 case "5000<freq<10000"
+%                     fullGcampSignal = fullGcampSignal(5000<=tInfo.freq & tInfo.freq<10000 & tInfo.atten == 0, :);
+%                     fullJrgecoSignal = fullJrgecoSignal(5000<=tInfo.freq & tInfo.freq<10000 & tInfo.atten == 0, :);
+%                 case "10000<freq"
+%                     fullGcampSignal = fullGcampSignal(10000<=tInfo.freq & tInfo.atten == 0, :);
+%                     fullJrgecoSignal = fullJrgecoSignal(10000<=tInfo.freq & tInfo.atten == 0, :);
+%             end
             
             switch descriptionVector(1)
                 case "Task"
@@ -1419,7 +1473,7 @@ classdef Mouse < handle
             
         end
         
-        function drawCutSessions(obj, gcampSignal, jrgecoSignal, timeVector, signalTitle, smoothFactor, downsampleFactor)
+        function drawCutSessions(obj, gcampSignal, jrgecoSignal, timeVector, signalTitle, condition, limits, smoothFactor, downsampleFactor)
             % Draws the plot for the plotAllSessions function.
             
             figure("Name", "Signal from cut sessions of mouse " + obj.Name, "NumberTitle", "off");
@@ -1431,20 +1485,51 @@ classdef Mouse < handle
             meanJrgeco = mean(jrgecoSignal, 1);
             SEMJrgeco = std(jrgecoSignal, 1)/sqrt(size(jrgecoSignal, 1));
             
-            gcampLine = shadedErrorBar(timeVector, meanGcamp, SEMGcamp, 'r').mainLine;
+            gcampLine = shadedErrorBar(timeVector, meanGcamp, SEMGcamp, 'lineProps', '-r','transparent',1).mainLine;
             hold on;
-            jrgecoLine = shadedErrorBar(timeVector, meanJrgeco, SEMJrgeco, 'b').mainLine;
+            jrgecoLine = shadedErrorBar(timeVector, meanJrgeco, SEMJrgeco, 'lineProps', '-b','transparent',1).mainLine;
             hold off;
+            line(ax, [0 0], ylim(ax), 'Color', 'black')
             
-            title(ax, {"Cut Signal From: " +  signalTitle, "Mouse: " + obj.Name, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}, 'FontSize', 12) % TODO - Fix
+            title(ax, {"Cut Signal From: " +  signalTitle, "Mouse: " + obj.Name, "Filtered by: " + condition, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}, 'FontSize', 12) % TODO - Fix
             
             [gcampType, jrgecoType] = obj.findGcampJrgecoType();
             
             legend([gcampLine, jrgecoLine], gcampType + " (gcamp)", jrgecoType + " (jrgeco)", 'Location', 'best', 'Interpreter', 'none')
             xlabel("Time (sec)", 'FontSize', 14)
             ylabel("zscored \DeltaF/F", 'FontSize', 14)
-            xlim([-5 15])
+            xlim(limits)
             
+        end
+        
+        function drawCutSessionsHeatmap(obj, gcampSignal, jrgecoSignal, signalTitle, limits, smoothFactor, downsampleFactor)
+            
+            % Normalize signal to be between 0 and 1
+            normalizedGcampSignal = gcampSignal - min(gcampSignal, [], 2);  % Bring all trials to 0
+            normalizedGcampSignal = normalizedGcampSignal ./ max(normalizedGcampSignal, [], 2); % All trials between 0 and 1
+            
+            normalizedJrgecoSignal = jrgecoSignal - min(jrgecoSignal, [], 2);  % Bring all trials to 0
+            normalizedJrgecoSignal = normalizedJrgecoSignal ./ max(normalizedJrgecoSignal, [], 2); % All trials between 0 and 1
+            
+            % Draw
+            fig = figure();
+            gcampSubplot = subplot(1, 2, 1);
+            im = imagesc(gcampSubplot, normalizedGcampSignal);
+            im.XData = linspace(limits(1), limits(2), size(normalizedGcampSignal, 2));
+            xlim(gcampSubplot, limits);
+            ylim(gcampSubplot, [0, size(normalizedGcampSignal, 1)]);
+            line(gcampSubplot, [0 0], [0 size(normalizedGcampSignal, 1)], 'Color', 'black')
+            title(gcampSubplot, "Gcamp")
+            
+            jrgecoSubplot = subplot(1, 2, 2);
+            im = imagesc(jrgecoSubplot, normalizedJrgecoSignal);
+            im.XData = linspace(limits(1), limits(2), size(normalizedJrgecoSignal, 2));
+            xlim(jrgecoSubplot, limits);
+            ylim(jrgecoSubplot, [0, size(normalizedJrgecoSignal, 1)]);
+            line(jrgecoSubplot, [0 0], [0 size(normalizedJrgecoSignal, 1)], 'Color', 'black')
+            title(jrgecoSubplot, "JrGeco")
+            
+            sgtitle({"Cut Signal From: " +  signalTitle, "Mouse: " + obj.Name, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}, 'FontSize', 12) % TODO - Fix
         end
         
         function drawScatterPlot(obj, curPlot, descriptionVector, smoothFactor, downsampleFactor)
@@ -1655,6 +1740,36 @@ classdef Mouse < handle
                     ylim(ax, [-1, 0])
                 end
             end
+        end
+        
+        function drawSlidingCorrelationCutSessionsHeatmap(obj, gcampSignal, jrgecoSignal, signalTitle, limits, timeWindow, timeShift,smoothFactor, downsampleFactor)
+            % Normalize signal to be between 0 and 1
+            normalizedGcampSignal = gcampSignal - min(gcampSignal, [], 2);  % Bring all trials to 0
+            normalizedGcampSignal = normalizedGcampSignal ./ max(normalizedGcampSignal, [], 2); % All trials between 0 and 1
+            
+            normalizedJrgecoSignal = jrgecoSignal - min(jrgecoSignal, [], 2);  % Bring all trials to 0
+            normalizedJrgecoSignal = normalizedJrgecoSignal ./ max(normalizedJrgecoSignal, [], 2); % All trials between 0 and 1
+            
+            % Draw
+            fig = figure();
+            gcampSubplot = subplot(1, 2, 1);
+            im = imagesc(gcampSubplot, normalizedGcampSignal);
+            im.XData = linspace(limits(1), limits(2), size(normalizedGcampSignal, 2));
+            xlim(gcampSubplot, limits);
+            ylim(gcampSubplot, [0, size(normalizedGcampSignal, 1)]);
+            line(gcampSubplot, [0 0], [0 size(normalizedGcampSignal, 1)], 'Color', 'black')
+            title(gcampSubplot, "Gcamp")
+            
+            jrgecoSubplot = subplot(1, 2, 2);
+            im = imagesc(jrgecoSubplot, normalizedJrgecoSignal);
+            im.XData = linspace(limits(1), limits(2), size(normalizedJrgecoSignal, 2));
+            xlim(jrgecoSubplot, limits);
+            ylim(jrgecoSubplot, [0, size(normalizedJrgecoSignal, 1)]);
+            line(jrgecoSubplot, [0 0], [0 size(normalizedJrgecoSignal, 1)], 'Color', 'black')
+            title(jrgecoSubplot, "JrGeco")
+            
+            sgtitle({"Cut Signal From: " +  signalTitle, "Mouse: " + obj.Name, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}, 'FontSize', 12) % TODO - Fix
+
         end
         
         function drawCrossCorrelation(obj, crossSignalList, timeVector, lim, legendList, signalTitle, CrossType, smoothFactor, downsampleFactor, shouldReshape)
@@ -1913,6 +2028,17 @@ classdef Mouse < handle
             else
                 gcampType = obj.GCAMP;
                 jrgecoType = obj.JRGECO;
+            end
+        end
+        
+        function tInfo = getTInfo(obj, descriptionVector)
+            switch descriptionVector(1)
+                case "Task"
+                    tInfo = obj.Info.(descriptionVector(1)).(descriptionVector(2));
+                case "Passive"
+                    tInfo = obj.Info.(descriptionVector(1)).(descriptionVector(2)).(descriptionVector(3)).(descriptionVector(4));
+                case "Free"
+                    tInfo = obj.Info.(descriptionVector(1)).(descriptionVector(2));
             end
         end
         
