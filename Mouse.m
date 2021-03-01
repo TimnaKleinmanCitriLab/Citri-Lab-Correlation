@@ -144,13 +144,44 @@ classdef Mouse < handle
             obj.Info.Task.movement = obj.createTaskMovementInfo();
         end
         
-        function finalMovementInfo = createTaskMovementInfo(obj)
+        function finalMovementTInfo = createTaskMovementInfo(obj)
+            % Add days to movement tInfo
             tInfo = obj.Info.Task.onset;
-            smallMovementInfo = obj.RawMatFile.Task.movement.mov_info;
-            finalMovementInfo = array2table(zeros(0, size(tInfo, 2)), 'VariableNames',tInfo.Properties.VariableNames);
             
-            for rowIndex = 1:size(smallMovementInfo, 1)
-                finalMovementInfo = [finalMovementInfo; tInfo(smallMovementInfo.closest_trial(rowIndex), :)]; 
+            sessionBreaksTInfo = find(tInfo.trial_number == 1);
+            sessionBreaksTInfo = [sessionBreaksTInfo; size(tInfo, 1) + 1];
+            
+            recordingDaysTInfo = [];
+            
+            for index = 1:(length(sessionBreaksTInfo) - 1)
+                recordingDaysTInfo(sessionBreaksTInfo(index):sessionBreaksTInfo(index + 1) - 1) = index;      % Tags each recording day
+            end
+            
+            recordingDaysTInfo = categorical(recordingDaysTInfo');
+            
+            tInfo.day = double(recordingDaysTInfo);
+            
+            % Add days to movement info (mov_info)
+            givenMovementInfo = obj.RawMatFile.Task.movement.mov_info;
+            recDiff = [0; diff(givenMovementInfo.closest_trial)];
+            
+            sessionBreaksMoveInfo = [1; find(recDiff < 0); size(givenMovementInfo, 1) + 1];
+            
+            recordingDaysMoveInfo = [];
+            
+            for index = 1:(length(sessionBreaksMoveInfo) - 1)
+                recordingDaysMoveInfo(sessionBreaksMoveInfo(index):sessionBreaksMoveInfo(index + 1) - 1) = index;      % Tags each recording day
+            end
+            
+            recordingDaysMoveInfo = categorical(recordingDaysMoveInfo');
+            
+            givenMovementInfo.day = double(recordingDaysMoveInfo);
+            
+            finalMovementTInfo = array2table(zeros(0, size(tInfo, 2)), 'VariableNames',tInfo.Properties.VariableNames);
+            
+            for rowIndex = 1:size(givenMovementInfo, 1)
+                indexRowToAdd = find(tInfo.trial_number == givenMovementInfo.closest_trial(rowIndex) & tInfo.day == givenMovementInfo.day(rowIndex));
+                finalMovementTInfo = [finalMovementTInfo; tInfo(indexRowToAdd, :)]; 
             end
         end
         
