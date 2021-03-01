@@ -598,7 +598,7 @@ classdef MouseList < handle
             % ax.XTickLabel = ["General Correlation", "Correlation Trials With Lick", "Correlation Trials Without Lick"];
         end
         
-        function plotCorrWithOrWithoutLick(obj, straightenedBy, smoothFactor, downsampleFactor)
+        function plotCorrWithOrWithoutMovement(obj, straightenedBy, smoothFactor, downsampleFactor)
             descriptionVector = ["Task", straightenedBy];
             [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
             

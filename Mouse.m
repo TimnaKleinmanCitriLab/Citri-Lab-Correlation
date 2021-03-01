@@ -136,17 +136,28 @@ classdef Mouse < handle
             
             tInfo.day = double(recordingDays);
             
+            % Add movement to info
+            movementTInfo = obj.createTaskMovementInfo(tInfo);
+            
+            hasMovement = zeros(size(tInfo, 1) ,1);
+            for rowIndex = 1:size(hasMovement, 1)
+                hasMovement(rowIndex) = any(movementTInfo.day == tInfo.day(rowIndex) & movementTInfo.trial_number == tInfo.trial_number(rowIndex));
+            end
+            
+            tInfo.has_movement = hasMovement;
+            movementTInfo.has_movement = ones(size(movementTInfo, 1), 1);
+            
             % Save Infos
             obj.Info.Task.onset = tInfo;
             % obj.Info.Task.cloud =              % TODO - think how to cut by cloud
             obj.Info.Task.cue = tInfo((tInfo.plot_result ~= -1), :);       % All trials that are not premature
             obj.Info.Task.lick = tInfo((~isnan(tInfo.first_lick)), :);     % All trials that had a lick (including omissions that had a lick)
-            obj.Info.Task.movement = obj.createTaskMovementInfo();
+            obj.Info.Task.movement = movementTInfo;
         end
         
-        function finalMovementTInfo = createTaskMovementInfo(obj)
+        function finalMovementTInfo = createTaskMovementInfo(obj, tInfo)
             % Add days to movement tInfo
-            tInfo = obj.Info.Task.onset;
+            % tInfo = obj.Info.Task.onset;
             
             sessionBreaksTInfo = find(tInfo.trial_number == 1);
             sessionBreaksTInfo = [sessionBreaksTInfo; size(tInfo, 1) + 1];
@@ -177,10 +188,11 @@ classdef Mouse < handle
             
             givenMovementInfo.day = double(recordingDaysMoveInfo);
             
+            % Create movement tInfo
             finalMovementTInfo = array2table(zeros(0, size(tInfo, 2)), 'VariableNames',tInfo.Properties.VariableNames);
             
             for rowIndex = 1:size(givenMovementInfo, 1)
-                indexRowToAdd = find(tInfo.trial_number == givenMovementInfo.closest_trial(rowIndex) & tInfo.day == givenMovementInfo.day(rowIndex));
+                indexRowToAdd = tInfo.trial_number == givenMovementInfo.closest_trial(rowIndex) & tInfo.day == givenMovementInfo.day(rowIndex);
                 finalMovementTInfo = [finalMovementTInfo; tInfo(indexRowToAdd, :)]; 
             end
         end
