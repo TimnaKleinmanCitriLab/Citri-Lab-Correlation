@@ -485,7 +485,7 @@ classdef Mouse < handle
             % and at last calculates the sliding correlation and plots it.
             
             [gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, signalTitle] = obj.dataForPlotSlidingCorrelationAll(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
-            obj.drawSlidingCorrelation(gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift, signalTitle, smoothFactor, downsampleFactor)
+            obj.drawSlidingCorrelationWithMovement(gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift, signalTitle, smoothFactor, downsampleFactor)
             % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Tactical\" + obj.Name + "\Sliding Correlation Zoom - " + signalTitle)
             % obj.drawSlidingCorrelationAllHeatmap(gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift, signalTitle, smoothFactor, downsampleFactor)
             % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Tactical\" + obj.Name + "\Sliding Correlation Heatmap Over Time - " + signalTitle)
@@ -1319,6 +1319,9 @@ classdef Mouse < handle
 %                 case "10000<freq"
 %                     fullGcampSignal = fullGcampSignal(10000<=tInfo.freq & tInfo.atten == 0, :);
 %                     fullJrgecoSignal = fullJrgecoSignal(10000<=tInfo.freq & tInfo.atten == 0, :);
+%                 case "correct"
+%                     fullGcampSignal = fullGcampSignal(ismember(tInfo.trial_result, 'correct'), :);
+%                     fullJrgecoSignal = fullJrgecoSignal(ismember(tInfo.trial_result, 'correct'), :);
 %             end
             
             switch descriptionVector(1)
@@ -1593,6 +1596,39 @@ classdef Mouse < handle
             
             sgtitle({"Sliding Window Correlation from " + signalTitle + " for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}, 'FontWeight', 'bold')
             
+            legend(signalPlot, gcampType + " (gcamp)", jrgecoType + " (jrgeco)", 'Location', 'best')
+            
+        end
+        
+        function drawSlidingCorrelationWithMovement(obj, gcampSignal, jrgecoSignal, signalTimeVector, slidingCorrelation, correlationTimeVector, timeWindow, timeShift, signalTitle, smoothFactor, downsampleFactor)
+            % Draws the plots for the plotSlidingCorrelationAll function
+            
+            fig = figure("Name", "Sliding window correlation for all sessions of mouse " + obj.Name, "NumberTitle", "off");
+            correlationPlot = subplot(2, 1, 1);
+            signalPlot = subplot(2, 1, 2);
+            
+            plot(correlationPlot, correlationTimeVector, slidingCorrelation, 'LineWidth', 2, 'Color', 'Black');
+            xlim(correlationPlot, [0 50])
+            ylim(correlationPlot, [-1 1])
+            line(correlationPlot, [0 correlationTimeVector(size(correlationTimeVector, 2))], [0 0], 'Color', '#C0C0C0')
+            
+            plot(signalPlot, signalTimeVector, gcampSignal, 'LineWidth', 2, 'Color', '#009999');
+            hold on
+            plot(signalPlot, signalTimeVector, jrgecoSignal, 'LineWidth', 2, 'Color', '#990099');
+            hold off
+            xlim(signalPlot, [0 50])
+            
+            title(correlationPlot, {"\fontsize{5}", "\fontsize{14}Sliding Window"}, 'FontWeight', 'normal')
+            [gcampType, jrgecoType] = obj.findGcampJrgecoType();
+            title(signalPlot, {"\fontsize{5}", "\fontsize{14}Signals"}, 'FontWeight', 'normal')
+            
+            xlabel(correlationPlot, "Time (sec)")
+            xlabel(signalPlot, "Time (sec)")
+            ylabel(correlationPlot, "correlation")
+            ylabel(signalPlot, "zscored \DeltaF/F")
+            
+            sgtitle({"Sliding Window Correlation from " + signalTitle + " for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}, 'FontWeight', 'bold')
+            
             % Add movement
             movementTimes = obj.Info.Free.movement;
             hold(correlationPlot, 'on')
@@ -1640,11 +1676,13 @@ classdef Mouse < handle
             % Heatmap Sliding
             % p = pcolor(correlationPlot, slidingCorrelation, 'LineStyle', 'none');
             colormap(winter)
-            slidingCorrelation = smooth(slidingCorrelation', 10)';
-            imagesc(heatmapPlot, slidingCorrelation);
-            cBar = colorbar(slidingPlot);
-            ylabel(cBar, 'Correlation', 'Rotation',270)
-            cBar.Label.VerticalAlignment = 'bottom';
+            % slidingCorrelation = smooth(slidingCorrelation', 10)';
+            im = imagesc(heatmapPlot, slidingCorrelation);
+            % cBar = colorbar(heatmapPlot);
+            % ylabel(cBar, 'Correlation', 'Rotation',270)
+            % cBar.Label.VerticalAlignment = 'bottom';
+            im.XData = correlationTimeVector;
+            xlim(heatmapPlot, [signalTimeVector(1), signalTimeVector(end)]);
             
             % Signal
             plot(signalPlot, signalTimeVector, gcampSignal, 'LineWidth', 0.5, 'Color', '#009999');

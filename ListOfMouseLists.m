@@ -372,17 +372,17 @@ classdef ListOfMouseLists < handle
             sgtitle(byMouse, {"Sliding in cut signal - by mouse", signalTitle, "Filtered by - " + condition, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             set(0,'CurrentFigure',byMouse)
             savedName = strrep(strrep(strrep("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Cut Signal - " + strjoin(descriptionVector, ' - ') + "\By mouse - filtered by - " + condition + " - time window of " + timeWindow, '<' ,' lt '), '>', ' ht '), '.', ',');
-            savefig(byMouse, savedName)
+            % savefig(byMouse, savedName)
             
             sgtitle(allMice, {"Sliding in cut signal - all mice", signalTitle, "Filtered by - " + condition, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             set(0,'CurrentFigure',allMice)
             savedName = strrep(strrep(strrep("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Cut Signal - " + strjoin(descriptionVector, ' - ') + "\All mice - filtered by - " + condition + " - time window of " + string(timeWindow), '<' ,' lt '), '>', ' ht '), '.', ',');
-            savefig(allMice, savedName)
+            % savefig(allMice, savedName)
             
             sgtitle(maxCorr, {"Sliding max in cut signal - all mice - between 0 and 1 sec", signalTitle, "Filtered by - " + condition, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             set(0,'CurrentFigure',maxCorr)
             savedName = strrep(strrep(strrep("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Cut Signal - " + strjoin(descriptionVector, ' - ') + "\Max - filtered by - " + condition + " - time window of " + string(timeWindow), '<' ,' lt '), '>', ' ht '), '.', ',');
-            savefig(maxCorr, savedName)
+            % savefig(maxCorr, savedName)
         end
         
         function plotSlidingCorrelationPassiveByAttenuation(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
