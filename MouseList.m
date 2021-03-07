@@ -102,6 +102,57 @@ classdef MouseList < handle
 %             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Scatter Plots\" + obj.Type + "\Scatter Plot - " + signalTitle)
         end
         
+        function plotScatterPlotWithAndWithoutLick(obj, timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor)
+            figure();
+            amountOfMice = size(obj.LoadedMouseList, 2);
+            
+            for mouseIndex = 1:amountOfMice
+                mouse = obj.LoadedMouseList(mouseIndex);
+                
+                [gcampNoLickSignal, jrgecoNoLickSignal, gcampLickCutSignal, jrgecoLickCutSignal, ~] = mouse.getConcatTaskNoLick(timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor);
+                
+                gcampLickCutSignal = (gcampLickCutSignal(~isnan(gcampLickCutSignal(:, 1)), :));
+                jrgecoLickCutSignal = (jrgecoLickCutSignal(~isnan(jrgecoLickCutSignal(:, 1)), :));
+                
+                gcampLickCutSignal = downsample(gcampLickCutSignal', downsampleFactor)';
+                jrgecoLickCutSignal = downsample(jrgecoLickCutSignal', downsampleFactor)';
+                
+                amountOfLicks = size(gcampLickCutSignal, 1);
+                lenOfLick = size(gcampLickCutSignal, 2);
+                
+                gcampLickSignal = reshape(gcampLickCutSignal', 1, []);
+                jrgecoLickSignal = reshape(jrgecoLickCutSignal', 1, []);
+                
+                colorsForLick = linspace(1, 10, amountOfLicks);
+                colorsForLick = repelem(colorsForLick, lenOfLick);
+                
+                % Plot No Lick
+                noLickPlot = subplot(3, amountOfMice, mouseIndex);
+                colorForNoLick = linspace(1, 10, length(gcampNoLickSignal));
+                
+                scatter(noLickPlot, gcampNoLickSignal, jrgecoNoLickSignal, 2, colorForNoLick, 'filled')
+                
+                    % Best fit line
+                coefficients = polyfit(gcampNoLickSignal,  jrgecoNoLickSignal, 1);
+                fitted = polyval(coefficients, gcampNoLickSignal);
+                line(noLickPlot, gcampNoLickSignal, fitted, 'Color', 'black', 'LineStyle', '--')
+                
+                title(noLickPlot, "Mouse: " + mouse.Name + ", No lick Signal")
+                
+                % Plot Lick
+                lickPlot = subplot(3, amountOfMice, mouseIndex + amountOfMice);
+                scatter(lickPlot, gcampLickSignal, jrgecoLickSignal, 2, colorsForLick, 'filled')
+                title(lickPlot, "Lick Signal")
+                
+                % Plot together
+                generalPlot = subplot(3, amountOfMice, mouseIndex + 2 * amountOfMice);
+                
+                [gcampSignal, jrgecoSignal, ~, ~, ~] = mouse.getInformationDownsampleAndSmooth(["Task", "onset"], smoothFactor, downsampleFactor, true);
+                scatter(generalPlot, gcampSignal, jrgecoSignal, 2, 'filled')
+                title(generalPlot, "General Signal")
+            end
+        end
+        
         function plotCorrelationBar(obj, smoothFactor, downsampleFactor)
             % Plots two graphs - one is of bars where one can see each of
             % the mice separately, and the other is a summary one with the
@@ -145,6 +196,146 @@ classdef MouseList < handle
             obj.drawSingleBubble(miceCorrelation, shuffledCorrelation, signalTitle, smoothFactor, downsampleFactor, true)
 %             savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Bubble\" + obj.Type + " - " + signalTitle + " - All Mice")
             
+        end
+        
+        function plotCorrWithOrWithoutLick(obj, straightenedBy, smoothFactor, downsampleFactor)
+            descriptionVector = ["Task", straightenedBy];
+            [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
+            
+            amoutOfMice = size(obj.LoadedMouseList, 2);
+            
+            miceCorrelation = zeros(1, amoutOfMice);
+            miceCorrelationLick = zeros(1, amoutOfMice);
+            miceCorrelationNoLick = zeros(1, amoutOfMice);
+            
+            miceNames = strings(1, amoutOfMice);
+            
+            for mouseIndx = 1:amoutOfMice
+                mouse = obj.LoadedMouseList(mouseIndx);
+                
+                % General Correlation
+                mouseCorrelation = mouse.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor, false);
+                miceCorrelation(1, mouseIndx) = mouseCorrelation;
+                
+                if mouse.signalExists(descriptionVector)
+                    
+                    [gcampSignal, jrgecoSignal, ~, ~, signalTitle] = mouse.getRawSignals(descriptionVector);
+                    
+                    tInfo = mouse.getTInfo(descriptionVector);
+                    
+                    % Correlation When Lick
+                    lickGcampSignal = gcampSignal(~(isnan(tInfo.first_lick)), :);
+                    lickJrgecoSignal = jrgecoSignal(~(isnan(tInfo.first_lick)), :);
+                    
+                    lickGcampSignal = reshape(lickGcampSignal', 1, []);
+                    lickJrgecoSignal = reshape(lickJrgecoSignal', 1, []);
+                    
+                    lickGcampSignal = smooth(lickGcampSignal', smoothFactor)';
+                    lickJrgecoSignal = smooth(lickJrgecoSignal', smoothFactor)';
+                    
+                    lickGcampSignal = downsample(lickGcampSignal, downsampleFactor);
+                    lickJrgecoSignal = downsample(lickJrgecoSignal, downsampleFactor);
+                    
+                    lickCorrelation = corr(lickGcampSignal', lickJrgecoSignal');
+                    miceCorrelationLick(mouseIndx) = lickCorrelation;
+                    
+                    % Correlation When No Lick
+                    noLickGcampSignal = gcampSignal(isnan(tInfo.first_lick), :);
+                    noLickJrgecoSignal = jrgecoSignal(isnan(tInfo.first_lick), :);
+                    
+                    noLickGcampSignal = reshape(noLickGcampSignal', 1, []);
+                    noLickJrgecoSignal = reshape(noLickJrgecoSignal', 1, []);
+                    
+                    noLickGcampSignal = smooth(noLickGcampSignal', smoothFactor)';
+                    noLickJrgecoSignal = smooth(noLickJrgecoSignal', smoothFactor)';
+                    
+                    noLickGcampSignal = downsample(noLickGcampSignal, downsampleFactor);
+                    noLickJrgecoSignal = downsample(noLickJrgecoSignal, downsampleFactor);
+                    
+                    noLickCorrelation = corr(noLickGcampSignal', noLickJrgecoSignal');
+                    miceCorrelationNoLick(mouseIndx) = noLickCorrelation;
+                    
+                else
+                    miceCorrelationLick(mouseIndx) = 0;
+                    miceCorrelationNoLick(mouseIndx) = 0;
+                end
+                
+                % General
+                miceNames(1, mouseIndx) = mouse.Name;
+            end
+            
+            obj.drawRelativeBubbleByMouse(miceCorrelation, miceCorrelationLick, miceCorrelationNoLick, miceNames, "Correlation with and without lick", signalTitle, ["General Correlation", "Correlation Trials With Lick", "Correlation Trials Without Lick"], -5, 15, 0, 0, smoothFactor, downsampleFactor)
+            % obj.drawTwoBubble(miceCorrelation, miceCorrelationLick, miceCorrelationLick, miceCorrelationNoLick, miceCorrelationNoLick, signalTitle, 0, 0, 0, smoothFactor, downsampleFactor, true)
+        end
+        
+        function plotCorrWithOrWithoutMovement(obj, straightenedBy, smoothFactor, downsampleFactor)
+            descriptionVector = ["Task", straightenedBy];
+            [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
+            
+            amoutOfMice = size(obj.LoadedMouseList, 2);
+            
+            miceCorrelation = zeros(1, amoutOfMice);
+            miceCorrelationMovement = zeros(1, amoutOfMice);
+            miceCorrelationNoMovement = zeros(1, amoutOfMice);
+            
+            miceNames = strings(1, amoutOfMice);
+            
+            for mouseIndx = 1:amoutOfMice
+                mouse = obj.LoadedMouseList(mouseIndx);
+                
+                % General Correlation
+                mouseCorrelation = mouse.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor, false);
+                miceCorrelation(1, mouseIndx) = mouseCorrelation;
+                
+                if mouse.signalExists(descriptionVector)
+                    
+                    [gcampSignal, jrgecoSignal, ~, ~, signalTitle] = mouse.getRawSignals(descriptionVector);
+                    
+                    tInfo = mouse.getTInfo(descriptionVector);
+                    
+                    % Correlation With Movement
+                    movementGcampSignal = gcampSignal(tInfo.has_movement == 1, :);
+                    movementJrgecoSignal = jrgecoSignal(tInfo.has_movement == 1, :);
+                    
+                    movementGcampSignal = reshape(movementGcampSignal', 1, []);
+                    movementJrgecoSignal = reshape(movementJrgecoSignal', 1, []);
+                    
+                    movementGcampSignal = smooth(movementGcampSignal', smoothFactor)';
+                    movementJrgecoSignal = smooth(movementJrgecoSignal', smoothFactor)';
+                    
+                    movementGcampSignal = downsample(movementGcampSignal, downsampleFactor);
+                    movementJrgecoSignal = downsample(movementJrgecoSignal, downsampleFactor);
+                    
+                    movementCorrelation = corr(movementGcampSignal', movementJrgecoSignal');
+                    miceCorrelationMovement(mouseIndx) = movementCorrelation;
+                    
+                    % Correlation When No Lick
+                    noMovementGcampSignal = gcampSignal(tInfo.has_movement == 0, :);
+                    noMovementJrgecoSignal = jrgecoSignal(tInfo.has_movement == 0, :);
+                    
+                    noMovementGcampSignal = reshape(noMovementGcampSignal', 1, []);
+                    noMovementJrgecoSignal = reshape(noMovementJrgecoSignal', 1, []);
+                    
+                    noMovementGcampSignal = smooth(noMovementGcampSignal', smoothFactor)';
+                    noMovementJrgecoSignal = smooth(noMovementJrgecoSignal', smoothFactor)';
+                    
+                    noMovementGcampSignal = downsample(noMovementGcampSignal, downsampleFactor);
+                    noMovementJrgecoSignal = downsample(noMovementJrgecoSignal, downsampleFactor);
+                    
+                    noMovementCorrelation = corr(noMovementGcampSignal', noMovementJrgecoSignal');
+                    miceCorrelationNoMovement(mouseIndx) = noMovementCorrelation;
+                    
+                else
+                    miceCorrelationMovement(mouseIndx) = 0;
+                    miceCorrelationNoMovement(mouseIndx) = 0;
+                end
+                
+                % General
+                miceNames(1, mouseIndx) = mouse.Name;
+            end
+            
+            obj.drawRelativeBubbleByMouse(miceCorrelation, miceCorrelationMovement, miceCorrelationNoMovement, miceNames, "Correlation with and without movement", signalTitle, ["General Correlation", "Correlation Trials With Movement", "Correlation Trials Without Movement"], -5, 15, 0, 0, smoothFactor, downsampleFactor)
+            % obj.drawTwoBubble(miceCorrelation, miceCorrelationLick, miceCorrelationLick, miceCorrelationNoLick, miceCorrelationNoLick, signalTitle, 0, 0, 0, smoothFactor, downsampleFactor, true)
         end
         
         % === Sliding Correlation ===
@@ -476,7 +667,7 @@ classdef MouseList < handle
         
         % === Comparison Correlation ===
         
-        function plotCorrVsSliding(obj, straightenedBy, timeToRemove, timeWindow, timeShift, smoothFactor, downsampleFactor)
+        function plotCorrVsSliding(obj, straightenedBy, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
             descriptionVector = ["Task", straightenedBy];
             [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
             
@@ -495,7 +686,7 @@ classdef MouseList < handle
                 mouse = obj.LoadedMouseList(mouseIndx);
                 
                 % Correlation Lick Removed
-                mouseCorrelationNoLick = mouse.getWholeSignalCorrelationNoLick(timeToRemove, smoothFactor, downsampleFactor, false);
+                mouseCorrelationNoLick = mouse.getWholeSignalCorrelationNoLick(timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor, false);
                 miceCorrelationNoLick(1, mouseIndx) = mouseCorrelationNoLick;
                 
                 % Correlation
@@ -516,7 +707,7 @@ classdef MouseList < handle
                 miceNames(1, mouseIndx) = mouse.Name;
             end
             
-            obj.drawRelativeBubbleByMouse(miceCorrelationNoLick, miceCorrelation, miceSliding, miceNames, signalTitle, timeToRemove, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            obj.drawRelativeBubbleByMouse(miceCorrelationNoLick, miceCorrelation, miceSliding, miceNames, "Correlation Vs. Sliding Correlation", signalTitle, ["Correlation No Lick", "Correlation", "Sliding Concat \fontsize{7}(median)"], timeToRemove, timeWindow, timeShift, smoothFactor, downsampleFactor)
             
             % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\By Group\" + obj.Type + " - " + signalTitle + " - By Mouse, Cut by " + timeToRemove)
             obj.drawTwoBubble(miceCorrelationNoLick, miceCorrelation, shuffledCorrelation, miceSliding, shuffledSliding, signalTitle, timeToRemove, timeWindow, timeShift, smoothFactor, downsampleFactor, true)
@@ -524,152 +715,49 @@ classdef MouseList < handle
             
         end
         
-        function plotCorrWithOrWithoutLick(obj, straightenedBy, smoothFactor, downsampleFactor)
+        function plotCorrVsSlidingTest(obj, straightenedBy, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
             descriptionVector = ["Task", straightenedBy];
             [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
             
             amoutOfMice = size(obj.LoadedMouseList, 2);
             
-            miceCorrelation = zeros(1, amoutOfMice);
-            miceCorrelationLick = zeros(1, amoutOfMice);
             miceCorrelationNoLick = zeros(1, amoutOfMice);
+            miceCorrelation = zeros(1, amoutOfMice);
+            shuffledCorrelation = zeros(1, amoutOfMice);
+            
+            miceSliding = zeros(1, amoutOfMice);
+            shuffledSliding = zeros(1, amoutOfMice);
             
             miceNames = strings(1, amoutOfMice);
             
             for mouseIndx = 1:amoutOfMice
                 mouse = obj.LoadedMouseList(mouseIndx);
                 
-                % General Correlation
+                % Correlation Lick Removed
+                mouseCorrelationNoLick = mouse.getWholeSignalCorrelationNoLick(timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor, false);
+                miceCorrelationNoLick(1, mouseIndx) = mouseCorrelationNoLick;
+                
+                % Correlation
                 mouseCorrelation = mouse.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor, false);
                 miceCorrelation(1, mouseIndx) = mouseCorrelation;
                 
-                if mouse.signalExists(descriptionVector)
-                    
-                    [gcampSignal, jrgecoSignal, ~, ~, signalTitle] = mouse.getRawSignals(descriptionVector);
-                    
-                    tInfo = mouse.getTInfo(descriptionVector);
-                    
-                    % Correlation When Lick
-                    lickGcampSignal = gcampSignal(~(isnan(tInfo.first_lick)), :);
-                    lickJrgecoSignal = jrgecoSignal(~(isnan(tInfo.first_lick)), :);
-                    
-                    lickGcampSignal = reshape(lickGcampSignal', 1, []);
-                    lickJrgecoSignal = reshape(lickJrgecoSignal', 1, []);
-                    
-                    lickGcampSignal = smooth(lickGcampSignal', smoothFactor)';
-                    lickJrgecoSignal = smooth(lickJrgecoSignal', smoothFactor)';
-                    
-                    lickGcampSignal = downsample(lickGcampSignal, downsampleFactor);
-                    lickJrgecoSignal = downsample(lickJrgecoSignal, downsampleFactor);
-                    
-                    lickCorrelation = corr(lickGcampSignal', lickJrgecoSignal');
-                    miceCorrelationLick(mouseIndx) = lickCorrelation;
-                    
-                    % Correlation When No Lick
-                    noLickGcampSignal = gcampSignal(isnan(tInfo.first_lick), :);
-                    noLickJrgecoSignal = jrgecoSignal(isnan(tInfo.first_lick), :);
-                    
-                    noLickGcampSignal = reshape(noLickGcampSignal', 1, []);
-                    noLickJrgecoSignal = reshape(noLickJrgecoSignal', 1, []);
-                    
-                    noLickGcampSignal = smooth(noLickGcampSignal', smoothFactor)';
-                    noLickJrgecoSignal = smooth(noLickJrgecoSignal', smoothFactor)';
-                    
-                    noLickGcampSignal = downsample(noLickGcampSignal, downsampleFactor);
-                    noLickJrgecoSignal = downsample(noLickJrgecoSignal, downsampleFactor);
-                    
-                    noLickCorrelation = corr(noLickGcampSignal', noLickJrgecoSignal');
-                    miceCorrelationNoLick(mouseIndx) = noLickCorrelation;
-                    
-                else
-                    miceCorrelationLick(mouseIndx) = 0;
-                    miceCorrelationNoLick(mouseIndx) = 0;
-                end
+                curShuffleCorrelation = mouse.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor, true);
+                shuffledCorrelation(1, mouseIndx) = curShuffleCorrelation;
+                
+                % Sliding concat
+                miceSliding(1, mouseIndx) = 0;
+                
+                shuffledSliding(1, mouseIndx) = 0;
                 
                 % General
                 miceNames(1, mouseIndx) = mouse.Name;
             end
             
-            obj.drawRelativeBubbleByMouse(miceCorrelation, miceCorrelationLick, miceCorrelationNoLick, miceNames, signalTitle, 0, 0, 0, smoothFactor, downsampleFactor)
-            % obj.drawTwoBubble(miceCorrelation, miceCorrelationLick, miceCorrelationLick, miceCorrelationNoLick, miceCorrelationNoLick, signalTitle, 0, 0, 0, smoothFactor, downsampleFactor, true)
+            obj.drawRelativeBubbleByMouse(miceCorrelationNoLick, miceCorrelation, miceSliding, miceNames, "Correlation Vs. Sliding Correlation", signalTitle, ["Correlation No Lick", "Correlation", "Sliding Concat \fontsize{7}(median)"], timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
             
-            
-            % Should add breakpoint at end of drawing and run:
-            % ax.XTickLabel = ["General Correlation", "Correlation Trials With Lick", "Correlation Trials Without Lick"];
-        end
-        
-        function plotCorrWithOrWithoutMovement(obj, straightenedBy, smoothFactor, downsampleFactor)
-            descriptionVector = ["Task", straightenedBy];
-            [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
-            
-            amoutOfMice = size(obj.LoadedMouseList, 2);
-            
-            miceCorrelation = zeros(1, amoutOfMice);
-            miceCorrelationLick = zeros(1, amoutOfMice);
-            miceCorrelationNoLick = zeros(1, amoutOfMice);
-            
-            miceNames = strings(1, amoutOfMice);
-            
-            for mouseIndx = 1:amoutOfMice
-                mouse = obj.LoadedMouseList(mouseIndx);
-                
-                % General Correlation
-                mouseCorrelation = mouse.getWholeSignalCorrelation(descriptionVector, smoothFactor, downsampleFactor, false);
-                miceCorrelation(1, mouseIndx) = mouseCorrelation;
-                
-                if mouse.signalExists(descriptionVector)
-                    
-                    [gcampSignal, jrgecoSignal, ~, ~, signalTitle] = mouse.getRawSignals(descriptionVector);
-                    
-                    tInfo = mouse.getTInfo(descriptionVector);
-                    
-                    % Correlation When Lick
-                    lickGcampSignal = gcampSignal(~(isnan(tInfo.first_lick)), :);
-                    lickJrgecoSignal = jrgecoSignal(~(isnan(tInfo.first_lick)), :);
-                    
-                    lickGcampSignal = reshape(lickGcampSignal', 1, []);
-                    lickJrgecoSignal = reshape(lickJrgecoSignal', 1, []);
-                    
-                    lickGcampSignal = smooth(lickGcampSignal', smoothFactor)';
-                    lickJrgecoSignal = smooth(lickJrgecoSignal', smoothFactor)';
-                    
-                    lickGcampSignal = downsample(lickGcampSignal, downsampleFactor);
-                    lickJrgecoSignal = downsample(lickJrgecoSignal, downsampleFactor);
-                    
-                    lickCorrelation = corr(lickGcampSignal', lickJrgecoSignal');
-                    miceCorrelationLick(mouseIndx) = lickCorrelation;
-                    
-                    % Correlation When No Lick
-                    noLickGcampSignal = gcampSignal(isnan(tInfo.first_lick), :);
-                    noLickJrgecoSignal = jrgecoSignal(isnan(tInfo.first_lick), :);
-                    
-                    noLickGcampSignal = reshape(noLickGcampSignal', 1, []);
-                    noLickJrgecoSignal = reshape(noLickJrgecoSignal', 1, []);
-                    
-                    noLickGcampSignal = smooth(noLickGcampSignal', smoothFactor)';
-                    noLickJrgecoSignal = smooth(noLickJrgecoSignal', smoothFactor)';
-                    
-                    noLickGcampSignal = downsample(noLickGcampSignal, downsampleFactor);
-                    noLickJrgecoSignal = downsample(noLickJrgecoSignal, downsampleFactor);
-                    
-                    noLickCorrelation = corr(noLickGcampSignal', noLickJrgecoSignal');
-                    miceCorrelationNoLick(mouseIndx) = noLickCorrelation;
-                    
-                else
-                    miceCorrelationLick(mouseIndx) = 0;
-                    miceCorrelationNoLick(mouseIndx) = 0;
-                end
-                
-                % General
-                miceNames(1, mouseIndx) = mouse.Name;
-            end
-            
-            obj.drawRelativeBubbleByMouse(miceCorrelation, miceCorrelationLick, miceCorrelationNoLick, miceNames, signalTitle, 0, 0, 0, smoothFactor, downsampleFactor)
-            % obj.drawTwoBubble(miceCorrelation, miceCorrelationLick, miceCorrelationLick, miceCorrelationNoLick, miceCorrelationNoLick, signalTitle, 0, 0, 0, smoothFactor, downsampleFactor, true)
-            
-            
-            % Should add breakpoint at end of drawing and run:
-            % ax.XTickLabel = ["General Correlation", "Correlation Trials With Lick", "Correlation Trials Without Lick"];
+            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\By Group\" + obj.Type + " - " + signalTitle + " - By Mouse, Cut by " + timeToRemove)
+            obj.drawTwoBubble(miceCorrelationNoLick, miceCorrelation, shuffledCorrelation, miceSliding, shuffledSliding, signalTitle, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor, true)
+            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\By Group\" + obj.Type + " - " + signalTitle + " - All Mice, Cut by " + timeToRemove)
         end
         
         % ============= Helpers =============
@@ -815,7 +903,7 @@ classdef MouseList < handle
             end
         end
         
-        function drawRelativeBubbleByMouse(obj, first, second, third, miceNames, signalTitle, timeToRemove, timeWindow, timeShift, smoothFactor, downsampleFactor)
+        function drawRelativeBubbleByMouse(obj, first, second, third, miceNames, generalTitle, signalTitle, xLabels, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
             fig = figure('Position', [555,407,799,511]);
             ax = axes;
             
@@ -829,15 +917,15 @@ classdef MouseList < handle
             
             legend(ax, miceNames, 'Location', 'best')           
             
-            title(ax, {"Correlation Vs. Sliding Correlation", obj.Type, signalTitle, "Time removed: " + timeToRemove + ", Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            title(ax, {generalTitle, obj.Type, signalTitle, "Time removed before: " + timeToRemoveBefore + ", after: " + timeToRemoveAfter + ", Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             xlim(ax, [0.75, 2.25])
             ax.XTick = xAxe;
-            ax.XTickLabel = ["Correlation No Lick", "Correlation", "Sliding Concat \fontsize{7}(median)"];
+            ax.XTickLabel = xLabels;
             ylabel(ax, "Correlation")
             
         end
         
-        function drawTwoBubble(obj, first, second, secondShuffled, third, thirdShuffled, signalTitle, timeToRemove, timeWindow, timeShift, smoothFactor, downsampleFactor, plotIndividuals)
+        function drawTwoBubble(obj, first, second, secondShuffled, third, thirdShuffled, signalTitle, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor, plotIndividuals)
             
             % Calcl Mean
             firstMean = mean(nonzeros(first));
@@ -877,7 +965,7 @@ classdef MouseList < handle
             % Titles
             legend(ax, 'Mice Mean', 'Shuffled', 'Individuals', 'Location', 'best')
             
-            title(ax, {"Correlation Vs. Sliding Correlation - all mice", obj.Type, signalTitle,  "Time removed: " + timeToRemove + " ,Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            title(ax, {"Correlation Vs. Sliding Correlation - all mice", obj.Type, signalTitle,  "Time removed before: " + timeToRemoveBefore + ", after:" + timeToRemoveAfter + " ,Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             xlim(ax, [0.75, 2.25])
             ax.XTick = xAxe;
             ax.XTickLabel = ["Correlation No Lick", "Correlation", "Sliding Correlation \fontsize{7}(median)"];
