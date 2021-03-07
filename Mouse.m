@@ -2,10 +2,29 @@ classdef Mouse < handle
     %MOUSE class - Not supposed to be used directly but through sub-classes
     % of mouse type (OfcAccMouse etc.)
     
+    % Condition options:
+    
+    % TASK:
+    % No lick:
+    %   isnan(tInfo.first_lick)
+    % Lick:
+    %   ~(isnan(tInfo.first_lick))
+    % Correct:
+    %   ismember(tInfo.trial_result, 'correct')
+    
+    % PASSIVE:
+    % Atten=0:
+    %   tInfo.atten == 0
+    % Atten=0/10:
+    %   tInfo.atten == 0 | tInfo.atten == 10
+    % 0<=Freq<5000:
+    %   0<=tInfo.freq & tInfo.freq<5000 & tInfo.atten == 0
+    
     properties (Constant)
         
         % General
-        CONST_MOUSE_SAVE_PATH = "W:\shared\Timna\Gal Projects\Mice";
+        SHARED_FILE_LOCATION = "W:"                 % Change for different computers - in my computer it it "W:"
+        CONST_MOUSE_SAVE_PATH = Mouse.SHARED_FILE_LOCATION + "\shared\Timna\Gal Projects\Mice";
         CONST_RAW_FILE_PATH = "\\132.64.59.21\Citri_Lab\gala\Phys data\New Rig";
         TIMES_TO_SHUFFLE = 1;
         
@@ -549,14 +568,14 @@ classdef Mouse < handle
             % correlation values for all possible categories (A histogram of
             % zeros for a category that has no data, eg. a mouse that didnt
             % have a pre-awake-FS recording session).
-            % The function first smooths the signal, then down samples it
+            % The function first smooths the signal, then downsamples it
             % and at last calculates the sliding windows, it's relevant
             % histogram and plots the heatmap.
             
-            [histogramMatrix, labels] = dataForPlotSlidingCorrelationHeatmap(obj, timeWindow, timeShift, smoothFactor, downsampleFactor);
+            [histogramMatrix, labels] = obj.dataForPlotSlidingCorrelationHeatmap(timeWindow, timeShift, smoothFactor, downsampleFactor);
             obj.drawSlidingCorrelationHeatmap(histogramMatrix, labels, timeWindow, timeShift, smoothFactor, downsampleFactor)
             obj.drawSlidingCorrelationHistogram(histogramMatrix, labels, timeWindow, timeShift, smoothFactor, downsampleFactor)
-            %             obj.drawBar(skewness(histogramMatrix), labels, "Skewness of of sliding window correlation values for mouse " + obj.Name, "Skewness", smoothFactor, downsampleFactor, false)
+            % obj.drawBar(skewness(histogramMatrix), labels, "Skewness of of sliding window correlation values for mouse " + obj.Name, "Skewness", smoothFactor, downsampleFactor, false)
         end
         
         function plotSlidingCorrelationCutSessionsHeatmap(obj, descriptionVector, condition, timeWindow, timeShift, smoothFactor, downsampleFactor)
@@ -1086,7 +1105,7 @@ classdef Mouse < handle
                 for soundType = obj.CONST_PASSIVE_SOUND_TYPES
                     for time = obj.CONST_PASSIVE_TIMES
                         descriptionVector = ["Passive", (state), (soundType), (time)];
-                        binCount = obj.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, false);
+                        binCount = obj.getWholeSignalSlidingBincount(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, false);
                         
                         histogramMatrix = [histogramMatrix, binCount'];
                         labels = [labels, (time) + ' ' + (state) + ' ' + (soundType)];
@@ -1126,7 +1145,7 @@ classdef Mouse < handle
                 if shouldShuffel
                     idx = randperm(length(gcampSignal));
                     gcampSignal(idx) = gcampSignal;
-                    %                     jrgecoSignal(idx) = jrgecoSignal;
+                    % jrgecoSignal(idx) = jrgecoSignal;
                 end
                 
                 [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
@@ -1342,30 +1361,6 @@ classdef Mouse < handle
                 fullGcampSignal = fullGcampSignal(eval(condition),:);
                 fullJrgecoSignal = fullJrgecoSignal(eval(condition),:);
             end
-            
-%             switch filterBy
-%                 case "no lick"
-%                     fullGcampSignal = fullGcampSignal(isnan(tInfo.first_lick), :);
-%                     fullJrgecoSignal = fullJrgecoSignal(isnan(tInfo.first_lick), :);
-%                 case "atten=0"
-%                     fullGcampSignal = fullGcampSignal(tInfo.atten == 0, :);
-%                     fullJrgecoSignal = fullJrgecoSignal(tInfo.atten == 0, :);
-%                 case "atten=0/10"
-%                     fullGcampSignal = fullGcampSignal(tInfo.atten == 0 | tInfo.atten == 10, :);
-%                     fullJrgecoSignal = fullJrgecoSignal(tInfo.atten == 0 | tInfo.atten == 10, :);
-%                 case "0<freq<5000"
-%                     fullGcampSignal = fullGcampSignal(0<=tInfo.freq & tInfo.freq<5000 & tInfo.atten == 0, :);
-%                     fullJrgecoSignal = fullJrgecoSignal(0<=tInfo.freq & tInfo.freq<5000 & tInfo.atten == 0, :);
-%                 case "5000<freq<10000"
-%                     fullGcampSignal = fullGcampSignal(5000<=tInfo.freq & tInfo.freq<10000 & tInfo.atten == 0, :);
-%                     fullJrgecoSignal = fullJrgecoSignal(5000<=tInfo.freq & tInfo.freq<10000 & tInfo.atten == 0, :);
-%                 case "10000<freq"
-%                     fullGcampSignal = fullGcampSignal(10000<=tInfo.freq & tInfo.atten == 0, :);
-%                     fullJrgecoSignal = fullJrgecoSignal(10000<=tInfo.freq & tInfo.atten == 0, :);
-%                 case "correct"
-%                     fullGcampSignal = fullGcampSignal(ismember(tInfo.trial_result, 'correct'), :);
-%                     fullJrgecoSignal = fullJrgecoSignal(ismember(tInfo.trial_result, 'correct'), :);
-%             end
             
             switch descriptionVector(1)
                 case "Task"
@@ -1792,7 +1787,6 @@ classdef Mouse < handle
             legend(xLabels, 'Location', 'best')
             
             title(ax, {"Sliding Window Histogram for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
-            
         end
         
         function drawBar(obj, vector, xLabels, figureTitle, yLable, smoothFactor, downsampleFactor, oneToMinusOne)
@@ -2249,6 +2243,7 @@ classdef Mouse < handle
         end
         
     end
+    
     
     methods (Static)
         % ============================= Plot ==============================

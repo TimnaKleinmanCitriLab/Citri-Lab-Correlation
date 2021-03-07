@@ -5,7 +5,7 @@ classdef MouseList < handle
     properties (Constant)
         CONST_FOLDER_DELIMITER = "\";
         
-        CONST_LIST_SAVE_PATH = "W:\shared\Timna\Gal Projects\Mouse Lists";
+        CONST_LIST_SAVE_PATH = Mouse.SHARED_FILE_LOCATION +  "\shared\Timna\Gal Projects\Mouse Lists";
     end
     
     properties
@@ -50,6 +50,7 @@ classdef MouseList < handle
             % paths in MousePathList)
             obj.LoadedMouseList = [];
             for mouseStruct = obj.MousePathList
+                mouseStruct.Path = strrep(mouseStruct.Path, "W:", Mouse.SHARED_FILE_LOCATION);
                 curMouse = load(mouseStruct.Path).obj;
                 obj.LoadedMouseList = [obj.LoadedMouseList, curMouse];
             end
@@ -542,6 +543,58 @@ classdef MouseList < handle
             
         end
         
+        function plotSlidingWindowHistogramWithAndWithoutLick(obj, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            
+            % Bin Init
+            numOfBins = 100;
+            histogramEdges = linspace(-1, 1, numOfBins + 1);
+            
+            % General Init
+            descriptionVector = ["Task", straightenedBy];
+            [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
+            
+            amoutOfMice = size(obj.LoadedMouseList, 2);
+            miceNames = strings(1, amoutOfMice);
+            
+            % Figure Init
+            figure();
+            
+            for mouseIndx = 1:amoutOfMice
+                mouse = obj.LoadedMouseList(mouseIndx);
+                
+                % Full Signal
+                [fullGcampSignal, fullJrgecoSignal, ~, ~, fs] = obj.getInformationDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor, true);
+                [fullSignalCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, fullGcampSignal, fullJrgecoSignal, fs);
+                [fullSignalBinCount,~] = histcounts(fullSignalCorrelationVector, histogramEdges, 'Normalization', 'probability');
+                
+                % Sliding Correlation Lick Removed
+                [gcampNoLickSignal, jrgecoNoLickSignal, gcampLickCutSignal, jrgecoLickCutSignal, fs] = mouse.getConcatTaskNoLick(timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor);
+                [noLickCorrelationVector, ~] = mouse.getSlidingCorrelation(timeWindow, timeShift, gcampNoLickSignal, jrgecoNoLickSignal, fs);
+                [noLickBinCount,~] = histcounts(noLickCorrelationVector, histogramEdges, 'Normalization', 'probability');
+                
+                % Sliding Correlation Only Lick
+                gcampLickSignal = reshape(gcampLickCutSignal', 1, []);
+                jrgecoLickSignal = reshape(jrgecoLickCutSignal', 1, []);
+                
+                gcampLickSignal=(gcampLickSignal(~isnan(gcampLickSignal)));
+                jrgecoLickSignal=(jrgecoLickSignal(~isnan(jrgecoLickSignal)));
+                
+                gcampLickSignal = downsample(gcampLickSignal, downsampleFactor);
+                jrgecoLickSignal = downsample(jrgecoLickSignal, downsampleFactor);
+                
+                [lickCorrelationVector, ~] = mouse.getSlidingCorrelation(timeWindow, timeShift, gcampLickSignal, jrgecoLickSignal, fs);
+                [lickBinCount,~] = histcounts(lickCorrelationVector, histogramEdges, 'Normalization', 'probability');
+                
+                
+                
+            end
+            
+            
+            [fullSignalCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, fullGcampSignal, fullJrgecoSignal, fs);
+                
+            [fullSignalBinCount,~] = histcounts(fullSignalCorrelationVector, histogramEdges, 'Normalization', 'probability');
+        end
+        
         % == Separately ==
         
         function plotSlidingCorrelationTaskByOutcomeEachMouse(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
@@ -758,6 +811,57 @@ classdef MouseList < handle
             % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\By Group\" + obj.Type + " - " + signalTitle + " - By Mouse, Cut by " + timeToRemove)
             obj.drawTwoBubble(miceCorrelationNoLick, miceCorrelation, shuffledCorrelation, miceSliding, shuffledSliding, signalTitle, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor, true)
             % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\By Group\" + obj.Type + " - " + signalTitle + " - All Mice, Cut by " + timeToRemove)
+        end
+        
+        function plotSlidingWithAndWithoutLick(obj, straightenedBy, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            descriptionVector = ["Task", straightenedBy];
+            [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
+            
+            amoutOfMice = size(obj.LoadedMouseList, 2);
+            
+            miceGeneralSliding = zeros(1, amoutOfMice);
+            miceNoLickSliding = zeros(1, amoutOfMice);
+            miceLickSliding = zeros(1, amoutOfMice);
+            
+            miceNames = strings(1, amoutOfMice);
+            
+            for mouseIndx = 1:amoutOfMice
+                mouse = obj.LoadedMouseList(mouseIndx);
+                
+                % Sliding Full Signal
+                [medianFullSignalSliding, ~] = mouse.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, false);
+                miceGeneralSliding(1, mouseIndx) = medianFullSignalSliding;
+                
+                % Sliding Correlation Lick Removed
+                [gcampNoLickSignal, jrgecoNoLickSignal, gcampLickCutSignal, jrgecoLickCutSignal, fs] = mouse.getConcatTaskNoLick(timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor);
+                [noLickCorrelationVector, ~] = mouse.getSlidingCorrelation(timeWindow, timeShift, gcampNoLickSignal, jrgecoNoLickSignal, fs);
+                medianNoLickSliding = median(noLickCorrelationVector);
+                miceNoLickSliding(1, mouseIndx) = medianNoLickSliding;
+                
+                % Sliding Correlation Only Lick
+                gcampLickSignal = reshape(gcampLickCutSignal', 1, []);
+                jrgecoLickSignal = reshape(jrgecoLickCutSignal', 1, []);
+                
+                gcampLickSignal=(gcampLickSignal(~isnan(gcampLickSignal)));
+                jrgecoLickSignal=(jrgecoLickSignal(~isnan(jrgecoLickSignal)));
+                
+                gcampLickSignal = downsample(gcampLickSignal, downsampleFactor);
+                jrgecoLickSignal = downsample(jrgecoLickSignal, downsampleFactor);
+                
+                [lickCorrelationVector, ~] = mouse.getSlidingCorrelation(timeWindow, timeShift, gcampLickSignal, jrgecoLickSignal, fs);
+                medianLickSliding = median(lickCorrelationVector);
+                miceLickSliding(1, mouseIndx) = medianLickSliding;
+                
+                % General
+                miceNames(1, mouseIndx) = mouse.Name;
+            end
+            
+            obj.drawRelativeBubbleByMouse(miceGeneralSliding, miceNoLickSliding, miceLickSliding, miceNames, "Sliding Correlation With and Without Lick", signalTitle, ["Overall Sliding \fontsize{7}(median)", "No Lick Sliding \fontsize{7}(median)", "Lick Sliding \fontsize{7}(median)"], timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            
+            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\By Group\" + obj.Type + " - " + signalTitle + " - By Mouse, Cut by " + timeToRemove)
+            % obj.drawTwoBubble(miceCorrelationNoLick, miceCorrelation, shuffledCorrelation, miceGeneralSliding, shuffledSliding, signalTitle, timeToRemove, timeWindow, timeShift, smoothFactor, downsampleFactor, true)
+            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\By Group\" + obj.Type + " - " + signalTitle + " - All Mice, Cut by " + timeToRemove)
+            
         end
         
         % ============= Helpers =============

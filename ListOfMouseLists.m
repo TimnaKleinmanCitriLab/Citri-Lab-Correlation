@@ -9,17 +9,16 @@ classdef ListOfMouseLists < handle
         ListOfLists
     end
     
-    
     methods
         function obj = ListOfMouseLists()
             % Constructs an instance of this class, and loades all the relavent
             % MouseLists
             
-            obj.OfcAcc = load('W:\shared\Timna\Gal Projects\Mouse Lists\OfcAccMice.mat').obj;
-            obj.AudInAccOut = load('W:\shared\Timna\Gal Projects\Mouse Lists\AudInAccOutMice.mat').obj;
-            obj.AccInAccOut = load('W:\shared\Timna\Gal Projects\Mouse Lists\AccInAccOutMice.mat').obj;
-            obj.AudInAudOut = load('W:\shared\Timna\Gal Projects\Mouse Lists\AudInAudOutMice.mat').obj;
-            obj.AudAcc = load('W:\shared\Timna\Gal Projects\Mouse Lists\AudAccMice.mat').obj;
+            obj.OfcAcc = load(Mouse.SHARED_FILE_LOCATION + "\shared\Timna\Gal Projects\Mouse Lists\OfcAccMice.mat").obj;
+            obj.AudInAccOut = load(Mouse.SHARED_FILE_LOCATION + "\shared\Timna\Gal Projects\Mouse Lists\AudInAccOutMice.mat").obj;
+            obj.AccInAccOut = load(Mouse.SHARED_FILE_LOCATION + "\shared\Timna\Gal Projects\Mouse Lists\AccInAccOutMice.mat").obj;
+            obj.AudInAudOut = load(Mouse.SHARED_FILE_LOCATION + "\shared\Timna\Gal Projects\Mouse Lists\AudInAudOutMice.mat").obj;
+            obj.AudAcc = load(Mouse.SHARED_FILE_LOCATION + "\shared\Timna\Gal Projects\Mouse Lists\AudAccMice.mat").obj;
             
             obj.OfcAcc.loadMice()
             obj.AudInAccOut.loadMice()
