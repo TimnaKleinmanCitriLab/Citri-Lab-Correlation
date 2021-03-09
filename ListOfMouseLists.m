@@ -157,7 +157,7 @@ classdef ListOfMouseLists < handle
                 xAxe = [groupIndx * 2 - 1 , groupIndx * 2];
                 labels(1, groupIndx * 2 - 1:groupIndx * 2) = ["Correlation of " + group.Type, "Sliding Correlation (median) of " + group.Type];
                 
-                obj.drawTwoBubble(miceCorrelation, shuffledCorrelation, miceSliding, shuffledSliding, xAxe, ax, true)
+                obj.drawTwoBubble(miceCorrelation, shuffledCorrelation, miceSliding, shuffledSliding, xAxe, ax, true, true)
             end
             
             % Titles
@@ -170,7 +170,65 @@ classdef ListOfMouseLists < handle
             xtickangle(45)
             ylabel(ax, "Correlation / Median of sliding correlation")
             
-            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\Groups Together\" + signalTitle + " - By Groups")
+            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\Groups Together\" + signalTitle + " - By Groups")
+        end
+        
+        function plotSlidingWithAndWithoutLick(obj, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            AmountOfGroups = 3;
+            
+            fig = figure('Position', [450,109,961,860]);
+            ax = axes;
+            labels = strings(2 * AmountOfGroups);
+            
+            [~, ~, ~, ~, signalTitle] = obj.ListOfLists(1).LoadedMouseList(1).getRawSignals(["Task", "onset"]);
+            
+            for groupIndx = 1:AmountOfGroups
+                group = obj.ListOfLists(groupIndx);
+                amoutOfMiceInGroup = size(group.LoadedMouseList, 2);
+                
+                miceNoLickSliding = zeros(1, amoutOfMiceInGroup);
+                miceLickSliding = zeros(1, amoutOfMiceInGroup);
+                
+                for mouseIndx = 1:amoutOfMiceInGroup
+                    mouse = group.LoadedMouseList(mouseIndx);
+                    
+                    % Sliding Correlation Lick Removed
+                    [gcampNoLickSignal, jrgecoNoLickSignal, gcampLickCutSignal, jrgecoLickCutSignal, fs] = mouse.getConcatTaskNoLick(timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor);
+                    [noLickCorrelationVector, ~] = mouse.getSlidingCorrelation(timeWindow, timeShift, gcampNoLickSignal, jrgecoNoLickSignal, fs);
+                    medianNoLickSliding = median(noLickCorrelationVector);
+                    miceNoLickSliding(1, mouseIndx) = medianNoLickSliding;
+                    
+                    % Sliding Correlation Only Lick
+                    gcampLickSignal = reshape(gcampLickCutSignal', 1, []);
+                    jrgecoLickSignal = reshape(jrgecoLickCutSignal', 1, []);
+                    
+                    gcampLickSignal=(gcampLickSignal(~isnan(gcampLickSignal)));
+                    jrgecoLickSignal=(jrgecoLickSignal(~isnan(jrgecoLickSignal)));
+                    
+                    gcampLickSignal = downsample(gcampLickSignal, downsampleFactor);
+                    jrgecoLickSignal = downsample(jrgecoLickSignal, downsampleFactor);
+                    
+                    [lickCorrelationVector, ~] = mouse.getSlidingCorrelation(timeWindow, timeShift, gcampLickSignal, jrgecoLickSignal, fs);
+                    medianLickSliding = median(lickCorrelationVector);
+                    miceLickSliding(1, mouseIndx) = medianLickSliding;
+                end
+                xAxe = [groupIndx * 2 - 1 , groupIndx * 2];
+                labels(1, groupIndx * 2 - 1:groupIndx * 2) = ["Correlation of " + group.Type, "Sliding Correlation (median) of " + group.Type];
+                
+                obj.drawTwoBubble(miceNoLickSliding, [], miceLickSliding, [], xAxe, ax, true, false)
+            end
+            
+            % Titles
+            legend(ax, 'Mice Mean', 'Shuffled', 'Individuals', 'Location', 'best')
+            
+            title(ax, {"Correlation Vs. Sliding Correlation", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            xlim(ax, [0.75, AmountOfGroups * 2 + 0.25])
+            ax.XTick = [1: AmountOfGroups * 2];
+            ax.XTickLabel = labels';
+            xtickangle(45)
+            ylabel(ax, "Correlation / Median of sliding correlation")
+            
+            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\Groups Together\" + signalTitle + " - By Groups")
         end
         
         function plotSlidingCorrelationTaskByOutcomeBuble(obj, straightenedBy, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor)
@@ -545,14 +603,14 @@ classdef ListOfMouseLists < handle
                 sgtitle(groupByMouse, {"Sliding heatmap for mice of group " + group.Type, signalTitle, "Filtered by - " + condition, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
                 set(0,'CurrentFigure',groupByMouse)
                 savedName = strrep(strrep(strrep("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Heatmap - " + strjoin(descriptionVector, ' - ') + "\" + group.Type + " - filtered by - " + condition + " - time window of " + string(timeWindow), '<' ,' lt '), '>', ' ht '), 'tInfo.', '');
-                savefig(groupByMouse, savedName)
+                % savefig(groupByMouse, savedName)
                 
             end
             
             sgtitle(allMiceAllGroups, {"Sliding heatmap for all groups", signalTitle, "Filtered by - " + condition, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             set(0,'CurrentFigure', allMiceAllGroups)
             savedName = strrep(strrep(strrep("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Sliding Heatmap - " + strjoin(descriptionVector, ' - ') + "\All Groups - filtered by - " + condition + " - time window of " + string(timeWindow), '<' ,' lt '), '>', ' ht '), 'tInfo.', '');
-            savefig(allMiceAllGroups, savedName)
+            % savefig(allMiceAllGroups, savedName)
         end
         
         function plotSignalAndSlidingCorrelationHeatpmapCutSignal(obj, descriptionVector, condition, timeWindow, timeShift, smoothFactor, downsampleFactor)           
@@ -701,7 +759,7 @@ classdef ListOfMouseLists < handle
             ylabel(ax, yLabel + "\fontsize{8} (mean of all mice)")
         end
         
-        function drawTwoBubble(first, firstShuffled, second, secondShuffled, xAxe, ax, plotIndividuals)
+        function drawTwoBubble(first, firstShuffled, second, secondShuffled, xAxe, ax, shoukdPlotIndividuals, shouldPlotRandom)
             
             % Calcl Mean
             firstMean = mean(nonzeros(first));
@@ -716,9 +774,11 @@ classdef ListOfMouseLists < handle
             % Plot
             plot(ax, xAxe, [firstMean, secondMean], 'd', 'LineWidth', 1, 'color', '#800080', 'MarkerFaceColor', '#800080', 'MarkerSize', 8)
             hold on
-            % errorbar(ax, xAxe, [firstRandomMean, secondRandomMean], [firstRandomSEM, secondRandomSEM],'o', 'LineWidth', 1, 'color', '#C0C0C0', 'MarkerFaceColor', '#C0C0C0', 'MarkerSize', 6, 'CapSize', 12)
-            plot(ax, xAxe, [firstRandomMean, secondRandomMean],'o', 'LineWidth', 1, 'color', '#C0C0C0', 'MarkerFaceColor', '#C0C0C0', 'MarkerSize', 6)
-            if plotIndividuals
+            if shouldPlotRandom
+                % errorbar(ax, xAxe, [firstRandomMean, secondRandomMean], [firstRandomSEM, secondRandomSEM],'o', 'LineWidth', 1, 'color', '#C0C0C0', 'MarkerFaceColor', '#C0C0C0', 'MarkerSize', 6, 'CapSize', 12)
+                plot(ax, xAxe, [firstRandomMean, secondRandomMean],'o', 'LineWidth', 1, 'color', '#C0C0C0', 'MarkerFaceColor', '#C0C0C0', 'MarkerSize', 6)
+            end
+            if shoukdPlotIndividuals
                 for idx = 1:size(first, 2)
                     plot(ax, xAxe, [first(idx), second(idx)], 'o-', 'color', 'black', 'MarkerFaceColor', 'black', 'MarkerSize', 4)
                     hold on

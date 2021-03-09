@@ -2171,10 +2171,11 @@ classdef Mouse < handle
             
             % Get data
             [gcampSignal, jrgecoSignal, ~, fs, ~] = obj.getRawSignals(["Task", "onset"]);
+            lickTime = obj.Info.Task.onset.first_lick;
             amountOfTrials = size(gcampSignal, 1);
             samplesInTrial = size(gcampSignal, 2);
             samplesInTimeWindow = round(fs * (timeToRemoveAfter + timeToRemoveBefore));
-             
+            
             % Concat and get data ready
             gcampSignal = reshape(gcampSignal', 1, []);
             jrgecoSignal = reshape(jrgecoSignal', 1, []);
@@ -2183,18 +2184,25 @@ classdef Mouse < handle
             jrgecoSignal = smooth(jrgecoSignal', smoothFactor)';
             
             trialBegSample = 1:samplesInTrial:size(gcampSignal, 2);
-            lickTimes = obj.Info.Task.onset.first_lick;
-            startLickSample = trialBegSample' + round(fs * (lickTimes + 5 - timeToRemoveBefore));
+            startLickSample = trialBegSample' + round(fs * (lickTime + 5 - timeToRemoveBefore));
             endLickSample = startLickSample + samplesInTimeWindow - 1;
             
-            gcampLickCutSignal = zeros(size(lickTimes, 1), samplesInTimeWindow);
+            if startLickSample(size(lickTime, 1)) > size(gcampSignal, 2)   % If last lick starts out of bounds - remove it
+                startLickSample(end) = [];
+                endLickSample(end) = [];
+                amountOfTrials = amountOfTrials - 1;
+            elseif endLickSample(size(lickTime, 1)) > size(gcampSignal, 2) % If last lick ends out of bounds - change it to be the last element
+                endLickSample(end) = size(gcampSignal, 2);
+            end
+            
+            gcampLickCutSignal = zeros(amountOfTrials, samplesInTimeWindow);
             jrgecoLickCutSignal = zeros(size(gcampLickCutSignal));
             
             gcampNoLickSignal = gcampSignal;
             jrgecoNoLickSignal = jrgecoSignal;
             
             for trialIdx = 1:amountOfTrials
-                if ~isnan(lickTimes(trialIdx))                             % There was a lick
+                if ~isnan(lickTime(trialIdx))                               % There was a lick
                     % Save the lick aside
                     gcampLickCutSignal(trialIdx, :) = gcampNoLickSignal(1, startLickSample(trialIdx):endLickSample(trialIdx));
                     jrgecoLickCutSignal(trialIdx, :) = jrgecoNoLickSignal(1, startLickSample(trialIdx):endLickSample(trialIdx));
