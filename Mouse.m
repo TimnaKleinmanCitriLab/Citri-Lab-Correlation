@@ -2,6 +2,16 @@ classdef Mouse < handle
     %MOUSE class - Not supposed to be used directly but through sub-classes
     % of mouse type (OfcAccMouse etc.)
     
+    % Description vector options:
+    
+    % TASK - ["Task", "divideBy"],
+    %      for example ["Task", "lick"]
+    % PASSIVE - ["Passive", "state", "soundType", "time"],
+    %         for example ["Passive", "awake", "BBN", "post"]
+    % FREE - ["Free", "divideBy", "time"] where divideBy can be concat / movement
+    %         for example ["Free", "movement", "pre"]
+    
+    
     % Condition options:
     
     % TASK:
@@ -19,6 +29,7 @@ classdef Mouse < handle
     %   tInfo.atten == 0 | tInfo.atten == 10
     % 0<=Freq<5000:
     %   0<=tInfo.freq & tInfo.freq<5000 & tInfo.atten == 0
+    
     
     properties (Constant)
         
@@ -140,8 +151,13 @@ classdef Mouse < handle
             % Organizes info for different task divisions (by cue, cloud,..)
             % and adds information about the day of the task.
             
-            % Add day to info
             tInfo = obj.RawMatFile.Task.onset.t_info;
+            
+            % Add time of onset (from beg of signal)
+            timeOfOnsetFromBegSignal = (5:20:(size(tInfo, 1) - 1)*20 + 5)';
+            tInfo.time_of_onset = timeOfOnsetFromBegSignal;
+            
+            % Add day to info
             sessionBreaks = find(tInfo.trial_number == 1);
             sessionBreaks = [sessionBreaks; size(tInfo, 1) + 1];
             
@@ -214,6 +230,9 @@ classdef Mouse < handle
                 indexRowToAdd = tInfo.trial_number == givenMovementInfo.closest_trial(rowIndex) & tInfo.day == givenMovementInfo.day(rowIndex);
                 finalMovementTInfo = [finalMovementTInfo; tInfo(indexRowToAdd, :)]; 
             end
+            
+            finalMovementTInfo.distance_from_onset = givenMovementInfo.distance_from_onset;
+            finalMovementTInfo.movement_duration = givenMovementInfo.movment_duration;
         end
         
         function createPassiveDataAndInfo(obj)
@@ -563,7 +582,7 @@ classdef Mouse < handle
             obj.plotSlidingCorrelationBar(timeWindow, timeShift, smoothFactor, downsampleFactor)
         end
         
-        function plotSlidingCorrelationHeatmap(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
+        function plotSlidingCorrelationHeatmapAndHistogram(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
             % Plots heatmap of the histogram of the sliding window
             % correlation values for all possible categories (A histogram of
             % zeros for a category that has no data, eg. a mouse that didnt
@@ -576,6 +595,12 @@ classdef Mouse < handle
             obj.drawSlidingCorrelationHeatmap(histogramMatrix, labels, timeWindow, timeShift, smoothFactor, downsampleFactor)
             obj.drawSlidingCorrelationHistogram(histogramMatrix, labels, timeWindow, timeShift, smoothFactor, downsampleFactor)
             % obj.drawBar(skewness(histogramMatrix), labels, "Skewness of of sliding window correlation values for mouse " + obj.Name, "Skewness", smoothFactor, downsampleFactor, false)
+        end
+        
+        function plotSlidingCorrelationHistogramWithAndWithoutLick(obj, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            [histogramMatrix, labels] = obj.dataForPlotSlidingCorrelationHeatmapWithAndWithoutLick(timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+            % Doesn't save in the title how much time before and after is trimmed
+            obj.drawSlidingCorrelationHistogram(histogramMatrix, labels, timeWindow, timeShift, smoothFactor, downsampleFactor)
         end
         
         function plotSlidingCorrelationCutSessionsHeatmap(obj, descriptionVector, condition, timeWindow, timeShift, smoothFactor, downsampleFactor)
@@ -1131,6 +1156,25 @@ classdef Mouse < handle
             histogramMatrix = [histogramMatrix, binCount'];
             labels = [labels, "Free - post"];
             
+        end
+        
+        function [histogramMatrix, labels] = dataForPlotSlidingCorrelationHeatmapWithAndWithoutLick(obj, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            
+            % Bin Init
+            numOfBins = 100;
+            histogramEdges = linspace(-1, 1, numOfBins + 1);
+            
+            % General Init
+            histogramMatrix = [];
+            labels = [];
+            
+            % Task
+            [noLickCorrelationVector, lickCorrelationVector] = obj.getSlidingCorrelationWithAndWithoutLick(timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+            [noLickBinCount,~] = histcounts(noLickCorrelationVector, histogramEdges, 'Normalization', 'probability');
+            [lickBinCount,~] = histcounts(lickCorrelationVector, histogramEdges, 'Normalization', 'probability');
+            
+            histogramMatrix = [noLickBinCount', lickBinCount'];
+            labels = ["No Lick", "Lick"];
         end
         
         function binCount = getWholeSignalSlidingBincount(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, shouldShuffel)
@@ -1771,7 +1815,7 @@ classdef Mouse < handle
             x = [-0.99: 0.02: 0.99];
             xLabels = [];
             
-            for index = 5:size(histogramMatrix, 2)
+            for index = 1:size(histogramMatrix, 2)
                 smoothed = histogramMatrix(:,index)';
                 if labels(index) ~= "Task"
                     smoothed = smooth(smoothed', 5)';
@@ -2248,6 +2292,23 @@ classdef Mouse < handle
             
             slidingMeanInTimePeriod = mean(allOutcumesSlidingCorrMatrix);
             
+        end
+        
+        function [noLickCorrelationVector, lickCorrelationVector] = getSlidingCorrelationWithAndWithoutLick(obj, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            [gcampNoLickSignal, jrgecoNoLickSignal, gcampLickCutSignal, jrgecoLickCutSignal, fs] = obj.getConcatTaskNoLick(timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor);
+            [noLickCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampNoLickSignal, jrgecoNoLickSignal, fs);
+
+            % Sliding Correlation Only Lick
+            gcampLickSignal = reshape(gcampLickCutSignal', 1, []);
+            jrgecoLickSignal = reshape(jrgecoLickCutSignal', 1, []);
+            
+            gcampLickSignal=(gcampLickSignal(~isnan(gcampLickSignal)));
+            jrgecoLickSignal=(jrgecoLickSignal(~isnan(jrgecoLickSignal)));
+            
+            gcampLickSignal = downsample(gcampLickSignal, downsampleFactor);
+            jrgecoLickSignal = downsample(jrgecoLickSignal, downsampleFactor);
+            
+            [lickCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampLickSignal, jrgecoLickSignal, fs);
         end
         
     end

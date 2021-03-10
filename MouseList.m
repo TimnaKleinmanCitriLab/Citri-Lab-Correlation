@@ -559,23 +559,13 @@ classdef MouseList < handle
                 % [medianFullSignalSliding, ~] = mouse.getWholeSignalSlidingMedian(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, false);
                 % miceGeneralSliding(mouseIndx, 1) = medianFullSignalSliding;
                 
+                [noLickCorrelationVector, lickCorrelationVector] = mouse.getSlidingCorrelationWithAndWithoutLick(timeWindow, timeShift, timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor);
+                
                 % Sliding Correlation Lick Removed
-                [gcampNoLickSignal, jrgecoNoLickSignal, gcampLickCutSignal, jrgecoLickCutSignal, fs] = mouse.getConcatTaskNoLick(timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor);
-                [noLickCorrelationVector, ~] = mouse.getSlidingCorrelation(timeWindow, timeShift, gcampNoLickSignal, jrgecoNoLickSignal, fs);
                 medianNoLickSliding = median(noLickCorrelationVector);
                 miceNoLickSliding(mouseIndx, 1) = medianNoLickSliding;
                 
                 % Sliding Correlation Only Lick
-                gcampLickSignal = reshape(gcampLickCutSignal', 1, []);
-                jrgecoLickSignal = reshape(jrgecoLickCutSignal', 1, []);
-                
-                gcampLickSignal=(gcampLickSignal(~isnan(gcampLickSignal)));
-                jrgecoLickSignal=(jrgecoLickSignal(~isnan(jrgecoLickSignal)));
-                
-                gcampLickSignal = downsample(gcampLickSignal, downsampleFactor);
-                jrgecoLickSignal = downsample(jrgecoLickSignal, downsampleFactor);
-                
-                [lickCorrelationVector, ~] = mouse.getSlidingCorrelation(timeWindow, timeShift, gcampLickSignal, jrgecoLickSignal, fs);
                 medianLickSliding = median(lickCorrelationVector);
                 miceLickSliding(mouseIndx, 1) = medianLickSliding;
                 
@@ -615,29 +605,15 @@ classdef MouseList < handle
                 [fullSignalCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, fullGcampSignal, fullJrgecoSignal, fs);
                 [fullSignalBinCount,~] = histcounts(fullSignalCorrelationVector, histogramEdges, 'Normalization', 'probability');
                 
+                [noLickCorrelationVector, lickCorrelationVector] = getSlidingCorrelationWithAndWithoutLick(obj, timeWindow, timeShift, timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor)
+                
                 % Sliding Correlation Lick Removed
-                [gcampNoLickSignal, jrgecoNoLickSignal, gcampLickCutSignal, jrgecoLickCutSignal, fs] = mouse.getConcatTaskNoLick(timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor);
-                [noLickCorrelationVector, ~] = mouse.getSlidingCorrelation(timeWindow, timeShift, gcampNoLickSignal, jrgecoNoLickSignal, fs);
                 [noLickBinCount,~] = histcounts(noLickCorrelationVector, histogramEdges, 'Normalization', 'probability');
                 
                 % Sliding Correlation Only Lick
-                gcampLickSignal = reshape(gcampLickCutSignal', 1, []);
-                jrgecoLickSignal = reshape(jrgecoLickCutSignal', 1, []);
-                
-                gcampLickSignal=(gcampLickSignal(~isnan(gcampLickSignal)));
-                jrgecoLickSignal=(jrgecoLickSignal(~isnan(jrgecoLickSignal)));
-                
-                gcampLickSignal = downsample(gcampLickSignal, downsampleFactor);
-                jrgecoLickSignal = downsample(jrgecoLickSignal, downsampleFactor);
-                
                 [lickCorrelationVector, ~] = mouse.getSlidingCorrelation(timeWindow, timeShift, gcampLickSignal, jrgecoLickSignal, fs);
                 [lickBinCount,~] = histcounts(lickCorrelationVector, histogramEdges, 'Normalization', 'probability');
             end
-            
-            
-            [fullSignalCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, fullGcampSignal, fullJrgecoSignal, fs);
-                
-            [fullSignalBinCount,~] = histcounts(fullSignalCorrelationVector, histogramEdges, 'Normalization', 'probability');
         end
         
         % == Separately ==

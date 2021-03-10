@@ -173,7 +173,7 @@ classdef ListOfMouseLists < handle
             % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\Groups Together\" + signalTitle + " - By Groups")
         end
         
-        function plotSlidingWithAndWithoutLick(obj, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
+        function plotSlidingBubbleWithAndWithoutLick(obj, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
             AmountOfGroups = 3;
             
             fig = figure('Position', [450,109,961,860]);
@@ -213,7 +213,7 @@ classdef ListOfMouseLists < handle
                     miceLickSliding(1, mouseIndx) = medianLickSliding;
                 end
                 xAxe = [groupIndx * 2 - 1 , groupIndx * 2];
-                labels(1, groupIndx * 2 - 1:groupIndx * 2) = ["Correlation of " + group.Type, "Sliding Correlation (median) of " + group.Type];
+                labels(1, groupIndx * 2 - 1:groupIndx * 2) = ["No Lick Sliding of " + group.Type + "\fontsize{7}(median)", "Lick Sliding of " + group.Type + "\fontsize{7}(median)"];
                 
                 obj.drawTwoBubble(miceNoLickSliding, [], miceLickSliding, [], xAxe, ax, true, false)
             end
@@ -221,7 +221,66 @@ classdef ListOfMouseLists < handle
             % Titles
             legend(ax, 'Mice Mean', 'Shuffled', 'Individuals', 'Location', 'best')
             
-            title(ax, {"Correlation Vs. Sliding Correlation", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            title(ax, {"Sliding Correlation With and Without Lick", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            xlim(ax, [0.75, AmountOfGroups * 2 + 0.25])
+            ax.XTick = [1: AmountOfGroups * 2];
+            ax.XTickLabel = labels';
+            xtickangle(45)
+            ylabel(ax, "Correlation / Median of sliding correlation")
+            
+            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\Groups Together\" + signalTitle + " - By Groups")
+        end
+        
+        % TODO
+        function plotSlidingBubbleWithAndWithoutMovement(obj, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            AmountOfGroups = 3;
+            
+            fig = figure('Position', [450,109,961,860]);
+            ax = axes;
+            labels = strings(2 * AmountOfGroups);
+            
+            [~, ~, ~, ~, signalTitle] = obj.ListOfLists(1).LoadedMouseList(1).getRawSignals(["Task", "onset"]);
+            
+            for groupIndx = 1:AmountOfGroups
+                group = obj.ListOfLists(groupIndx);
+                amoutOfMiceInGroup = size(group.LoadedMouseList, 2);
+                
+                miceNoLickSliding = zeros(1, amoutOfMiceInGroup);
+                miceLickSliding = zeros(1, amoutOfMiceInGroup);
+                
+                for mouseIndx = 1:amoutOfMiceInGroup
+                    mouse = group.LoadedMouseList(mouseIndx);
+                    
+                    % Sliding Correlation Lick Removed
+                    [gcampNoLickSignal, jrgecoNoLickSignal, gcampLickCutSignal, jrgecoLickCutSignal, fs] = mouse.getConcatTaskNoLick(timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor);
+                    [noLickCorrelationVector, ~] = mouse.getSlidingCorrelation(timeWindow, timeShift, gcampNoLickSignal, jrgecoNoLickSignal, fs);
+                    medianNoLickSliding = median(noLickCorrelationVector);
+                    miceNoLickSliding(1, mouseIndx) = medianNoLickSliding;
+                    
+                    % Sliding Correlation Only Lick
+                    gcampLickSignal = reshape(gcampLickCutSignal', 1, []);
+                    jrgecoLickSignal = reshape(jrgecoLickCutSignal', 1, []);
+                    
+                    gcampLickSignal=(gcampLickSignal(~isnan(gcampLickSignal)));
+                    jrgecoLickSignal=(jrgecoLickSignal(~isnan(jrgecoLickSignal)));
+                    
+                    gcampLickSignal = downsample(gcampLickSignal, downsampleFactor);
+                    jrgecoLickSignal = downsample(jrgecoLickSignal, downsampleFactor);
+                    
+                    [lickCorrelationVector, ~] = mouse.getSlidingCorrelation(timeWindow, timeShift, gcampLickSignal, jrgecoLickSignal, fs);
+                    medianLickSliding = median(lickCorrelationVector);
+                    miceLickSliding(1, mouseIndx) = medianLickSliding;
+                end
+                xAxe = [groupIndx * 2 - 1 , groupIndx * 2];
+                labels(1, groupIndx * 2 - 1:groupIndx * 2) = ["No Lick Sliding of " + group.Type + "\fontsize{7}(median)", "Lick Sliding of " + group.Type + "\fontsize{7}(median)"];
+                
+                obj.drawTwoBubble(miceNoLickSliding, [], miceLickSliding, [], xAxe, ax, true, false)
+            end
+            
+            % Titles
+            legend(ax, 'Mice Mean', 'Shuffled', 'Individuals', 'Location', 'best')
+            
+            title(ax, {"Sliding Correlation With and Without Lick", signalTitle, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             xlim(ax, [0.75, AmountOfGroups * 2 + 0.25])
             ax.XTick = [1: AmountOfGroups * 2];
             ax.XTickLabel = labels';
@@ -552,6 +611,7 @@ classdef ListOfMouseLists < handle
                 amoutOfMiceInGroup = size(group.LoadedMouseList, 2);
                 % miceNames = strings(1,amoutOfMiceInGroup);
                 miceNames = [];
+                amountOfTrialsPerMouse = [];
                 
                 % By mouse
                 groupByMouse = figure('Position', [247,579,1367,388]);
@@ -565,11 +625,11 @@ classdef ListOfMouseLists < handle
                     if mouse.signalExists(descriptionVector)
                         miceNames = [miceNames; mouse.Name];
                         
-                        [~, ~, ~, slidingTimeVector, slidingCorrMatrix, ~, signalTitle]  = mouse.dataForPlotSlidingCorrelation(descriptionVector, condition, corrLimits(1), corrLimits(2), timeWindow, timeShift, smoothFactor, downsampleFactor);
+                        [~, ~, ~, ~, slidingCorrMatrix, ~, signalTitle]  = mouse.dataForPlotSlidingCorrelation(descriptionVector, condition, corrLimits(1), corrLimits(2), timeWindow, timeShift, smoothFactor, downsampleFactor);
                         
                         % Save for all mice in group
                         groupMiceSliding = [groupMiceSliding; slidingCorrMatrix];
-                        
+                        amountOfTrialsPerMouse = [amountOfTrialsPerMouse, size(slidingCorrMatrix, 1)];
                         
                         % Plot
                         im = imagesc(currentMouseSubplot, slidingCorrMatrix);
@@ -598,6 +658,14 @@ classdef ListOfMouseLists < handle
                 hold on
                 line(allMiceInGroupSubplot, [0 0], [0 size(groupMiceSliding, 1)], 'Color', 'black')
                 hold off
+                
+                % Add lines between mice
+                currentTrialAmount = 0;
+                
+                for trialAmount = amountOfTrialsPerMouse
+                    currentTrialAmount = currentTrialAmount + trialAmount;
+                    line(allMiceInGroupSubplot, corrLimits, [currentTrialAmount, currentTrialAmount], 'Color', 'white')         
+                end
                 
                 % Titles
                 sgtitle(groupByMouse, {"Sliding heatmap for mice of group " + group.Type, signalTitle, "Filtered by - " + condition, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
@@ -636,7 +704,7 @@ classdef ListOfMouseLists < handle
                 groupMiceSliding = [];
                 groupMiceGcamp = [];
                 groupMiceGeco = [];
-                amountOfTrials = [];                                       % Used to draw lines between mice
+                amountOfTrialsPerMouse = [];                                       % Used to draw lines between mice
                 
                 for mouseIndx = 1:amoutOfMiceInGroup
                     mouse = group.LoadedMouseList(mouseIndx);
@@ -651,7 +719,7 @@ classdef ListOfMouseLists < handle
                         [~, ~, ~, ~, slidingCorrMatrix, ~, signalTitle]  = mouse.dataForPlotSlidingCorrelation(descriptionVector, condition, corrLimits(1), corrLimits(2), timeWindow, timeShift, smoothFactor, downsampleFactor);
                         groupMiceSliding = [groupMiceSliding; slidingCorrMatrix];
                         
-                        amountOfTrials = [amountOfTrials, size(gcampSignal, 1)];
+                        amountOfTrialsPerMouse = [amountOfTrialsPerMouse, size(gcampSignal, 1)];
                     end
                 end
                 
@@ -695,7 +763,7 @@ classdef ListOfMouseLists < handle
                 line(slidingSubplot, [0 0], [0 size(groupMiceSliding, 1)], 'Color', 'black')
                 
                 currentTrialAmount = 0;
-                for trialAmount = amountOfTrials
+                for trialAmount = amountOfTrialsPerMouse
                     currentTrialAmount = currentTrialAmount + trialAmount;
                     
                     line(gcampSubplot, corrLimits, [currentTrialAmount, currentTrialAmount], 'Color', 'white')
@@ -704,6 +772,74 @@ classdef ListOfMouseLists < handle
                 end
                 sgtitle(fig, {"Heatmap for mice of group " + group.Type, signalTitle, "Filtered by - " + condition, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             end
+        end
+        
+        function plotSlidingCorrelationHistogramWithAndWithoutLick(obj, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            
+            % Create figures
+            amountOfGroups = 3;                                            % Depending what groups one wants to include
+            byGroup = figure('Position', [110,226,1633,601]);
+            xAxe = -0.99: 0.02: 0.99;
+            allPlots = [];
+            [~, ~, ~, ~, signalTitle] = obj.ListOfLists(1).LoadedMouseList(1).getRawSignals(["Task", "onset"]);
+            
+            % Data + Plot
+            for groupIndx = 1:amountOfGroups
+                group = obj.ListOfLists(groupIndx);
+                
+                amoutOfMiceInGroup = size(group.LoadedMouseList, 2);
+                % miceNames = strings(1,amoutOfMiceInGroup);
+                miceNames = [];
+                
+                curGroupSubplot = subplot(1, amountOfGroups, groupIndx);
+                allPlots = [allPlots, curGroupSubplot];
+                
+                noLickBinByMouse = zeros(100, amoutOfMiceInGroup);
+                lickBinByMouse = zeros(100, amoutOfMiceInGroup);
+                
+                for mouseIndx = 1:amoutOfMiceInGroup
+                    mouse = group.LoadedMouseList(mouseIndx);
+                    miceNames = [miceNames; mouse.Name];
+                    
+                    
+                    [histogramMatrix, labels] = mouse.dataForPlotSlidingCorrelationHeatmapWithAndWithoutLick(timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    
+                    noLickBinByMouse(:, mouseIndx) = histogramMatrix(:, 1);
+                    lickBinByMouse(:, mouseIndx) = histogramMatrix(:, 2);
+                    
+                end
+                % Find mean of bins
+                meanNoLickBin = mean(noLickBinByMouse, 2);
+                meanLickBin = mean(lickBinByMouse, 2);
+                
+                plot(curGroupSubplot, xAxe, meanNoLickBin, 'LineWidth', 1.5)
+                hold on
+                plot(curGroupSubplot, xAxe, meanLickBin, 'LineWidth', 1.5)
+                hold off
+                
+                curGroupSubplot.XLabel.String = 'Correlation';
+                curGroupSubplot.YLabel.String = 'Amount';
+                legend(labels, 'Location', 'best')
+                
+                title(curGroupSubplot, group.Type)
+            end
+            
+            yMax = 0;
+            
+            for subplotIndex = amountOfGroups
+                curPlot = allPlots(subplotIndex);
+                yl = ylim(curPlot);
+                yMax = max(yMax, yl(2));
+            end
+            
+            for subplotIndex = amountOfGroups
+                curPlot = allPlots(subplotIndex);
+                ylim(curPlot, [0, yMax])
+            end
+            
+            sgtitle(byGroup, {"Sliding Window Histogram With VS Without Lick", signalTitle, "Time removed before: " + timeToRemoveBefore + ", after: " + timeToRemoveAfter + ", Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            savedName = "";
+            % savefig(byMouse, savedName)
         end
     end
     
@@ -759,7 +895,7 @@ classdef ListOfMouseLists < handle
             ylabel(ax, yLabel + "\fontsize{8} (mean of all mice)")
         end
         
-        function drawTwoBubble(first, firstShuffled, second, secondShuffled, xAxe, ax, shoukdPlotIndividuals, shouldPlotRandom)
+        function drawTwoBubble(first, firstShuffled, second, secondShuffled, xAxe, ax, shouldPlotIndividuals, shouldPlotRandom)
             
             % Calcl Mean
             firstMean = mean(nonzeros(first));
@@ -772,13 +908,15 @@ classdef ListOfMouseLists < handle
             secondRandomSEM =  std(secondShuffled)/sqrt(length(secondShuffled));
             
             % Plot
-            plot(ax, xAxe, [firstMean, secondMean], 'd', 'LineWidth', 1, 'color', '#800080', 'MarkerFaceColor', '#800080', 'MarkerSize', 8)
+            line([xAxe(1) - 0.1, xAxe(1) + 0.1], [firstMean, firstMean], 'Color', '#800080', 'LineWidth', 2)
+            line([xAxe(2) - 0.1, xAxe(2) + 0.1], [secondMean, secondMean], 'Color', '#800080', 'LineWidth', 2)
+            % plot(ax, xAxe, [firstMean, secondMean], 'd', 'LineWidth', 1, 'color', '#800080', 'MarkerFaceColor', '#800080', 'MarkerSize', 8)
             hold on
             if shouldPlotRandom
                 % errorbar(ax, xAxe, [firstRandomMean, secondRandomMean], [firstRandomSEM, secondRandomSEM],'o', 'LineWidth', 1, 'color', '#C0C0C0', 'MarkerFaceColor', '#C0C0C0', 'MarkerSize', 6, 'CapSize', 12)
                 plot(ax, xAxe, [firstRandomMean, secondRandomMean],'o', 'LineWidth', 1, 'color', '#C0C0C0', 'MarkerFaceColor', '#C0C0C0', 'MarkerSize', 6)
             end
-            if shoukdPlotIndividuals
+            if shouldPlotIndividuals
                 for idx = 1:size(first, 2)
                     plot(ax, xAxe, [first(idx), second(idx)], 'o-', 'color', 'black', 'MarkerFaceColor', 'black', 'MarkerSize', 4)
                     hold on
