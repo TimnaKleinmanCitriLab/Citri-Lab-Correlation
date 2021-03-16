@@ -616,6 +616,41 @@ classdef MouseList < handle
             end
         end
         
+        function passiveWithVSWithoutPassiveOnset(obj, descriptionVector, condition, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Plots all the mice with or without the onset in passive -
+            % useful to compare pre VS post
+            
+            [~, ~, ~, ~, signalTitle] = obj.LoadedMouseList(1).getRawSignals(descriptionVector);
+            
+            amoutOfMiceInGroup = size(obj.LoadedMouseList, 2);
+            
+            miceNoOnsetSliding = [];
+            miceOnsetSliding = [];
+            miceNames = [];
+            
+            for mouseIndx = 1:amoutOfMiceInGroup
+                mouse = obj.LoadedMouseList(mouseIndx);
+                
+                if mouse.signalExists(descriptionVector)
+                    miceNames = [miceNames; mouse.Name];
+                    
+                    [noOnsetCorrelationVector, onsetCorrelationVector] = mouse.getSlidingCorrelationWithAndWithoutOnsetPassive(descriptionVector, condition, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    
+                    % Sliding Correlation Onset Removed
+                    medianNoOnsetSliding = median(noOnsetCorrelationVector);
+                    miceNoOnsetSliding = [miceNoOnsetSliding; medianNoOnsetSliding];
+                    
+                    % Sliding Correlation Only Onset
+                    medianOnsetSliding = median(onsetCorrelationVector);
+                    miceOnsetSliding = [miceOnsetSliding; medianOnsetSliding];
+                end
+            end
+            % xAxe = [groupIndx * 2 - 1 , groupIndx * 2];
+            % labels(1, groupIndx * 2 - 1:groupIndx * 2) = ["Not Onset, Sliding of " + obj.Type + "\fontsize{7}(median)", "Onset, Sliding of " + obj.Type + "\fontsize{7}(median)"];
+            
+            obj.drawRelativeBubbleByMouse([miceNoOnsetSliding, miceOnsetSliding], miceNames, "Sliding Correlation With VS Without Passive Onset", signalTitle, ["Sliding No Onset \fontsize{7}(median)", "Sliding Onset \fontsize{7}(median)"], timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor) % "Correlation No Lick",
+        end
+        
         % == Separately ==
         function plotSlidingCorrelationTaskByOutcomeEachMouse(obj, straightenedBy, timeWindow, timeShift, smoothFactor, downsampleFactor)
             % Plots the sliding correlation of each mouse in a separate

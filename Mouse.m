@@ -598,7 +598,7 @@ classdef Mouse < handle
         end
         
         function plotSlidingCorrelationHistogramWithAndWithoutLick(obj, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
-            [histogramMatrix, labels] = obj.dataForPlotSlidingCorrelationHeatmapWithAndWithoutLick(timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+            [histogramMatrix, labels] = obj.dataForPlotSlidingCorrelationHistogramWithAndWithout("Task", "lick", "", timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
             % Doesn't save in the title how much time before and after is trimmed
             obj.drawSlidingCorrelationHistogram(histogramMatrix, labels, timeWindow, timeShift, smoothFactor, downsampleFactor)
         end
@@ -1158,23 +1158,33 @@ classdef Mouse < handle
             
         end
         
-        function [histogramMatrix, labels] = dataForPlotSlidingCorrelationHeatmapWithAndWithoutLick(obj, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
+        function [histogramMatrix, labels] = dataForPlotSlidingCorrelationHistogramWithAndWithout(obj, recordingType, cutBy, condition, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
             
             % Bin Init
             numOfBins = 100;
             histogramEdges = linspace(-1, 1, numOfBins + 1);
             
             % General Init
-            histogramMatrix = [];
             labels = [];
             
             % Task
-            [noLickCorrelationVector, lickCorrelationVector] = obj.getSlidingCorrelationWithAndWithoutLick(timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
-            [noLickBinCount,~] = histcounts(noLickCorrelationVector, histogramEdges, 'Normalization', 'probability');
-            [lickBinCount,~] = histcounts(lickCorrelationVector, histogramEdges, 'Normalization', 'probability');
+            if recordingType == "Task" && cutBy == "lick"
+                [withoutCutCorrelationVector, withCutCorrelationVector] = obj.getSlidingCorrelationWithAndWithoutLickTask(timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                labels = ["No Lick", "Lick"];
+            elseif recordingType == "Task" && cutBy == "movement"
+                [withoutCutCorrelationVector, withCutCorrelationVector] = obj.getSlidingCorrelationWithAndWithoutMovementTask(timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                labels = ["No Movement", "Movement"];
+            elseif recordingType == "Passive pre" && cutBy == "onset"
+                [withoutCutCorrelationVector, withCutCorrelationVector] = obj.getSlidingCorrelationWithAndWithoutOnsetPassive(["Passive", "awake", "BBN", "pre"], condition, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                labels = ["No Onset", "Onset"];
+            elseif recordingType == "Passive post" && cutBy == "onset"
+                [withoutCutCorrelationVector, withCutCorrelationVector] = obj.getSlidingCorrelationWithAndWithoutOnsetPassive(["Passive", "awake", "BBN", "post"], condition, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                labels = ["No Onset", "Onset"];
+            end
+            [withoutCutBinCount,~] = histcounts(withoutCutCorrelationVector, histogramEdges, 'Normalization', 'probability');
+            [withCutBinCount,~] = histcounts(withCutCorrelationVector, histogramEdges, 'Normalization', 'probability');
             
-            histogramMatrix = [noLickBinCount', lickBinCount'];
-            labels = ["No Lick", "Lick"];
+            histogramMatrix = [withoutCutBinCount', withCutBinCount'];
         end
         
         function binCount = getWholeSignalSlidingBincount(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, shouldShuffel)
@@ -1533,6 +1543,60 @@ classdef Mouse < handle
             % Time vectors
             signalTimeVector = linspace(- 5, trialTime - 5, size(cutGcampSignal, 2));
             slidingTimeVector = slidingTimeVector - 5;
+        end
+        
+        function [noLickCorrelationVector, lickCorrelationVector] = getSlidingCorrelationWithAndWithoutLickTask(obj, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            [gcampNoLickSignal, jrgecoNoLickSignal, gcampLickCutSignal, jrgecoLickCutSignal, fs] = obj.getConcatTaskNoLick(timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor);
+            [noLickCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampNoLickSignal, jrgecoNoLickSignal, fs);
+
+            % Sliding Correlation Only Lick
+            gcampLickSignal = reshape(gcampLickCutSignal', 1, []);
+            jrgecoLickSignal = reshape(jrgecoLickCutSignal', 1, []);
+            
+            gcampLickSignal=(gcampLickSignal(~isnan(gcampLickSignal)));
+            jrgecoLickSignal=(jrgecoLickSignal(~isnan(jrgecoLickSignal)));
+            
+            gcampLickSignal = downsample(gcampLickSignal, downsampleFactor);
+            jrgecoLickSignal = downsample(jrgecoLickSignal, downsampleFactor);
+            
+            [lickCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampLickSignal, jrgecoLickSignal, fs);
+        end
+        
+        function [noMovementCorrelationVector, movementCorrelationVector] = getSlidingCorrelationWithAndWithoutMovementTask(obj, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            [gcampNoMovementSignal, jrgecoNoMovementSignal, gcampMovementCutSignal, jrgecoMovementCutSignal, fs] = obj.getConcatTaskNoMovement(timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor);
+            [noMovementCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampNoMovementSignal, jrgecoNoMovementSignal, fs);
+            
+            % Sliding Correlation Only Lick
+            gcampMovementCutSignal = gcampMovementCutSignal';
+            jrgecoMovementCutSignal = jrgecoMovementCutSignal';
+            gcampMovementSignal = horzcat(gcampMovementCutSignal{:});
+            jrgecoMovementSignal = horzcat(jrgecoMovementCutSignal{:});
+            
+            gcampMovementSignal=(gcampMovementSignal(~isnan(gcampMovementSignal))); % If the movements fall on each other (with the time crop before and after) there will be Non
+            jrgecoMovementSignal=(jrgecoMovementSignal(~isnan(jrgecoMovementSignal)));
+            
+            gcampMovementSignal = downsample(gcampMovementSignal, downsampleFactor);
+            jrgecoMovementSignal = downsample(jrgecoMovementSignal, downsampleFactor);
+            
+            [movementCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampMovementSignal, jrgecoMovementSignal, fs);
+        end
+        
+        function [noOnsetCorrelationVector, onsetCorrelationVector] = getSlidingCorrelationWithAndWithoutOnsetPassive(obj, descriptionVector, condition, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Sliding Correlation Onset Removed
+            [gcampNoOnsetSignal, jrgecoNoOnsetSignal, gcampOnsetCutSignal, jrgecoOnsetCutSignal, fs] = obj.getConcatPassiveNoOnset(descriptionVector, condition, timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor);
+            [noOnsetCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampNoOnsetSignal, jrgecoNoOnsetSignal, fs);
+            
+            % Sliding Correlation Only Onset
+            gcampOnsetSignal = reshape(gcampOnsetCutSignal', 1, []);
+            jrgecoOnsetSignal = reshape(jrgecoOnsetCutSignal', 1, []);
+            
+            gcampOnsetSignal=(gcampOnsetSignal(~isnan(gcampOnsetSignal)));
+            jrgecoOnsetSignal=(jrgecoOnsetSignal(~isnan(jrgecoOnsetSignal)));
+            
+            gcampOnsetSignal = downsample(gcampOnsetSignal, downsampleFactor);
+            jrgecoOnsetSignal = downsample(jrgecoOnsetSignal, downsampleFactor);
+            
+            [onsetCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampOnsetSignal, jrgecoOnsetSignal, fs);
         end
         
         % ==== draw ====
@@ -2087,8 +2151,8 @@ classdef Mouse < handle
                     "    for example [Task, lick]" +  newline +...
                     "For Passive signal - [Passive, state, soundType, time]"  +  newline +...
                     "    for example [Passive, awake, BBN, post]" +  newline +...
-                    "For Free signals - [Free, divideBy, time], where divideBy can be concat / movement") +  newline +...
-                    "    for example [Free, movement, pre]";
+                    "For Free signals - [Free, divideBy, time], where divideBy can be concat / movement" +  newline +...
+                    "    for example [Free, movement, pre]");
             end
         end
         
@@ -2269,50 +2333,108 @@ classdef Mouse < handle
             fs = fs / downsampleFactor;
         end
         
-        function slidingMeanInTimePeriod = getSlidingCorrelationForTimeWindowInTask(obj,  descriptionVector, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor)
+        function [gcampNoMovementSignal, jrgecoNoMovementignal, gcampMovementCutSignal, jrgecoMovementCutSignal, fs] = getConcatTaskNoMovement(obj, timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor)
             
-            % Get Data
-            [fullGcampSignal, fullJrgecoSignal, ~, ~, fs] = obj.getInformationDownsampleAndSmooth(descriptionVector, smoothFactor, downsampleFactor, false);
+            % Get data
+            [gcampSignal, jrgecoSignal, ~, fs, ~] = obj.getRawSignals(["Task", "onset"]);
+            startMovement = obj.Info.Task.movement.distance_from_onset + obj.Info.Task.movement.time_of_onset;
+            endMovement = startMovement + obj.Info.Task.movement.movement_duration;
             
-            SamplesStart = max(round(fs * (startTime + 5)), 1);                    % + 5 cause time starts at -5
-            SamplesEnd = min(round(fs * (endTime + 5)), size(fullGcampSignal , 2));% + 5 cause time starts at -5
-            cutGcampSignal = fullGcampSignal(:, SamplesStart:SamplesEnd);
-            cutJrgecoSignal = fullJrgecoSignal(:, SamplesStart:SamplesEnd);
+            startMovementSample = round(fs * (startMovement - timeToRemoveBefore));
+            endMovementSample = round(fs * (endMovement + timeToRemoveAfter));
             
-            % Overall Sliding in time period
-            allOutcumesSlidingCorrMatrix = [];
+            % Concat and get data ready
+            gcampSignal = reshape(gcampSignal', 1, []);
+            jrgecoSignal = reshape(jrgecoSignal', 1, []);
             
-            for rowIndx = 1:size(cutGcampSignal, 1)
-                [correlationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, cutGcampSignal(rowIndx, :), cutJrgecoSignal(rowIndx, :), fs);
-                if timeWindow < 2
-                    correlationVector = smooth(correlationVector', 10)';
-                end
-                allOutcumesSlidingCorrMatrix = [allOutcumesSlidingCorrMatrix; correlationVector];
+            gcampSignal = smooth(gcampSignal', smoothFactor)';
+            jrgecoSignal = smooth(jrgecoSignal', smoothFactor)';
+            
+            startMovementSample(endMovementSample < 1) = [];  % Delete all licks that end before task starts
+            endMovementSample(endMovementSample < 1) = [];
+            startMovementSample(startMovementSample < 1) = 1; % Change all movements that start before beggining of task to 1
+            
+            endMovementSample(startMovementSample > size(gcampSignal, 2)) = []; % Delete all licks that start after task ends
+            startMovementSample(startMovementSample > size(gcampSignal, 2)) = [];
+            endMovementSample(endMovementSample > size(gcampSignal, 2)) = size(gcampSignal, 2); % Change all movements that end after end of task to the last element
+            
+            gcampMovementCutSignal = cell(size(startMovementSample, 1), 1);
+            jrgecoMovementCutSignal = cell(size(gcampMovementCutSignal));
+            
+            gcampNoMovementSignal = gcampSignal;
+            jrgecoNoMovementignal = jrgecoSignal;
+            
+            for trialIdx = 1:size(startMovementSample, 1)
+                % Save the lick aside
+                gcampMovementCutSignal(trialIdx) = {gcampNoMovementSignal(1, startMovementSample(trialIdx):endMovementSample(trialIdx))};
+                jrgecoMovementCutSignal(trialIdx) = {jrgecoNoMovementignal(1, startMovementSample(trialIdx):endMovementSample(trialIdx))};
+                
+                % Remove the lick
+                gcampNoMovementSignal(1, startMovementSample(trialIdx):endMovementSample(trialIdx)) = nan;
+                jrgecoNoMovementignal(1, startMovementSample(trialIdx):endMovementSample(trialIdx)) = nan;
             end
             
-            slidingMeanInTimePeriod = mean(allOutcumesSlidingCorrMatrix);
+            gcampNoMovementSignal=(gcampNoMovementSignal(~isnan(gcampNoMovementSignal)));
+            jrgecoNoMovementignal=(jrgecoNoMovementignal(~isnan(jrgecoNoMovementignal)));
             
+            gcampNoMovementSignal = downsample(gcampNoMovementSignal, downsampleFactor);
+            jrgecoNoMovementignal = downsample(jrgecoNoMovementignal, downsampleFactor);
+            
+            fs = fs / downsampleFactor;
         end
         
-        function [noLickCorrelationVector, lickCorrelationVector] = getSlidingCorrelationWithAndWithoutLick(obj, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
-            [gcampNoLickSignal, jrgecoNoLickSignal, gcampLickCutSignal, jrgecoLickCutSignal, fs] = obj.getConcatTaskNoLick(timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor);
-            [noLickCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampNoLickSignal, jrgecoNoLickSignal, fs);
-
-            % Sliding Correlation Only Lick
-            gcampLickSignal = reshape(gcampLickCutSignal', 1, []);
-            jrgecoLickSignal = reshape(jrgecoLickCutSignal', 1, []);
+        function [gcampNoOnsetSignal, jrgecoNoOnsetSignal, gcampOnsetCutSignal, jrgecoOnsetCutSignal, fs] = getConcatPassiveNoOnset(obj, descriptionVector, condition, timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor)
             
-            gcampLickSignal=(gcampLickSignal(~isnan(gcampLickSignal)));
-            jrgecoLickSignal=(jrgecoLickSignal(~isnan(jrgecoLickSignal)));
+            % Get data
+            [gcampSignal, jrgecoSignal, ~, fs, ~] = obj.getRawSignals(descriptionVector);
             
-            gcampLickSignal = downsample(gcampLickSignal, downsampleFactor);
-            jrgecoLickSignal = downsample(jrgecoLickSignal, downsampleFactor);
+            tInfo = obj.getTInfo(descriptionVector);
+            if condition ~= ""
+                gcampSignal = gcampSignal(eval(condition),:);
+                jrgecoSignal = jrgecoSignal(eval(condition),:);
+            end
             
-            [lickCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampLickSignal, jrgecoLickSignal, fs);
+            amountOfTrials = size(gcampSignal, 1);
+            
+            % Concat and get data ready
+            gcampSignal = reshape(gcampSignal', 1, []);
+            jrgecoSignal = reshape(jrgecoSignal', 1, []);
+            
+            gcampSignal = smooth(gcampSignal', smoothFactor)';
+            jrgecoSignal = smooth(jrgecoSignal', smoothFactor)';
+            
+            onsetTimes = (1:5:(size(tInfo, 1) - 1)*5 + 1)';
+            samplesInTimeWindow = round(fs * (timeToRemoveAfter + timeToRemoveBefore));
+            
+            startSample = round(fs * (onsetTimes - timeToRemoveBefore));
+            endSample = startSample + samplesInTimeWindow - 1;
+            
+            gcampOnsetCutSignal = zeros(amountOfTrials, samplesInTimeWindow);
+            jrgecoOnsetCutSignal = zeros(size(gcampOnsetCutSignal));
+            
+            gcampNoOnsetSignal = gcampSignal;
+            jrgecoNoOnsetSignal = jrgecoSignal;
+            
+            for trialIdx = 1:amountOfTrials
+                    % Save the onset aside
+                    gcampOnsetCutSignal(trialIdx, :) = gcampNoOnsetSignal(1, startSample(trialIdx):endSample(trialIdx));
+                    jrgecoOnsetCutSignal(trialIdx, :) = jrgecoNoOnsetSignal(1, startSample(trialIdx):endSample(trialIdx));
+                    
+                    % Remove the onset
+                    gcampNoOnsetSignal(1, startSample(trialIdx):endSample(trialIdx)) = nan;
+                    jrgecoNoOnsetSignal(1, startSample(trialIdx):endSample(trialIdx)) = nan;
+            end
+            
+            gcampNoOnsetSignal=(gcampNoOnsetSignal(~isnan(gcampNoOnsetSignal)));
+            jrgecoNoOnsetSignal=(jrgecoNoOnsetSignal(~isnan(jrgecoNoOnsetSignal)));
+            
+            gcampNoOnsetSignal = downsample(gcampNoOnsetSignal, downsampleFactor);
+            jrgecoNoOnsetSignal = downsample(jrgecoNoOnsetSignal, downsampleFactor);
+            
+            fs = fs / downsampleFactor;
         end
         
     end
-    
     
     methods (Static)
         % ============================= Plot ==============================
