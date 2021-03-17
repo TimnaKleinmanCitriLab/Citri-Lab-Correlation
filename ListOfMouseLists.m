@@ -282,6 +282,51 @@ classdef ListOfMouseLists < handle
             % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\Groups Together\" + signalTitle + " - By Groups")
         end
         
+        function plotSlidingBubbleWithAndWithoutMovementFree(obj, descriptionVector, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            AmountOfGroups = 3;
+            
+            fig = figure('Position', [450,109,961,860]);
+            ax = axes;
+            labels = strings(2 * AmountOfGroups);
+            
+            [~, ~, ~, ~, signalTitle] = obj.ListOfLists(1).LoadedMouseList(1).getRawSignals(["Task", "onset"]);
+            
+            for groupIndx = 1:AmountOfGroups
+                group = obj.ListOfLists(groupIndx);
+                amoutOfMiceInGroup = size(group.LoadedMouseList, 2);
+                
+                miceNoMovementSliding = zeros(1, amoutOfMiceInGroup);
+                miceMovementSliding = zeros(1, amoutOfMiceInGroup);
+                
+                for mouseIndx = 1:amoutOfMiceInGroup
+                    mouse = group.LoadedMouseList(mouseIndx);
+                    
+                    [noMovementCorrelationVector, movementCorrelationVector] = mouse.getSlidingCorrelationWithAndWithoutMovementFree(descriptionVector, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    medianNoMovementSliding = median(noMovementCorrelationVector);
+                    miceNoMovementSliding(1, mouseIndx) = medianNoMovementSliding;
+                    
+                    medianMovementSliding = median(movementCorrelationVector);
+                    miceMovementSliding(1, mouseIndx) = medianMovementSliding;
+                end
+                xAxe = [groupIndx * 2 - 1 , groupIndx * 2];
+                labels(1, groupIndx * 2 - 1:groupIndx * 2) = ["No Movement Sliding of " + group.Type + "\fontsize{7}(median)", "Movement Sliding of " + group.Type + "\fontsize{7}(median)"];
+                
+                obj.drawTwoBubble(miceNoMovementSliding, [], miceMovementSliding, [], xAxe, ax, true, false)
+            end
+            
+            % Titles
+            legend(ax, 'Individuals', 'Mice Mean', 'Location', 'best')
+            
+            title(ax, {"Sliding Correlation With and Without Movement", signalTitle, "Time removed before: " + timeToRemoveBefore + ", after: " + timeToRemoveAfter, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            xlim(ax, [0.75, AmountOfGroups * 2 + 0.25])
+            ax.XTick = [1: AmountOfGroups * 2];
+            ax.XTickLabel = labels';
+            xtickangle(45)
+            ylabel(ax, "Median of sliding correlation")
+            
+            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\Groups Together\" + signalTitle + " - By Groups")
+        end
+        
         function plotSlidingBubbleWithAndWithoutPassiveOnset(obj, descriptionVector, condition, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
             % Description Vector has to be Passive
             
@@ -844,7 +889,7 @@ classdef ListOfMouseLists < handle
                 for mouseIndx = 1:amoutOfMiceInGroup
                     mouse = group.LoadedMouseList(mouseIndx);
                     
-                    if ((~(strcmp(recordingType, "Passive pre")) && ~(strcmp(recordingType, "Passive post"))) ||(recordingType == "Passive pre"  && mouse.signalExists(["Passive", "awake", "BBN", "pre"])) || (recordingType == "Passive post"  && mouse.signalExists(["Passive", "awake", "BBN", "post"])))
+                    if ((~(strcmp(recordingType, "Passive pre")) && ~(strcmp(recordingType, "Passive post")) && ~(strcmp(recordingType, "Free post"))) || (recordingType == "Passive pre"  && mouse.signalExists(["Passive", "awake", "BBN", "pre"])) || (recordingType == "Passive post"  && mouse.signalExists(["Passive", "awake", "BBN", "post"])) || (recordingType == "Free post"  && mouse.signalExists(["Free", "concat", "post"])))
                         miceNames = [miceNames; mouse.Name];
                         
                         [histogramMatrix, labels] = mouse.dataForPlotSlidingCorrelationHistogramWithAndWithout(recordingType, cutBy, condition, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);

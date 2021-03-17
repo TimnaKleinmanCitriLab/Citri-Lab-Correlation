@@ -1180,6 +1180,9 @@ classdef Mouse < handle
             elseif recordingType == "Passive post" && cutBy == "onset"
                 [withoutCutCorrelationVector, withCutCorrelationVector] = obj.getSlidingCorrelationWithAndWithoutOnsetPassive(["Passive", "awake", "BBN", "post"], condition, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
                 labels = ["No Onset", "Onset"];
+            elseif recordingType == "Free post" && cutBy == "movement"
+                [withoutCutCorrelationVector, withCutCorrelationVector] = obj.getSlidingCorrelationWithAndWithoutMovementFree(["Free", "concat", "post"], timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                labels = ["No Movement", "Movement"];
             end
             [withoutCutBinCount,~] = histcounts(withoutCutCorrelationVector, histogramEdges, 'Normalization', 'probability');
             [withCutBinCount,~] = histcounts(withCutCorrelationVector, histogramEdges, 'Normalization', 'probability');
@@ -1581,6 +1584,25 @@ classdef Mouse < handle
             [movementCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampMovementSignal, jrgecoMovementSignal, fs);
         end
         
+        function [noMovementCorrelationVector, movementCorrelationVector] = getSlidingCorrelationWithAndWithoutMovementFree(obj, descriptionVector, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            [gcampNoMovementSignal, jrgecoNoMovementSignal, gcampMovementCutSignal, jrgecoMovementCutSignal, fs] = obj.getConcatFreeNoMovement(descriptionVector, timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor);
+            [noMovementCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampNoMovementSignal, jrgecoNoMovementSignal, fs);
+            
+            % Sliding Correlation Only Movement
+            gcampMovementCutSignal = gcampMovementCutSignal';
+            jrgecoMovementCutSignal = jrgecoMovementCutSignal';
+            gcampMovementSignal = horzcat(gcampMovementCutSignal{:});
+            jrgecoMovementSignal = horzcat(jrgecoMovementCutSignal{:});
+            
+            gcampMovementSignal=(gcampMovementSignal(~isnan(gcampMovementSignal))); % If the movements fall on each other (with the time crop before and after) there will be Non
+            jrgecoMovementSignal=(jrgecoMovementSignal(~isnan(jrgecoMovementSignal)));
+            
+            gcampMovementSignal = downsample(gcampMovementSignal, downsampleFactor);
+            jrgecoMovementSignal = downsample(jrgecoMovementSignal, downsampleFactor);
+            
+            [movementCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampMovementSignal, jrgecoMovementSignal, fs);
+        end
+        
         function [noOnsetCorrelationVector, onsetCorrelationVector] = getSlidingCorrelationWithAndWithoutOnsetPassive(obj, descriptionVector, condition, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
             % Sliding Correlation Onset Removed
             [gcampNoOnsetSignal, jrgecoNoOnsetSignal, gcampOnsetCutSignal, jrgecoOnsetCutSignal, fs] = obj.getConcatPassiveNoOnset(descriptionVector, condition, timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor);
@@ -1764,9 +1786,9 @@ classdef Mouse < handle
             hold off
             xlim(signalPlot, [0 50])
             
-            title(correlationPlot, {"\fontsize{5}", "\fontsize{14}Sliding Window"}, 'FontWeight', 'normal')
+            title(correlationPlot, "Sliding Window", 'FontWeight', 'normal')
             [gcampType, jrgecoType] = obj.findGcampJrgecoType();
-            title(signalPlot, {"\fontsize{5}", "\fontsize{14}Signals"}, 'FontWeight', 'normal')
+            title(signalPlot, "Signals", 'FontWeight', 'normal')
             
             xlabel(correlationPlot, "Time (sec)")
             xlabel(signalPlot, "Time (sec)")
@@ -1777,6 +1799,15 @@ classdef Mouse < handle
             
             % Add movement
             movementTimes = obj.Info.Free.movement;
+            
+            if obj.Name == "3 from 406"                                    % TODO!!! change it to be pretty and not with if
+                movementTimes.onset = movementTimes.onset - (96639 / obj.Info.Free.general.fs(1));
+                movementTimes.offset = movementTimes.offset - (96639 / obj.Info.Free.general.fs(1));
+                
+                movementTimes = movementTimes(movementTimes.offset > 1, :);   % Deletes movements that end before cut part
+                movementTimes.onset(movementTimes.onset < 1) = 1;          % Correct movement that starts before cut but ends after
+            end
+            
             hold(correlationPlot, 'on')
             hold(signalPlot, 'on')
             
@@ -1801,7 +1832,6 @@ classdef Mouse < handle
             hold(signalPlot, 'off')
             
             legend(signalPlot, gcampType + " (gcamp)", jrgecoType + " (jrgeco)", 'Location', 'best')
-            
         end
         
         function drawSlidingCorrelationAllHeatmap(obj, gcampSignal, jrgecoSignal, signalTimeVector, slidingCorrelation, correlationTimeVector, timeWindow, timeShift, signalTitle, smoothFactor, downsampleFactor)
@@ -2333,7 +2363,7 @@ classdef Mouse < handle
             fs = fs / downsampleFactor;
         end
         
-        function [gcampNoMovementSignal, jrgecoNoMovementignal, gcampMovementCutSignal, jrgecoMovementCutSignal, fs] = getConcatTaskNoMovement(obj, timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor)
+        function [gcampNoMovementSignal, jrgecoNoMovementSignal, gcampMovementCutSignal, jrgecoMovementCutSignal, fs] = getConcatTaskNoMovement(obj, timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor)
             
             % Get data
             [gcampSignal, jrgecoSignal, ~, fs, ~] = obj.getRawSignals(["Task", "onset"]);
@@ -2362,23 +2392,71 @@ classdef Mouse < handle
             jrgecoMovementCutSignal = cell(size(gcampMovementCutSignal));
             
             gcampNoMovementSignal = gcampSignal;
-            jrgecoNoMovementignal = jrgecoSignal;
+            jrgecoNoMovementSignal = jrgecoSignal;
             
             for trialIdx = 1:size(startMovementSample, 1)
                 % Save the lick aside
                 gcampMovementCutSignal(trialIdx) = {gcampNoMovementSignal(1, startMovementSample(trialIdx):endMovementSample(trialIdx))};
-                jrgecoMovementCutSignal(trialIdx) = {jrgecoNoMovementignal(1, startMovementSample(trialIdx):endMovementSample(trialIdx))};
+                jrgecoMovementCutSignal(trialIdx) = {jrgecoNoMovementSignal(1, startMovementSample(trialIdx):endMovementSample(trialIdx))};
                 
                 % Remove the lick
                 gcampNoMovementSignal(1, startMovementSample(trialIdx):endMovementSample(trialIdx)) = nan;
-                jrgecoNoMovementignal(1, startMovementSample(trialIdx):endMovementSample(trialIdx)) = nan;
+                jrgecoNoMovementSignal(1, startMovementSample(trialIdx):endMovementSample(trialIdx)) = nan;
             end
             
             gcampNoMovementSignal=(gcampNoMovementSignal(~isnan(gcampNoMovementSignal)));
-            jrgecoNoMovementignal=(jrgecoNoMovementignal(~isnan(jrgecoNoMovementignal)));
+            jrgecoNoMovementSignal=(jrgecoNoMovementSignal(~isnan(jrgecoNoMovementSignal)));
             
             gcampNoMovementSignal = downsample(gcampNoMovementSignal, downsampleFactor);
-            jrgecoNoMovementignal = downsample(jrgecoNoMovementignal, downsampleFactor);
+            jrgecoNoMovementSignal = downsample(jrgecoNoMovementSignal, downsampleFactor);
+            
+            fs = fs / downsampleFactor;
+        end
+        
+        function [gcampNoMovementSignal, jrgecoNoMovementSignal, gcampMovementCutSignal, jrgecoMovementCutSignal, fs] = getConcatFreeNoMovement(obj, descriptionVector, timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor)
+            
+            % Get data
+            [gcampSignal, jrgecoSignal, ~, fs, ~] = obj.getRawSignals(descriptionVector);
+            startMovement = obj.Info.Free.movement.onset;
+            endMovement = obj.Info.Free.movement.onset;
+            
+            startMovementSample = round(fs * (startMovement - timeToRemoveBefore));
+            endMovementSample = round(fs * (endMovement + timeToRemoveAfter));
+            
+            if obj.Name == "3 from 406"                                    % TODO!!! change it to be pretty and not with if
+                startMovementSample = startMovementSample - 96639;
+                endMovementSample = endMovementSample - 96639;
+            end
+            
+            % Concat and get data ready
+            gcampSignal = smooth(gcampSignal', smoothFactor)';
+            jrgecoSignal = smooth(jrgecoSignal', smoothFactor)';
+            
+            startMovementSample(endMovementSample < 1) = [];  % Delete all licks that end before task starts
+            endMovementSample(endMovementSample < 1) = [];
+            startMovementSample(startMovementSample < 1) = 1; % Change all movements that start before beggining of task to 1
+            
+            gcampMovementCutSignal = cell(size(startMovementSample, 1), 1);
+            jrgecoMovementCutSignal = cell(size(gcampMovementCutSignal));
+            
+            gcampNoMovementSignal = gcampSignal;
+            jrgecoNoMovementSignal = jrgecoSignal;
+            
+            for movementIdx = 1:size(startMovementSample, 1)
+                % Save the lick aside
+                gcampMovementCutSignal(movementIdx) = {gcampNoMovementSignal(1, startMovementSample(movementIdx):endMovementSample(movementIdx))};
+                jrgecoMovementCutSignal(movementIdx) = {jrgecoNoMovementSignal(1, startMovementSample(movementIdx):endMovementSample(movementIdx))};
+                
+                % Remove the lick
+                gcampNoMovementSignal(1, startMovementSample(movementIdx):endMovementSample(movementIdx)) = nan;
+                jrgecoNoMovementSignal(1, startMovementSample(movementIdx):endMovementSample(movementIdx)) = nan;
+            end
+            
+            gcampNoMovementSignal=(gcampNoMovementSignal(~isnan(gcampNoMovementSignal)));
+            jrgecoNoMovementSignal=(jrgecoNoMovementSignal(~isnan(jrgecoNoMovementSignal)));
+            
+            gcampNoMovementSignal = downsample(gcampNoMovementSignal, downsampleFactor);
+            jrgecoNoMovementSignal = downsample(jrgecoNoMovementSignal, downsampleFactor);
             
             fs = fs / downsampleFactor;
         end
