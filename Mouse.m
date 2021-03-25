@@ -1,5 +1,5 @@
 classdef Mouse < handle
-    %MOUSE class - Not supposed to be used directly but through sub-classes
+    %MOUSE class - Not supposed to be init directly but through sub-classes
     % of mouse type (OfcAccMouse etc.)
     
     % Description vector options:
@@ -37,7 +37,7 @@ classdef Mouse < handle
         SHARED_FILE_LOCATION = "W:"                 % Change for different computers - in my computer it it "W:"
         CONST_MOUSE_SAVE_PATH = Mouse.SHARED_FILE_LOCATION + "\shared\Timna\Gal Projects\Mice";
         CONST_RAW_FILE_PATH = "\\132.64.59.21\Citri_Lab\gala\Phys data\New Rig";
-        TIMES_TO_SHUFFLE = 1;
+        TIMES_TO_SHUFFLE = 1000;
         
         % Task
         CONST_TASK_DATA_BY_CLOUD = "CueInCloud_comb_cloud.mat";
@@ -144,12 +144,13 @@ classdef Mouse < handle
             
             % Free
             obj.RawMatFile.Free.concat = matfile(fileBeg + obj.CONST_FREE_DATA_CONCAT);
-            obj.RawMatFile.Free.movement = matfile(fileBeg + obj.CONST_FREE_DATA_BY_MOVEMENT);
+            obj.RawMatFile.Free.movement.post = matfile(fileBeg + obj.CONST_FREE_DATA_BY_MOVEMENT);
         end
         
         function createTaskInfo(obj)
             % Organizes info for different task divisions (by cue, cloud,..)
-            % and adds information about the day of the task.
+            % and adds information about the day of the task and did the
+            % trial have a movement.
             
             tInfo = obj.RawMatFile.Task.onset.t_info;
             
@@ -191,9 +192,9 @@ classdef Mouse < handle
         end
         
         function finalMovementTInfo = createTaskMovementInfo(obj, tInfo)
-            % Add days to movement tInfo
-            % tInfo = obj.Info.Task.onset;
+            % Creats the tInfo for the task cut by movement
             
+            % Add days to movement tInfo
             sessionBreaksTInfo = find(tInfo.trial_number == 1);
             sessionBreaksTInfo = [sessionBreaksTInfo; size(tInfo, 1) + 1];
             
@@ -337,9 +338,11 @@ classdef Mouse < handle
         end
         
         function createAndStrightenFreeData(obj)
+            % Loads the signal of free. Loads only free recordings that
+            % have in the info matrix a parameter of display >= 1 (shouls
+            % have at most 1 pre and 1 post).
             
             % Load Free that is concat
-            
             tInfo = obj.RawMatFile.Free.concat.t_info;
             gcampFree = obj.RawMatFile.Free.concat.all_trials;
             jrgecoFree = obj.RawMatFile.Free.concat.af_trials;
@@ -371,13 +374,12 @@ classdef Mouse < handle
             obj.Info.Free.general = tInfo;
             
             % Load Free by movement
+            obj.Info.Free.movement.post = obj.RawMatFile.Free.movement.post.t_info;
+            obj.Info.Free.movement.post.onset = obj.Info.Free.movement.post.onset + 0; % +5 because the GUI trims 5 first seconds
+            obj.Info.Free.movement.post.offset = obj.Info.Free.movement.post.offset + 0; % +5 because the GUI trims 5 first seconds
             
-            obj.Info.Free.movement = obj.RawMatFile.Free.movement.t_info;
-            obj.Info.Free.movement.onset = obj.Info.Free.movement.onset + 0; % +5 because the GUI trims 5 first seconds
-            obj.Info.Free.movement.offset = obj.Info.Free.movement.offset + 0; % +5 because the GUI trims 5 first seconds
-            
-            gcampData = obj.RawMatFile.Free.movement.all_trials;
-            jrgecoData = obj.RawMatFile.Free.movement.af_trials;
+            gcampData = obj.RawMatFile.Free.movement.post.all_trials;
+            jrgecoData = obj.RawMatFile.Free.movement.post.af_trials;
             
             % Fix jrgeco baseline to zero - acoording to mean of all the signal!
             jrgecoData = jrgecoData - postGecoMean;
@@ -430,6 +432,8 @@ classdef Mouse < handle
         end
         
         function plotCutSignal(obj, descriptionVector, condition, smoothFactor, downsampleFactor)
+            % Plots the averaged signal over all sessions of cut by the 
+            % parameters given in descriptionVector. 
             
             [gcampSignal, jrgecoSignal, timeVector, signalTitle] = obj.dataOfCutSignal(descriptionVector, condition, smoothFactor, downsampleFactor);
             
@@ -451,6 +455,9 @@ classdef Mouse < handle
         end
         
         function plotCutSignalHeatmap(obj, descriptionVector, condition, smoothFactor, downsampleFactor)
+            % Plots the signal as a heatmap where each row is a trial.Plots
+            % it according to the parameters given in descriptionVector.
+            
             [gcampSignal, jrgecoSignal, ~, signalTitle] = obj.dataOfCutSignal(descriptionVector, condition, smoothFactor, downsampleFactor);
             
             switch descriptionVector(1)
@@ -466,18 +473,9 @@ classdef Mouse < handle
         end
         
         % =========== Correlation ===========
-        function plotComparisonCorrelation(obj, smoothFactor, downsampleFactor)
-            % Plots correlations of the whole signal by all the different
-            % possible categories - plots each one as a scatter plot,
-            % and then all of them together for comparison.
-            
-            obj.plotCorrelationScatterPlot(smoothFactor, downsampleFactor)
-            obj.plotCorrelationBar(smoothFactor, downsampleFactor)
-        end
-        
         function plotCorrelationScatterPlot(obj, smoothFactor, downsampleFactor)
             % Plots scatter plot of the whole signal of all the different
-            % possible categories (empty plot for a category that has no
+            % possible recording types (empty plot for a category that has no
             % data, eg. a mouse that didnt have a pre-awake-FS recording
             % session).
             % It also plots the best fit line for the scatter plot.
@@ -528,7 +526,7 @@ classdef Mouse < handle
         
         function plotCorrelationBar(obj, smoothFactor, downsampleFactor)
             % Plot bars that represent the comparison between the
-            % correlations of all the possible categories (no bar for a
+            % correlations of all the possible recording types (no bar for a
             % category that has no data, eg. a mouse that didnt have a
             % pre-awake-FS recording session).
             % The function first smooths the signals, then down samples them
@@ -545,41 +543,24 @@ classdef Mouse < handle
             % sessions according to the description vector (see vectors
             % structure in the function getRawSignals).
             % It then plots the sliding window correlation.
+            % If the description vector is free post, it also marks te
+            % movements on the plots.
             % The function first smooths the signal, then down samples it
             % and at last calculates the sliding correlation and plots it.
             
             [gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, signalTitle] = obj.dataForPlotSlidingCorrelationAll(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
-            obj.drawSlidingCorrelation(gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift, signalTitle, smoothFactor, downsampleFactor)
-            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Tactical\" + obj.Name + "\Sliding Correlation Zoom - " + signalTitle)
-            obj.drawSlidingCorrelationAllHeatmap(gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift, signalTitle, smoothFactor, downsampleFactor)
-            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Tactical\" + obj.Name + "\Sliding Correlation Heatmap Over Time - " + signalTitle)
             
-        end
-        
-        % Shouldn't use this function! cause I cut the beg of signal for some mice, but not sure how much and which. better look in GUI
-        function plotSlidingCorrelationAllWithMovement(obj, descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor)
-            % Plots the gcamp and jrgeco signals from all the mouses'
-            % sessions according to the description vector (see vectors
-            % structure in the function getRawSignals).
-            % It then plots the sliding window correlation.
-            % The function first smooths the signal, then down samples it
-            % and at last calculates the sliding correlation and plots it.
+            if descriptionVector == ["Free", "concat", "post"]
+                obj.obj.drawSlidingCorrelationFreeWithMovement(gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift, signalTitle, smoothFactor, downsampleFactor);
+                % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Tactical\" + obj.Name + "\Sliding Correlation Zoom - " + signalTitle)
+            else
+                obj.drawSlidingCorrelation(gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift, signalTitle, smoothFactor, downsampleFactor)
+                % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Tactical\" + obj.Name + "\Sliding Correlation Zoom - " + signalTitle)
+                obj.drawSlidingCorrelationAllHeatmap(gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift, signalTitle, smoothFactor, downsampleFactor)
+                % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Tactical\" + obj.Name + "\Sliding Correlation Heatmap Over Time - " + signalTitle)
+            end
             
-            [gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, signalTitle] = obj.dataForPlotSlidingCorrelationAll(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor);
-            obj.drawSlidingCorrelationWithMovement(gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift, signalTitle, smoothFactor, downsampleFactor)
-            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Tactical\" + obj.Name + "\Sliding Correlation Zoom - " + signalTitle)
-            % obj.drawSlidingCorrelationAllHeatmap(gcampSignal, jrgecoSignal, signalTimeVector, correlationVector, correlationTimeVector, timeWindow, timeShift, signalTitle, smoothFactor, downsampleFactor)
-            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Tactical\" + obj.Name + "\Sliding Correlation Heatmap Over Time - " + signalTitle)
             
-        end
-        
-        function plotComparisonSlidingCorrelation(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
-            % Plots summary of the sliding correlations by all the different
-            % possible categories - plots a comparison heatmap and a
-            % comparison bar of mean / median
-            
-            obj.plotSlidingCorrelationHeatmap(timeWindow, timeShift, smoothFactor, downsampleFactor)
-            obj.plotSlidingCorrelationBar(timeWindow, timeShift, smoothFactor, downsampleFactor)
         end
         
         function plotSlidingCorrelationHeatmapAndHistogram(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
@@ -597,12 +578,7 @@ classdef Mouse < handle
             % obj.drawBar(skewness(histogramMatrix), labels, "Skewness of of sliding window correlation values for mouse " + obj.Name, "Skewness", smoothFactor, downsampleFactor, false)
         end
         
-        function plotSlidingCorrelationHistogramWithAndWithoutLick(obj, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
-            [histogramMatrix, labels] = obj.dataForPlotSlidingCorrelationHistogramWithAndWithout("Task", "lick", "", timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
-            % Doesn't save in the title how much time before and after is trimmed
-            obj.drawSlidingCorrelationHistogram(histogramMatrix, labels, timeWindow, timeShift, smoothFactor, downsampleFactor)
-        end
-        
+        % TODO - Up to here commented
         function plotSlidingCorrelationCutSessionsHeatmap(obj, descriptionVector, condition, timeWindow, timeShift, smoothFactor, downsampleFactor)
             switch descriptionVector(1)
                 case "Task"
@@ -705,6 +681,15 @@ classdef Mouse < handle
             
             figureTitle = {"Omission sliding window correlation from " + signalTitle + " for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift)};
             obj.drawOmissionLick("Sliding winodw",  lickTypesOrder, [-5, 15], signalTimeVector, meanGcamp, SEMGcamp, meanJrgeco, SEMJrgeco, [-5, 15], slidingTimeVector, corrFullMatrix, meanSliding, SEMSliding, figureTitle, smoothFactor, downsampleFactor)
+        end
+        
+        % TODO - finish!
+        function plotPrecentOfHighAndLowCorrelationCutTask(obj, descriptionVector, condition, highLowerLimit, lowHigherLimit, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            
+            [startTime, endTime] = obj.getStartEndTimeByType(descriptionVector);
+            
+            [signalTimeVector, ~, ~, slidingTimeVector, slidingCorrMatrix, ~, signalTitle]  = obj.dataForPlotSlidingCorrelation(descriptionVector, condition, startTime, endTime, timeWindow, timeShift, smoothFactor, downsampleFactor);
+            
         end
         
         % ======= Cross Correlation =======
@@ -1045,26 +1030,26 @@ classdef Mouse < handle
         end
         
         function correlation = getWholeSignalCorrelation(obj, descriptionVector, smoothFactor, downsampleFactor, shouldShuffel)
-            % Returns the correlation between gcamp and jrgeco for the
-            % given description vector. If no signal exists returns zero.
-            % If shouldSuffel is true shuffles TIMES_TO_SHUFFLE times and
-            % then returns the maximum
+            % Returns the correlation between gcamp and jrgeco for the given description vector. If no signal
+            % exists returns zero. If shouldSuffel is true shuffles TIMES_TO_SHUFFLE times and
+            % then returns the maximum.
             
             if obj.signalExists(descriptionVector)
                 
                 [gcampSignal, jrgecoSignal, ~, ~, ~] = getInformationDownsampleAndSmooth(obj, descriptionVector, smoothFactor, downsampleFactor, true);
                 
                 if shouldShuffel
-                    correlation = -1;
+                    allShuffledCorrelations = zeros(obj.TIMES_TO_SHUFFLE, 1);
                     
                     for i = 1:obj.TIMES_TO_SHUFFLE
                         idx = randperm(length(gcampSignal));
                         gcampSignal(idx) = gcampSignal;
                         % jrgecoSignal(idx) = jrgecoSignal;
-                        curCorrelation = corr(gcampSignal', jrgecoSignal');
+                        allShuffledCorrelations(i, 1) = corr(gcampSignal', jrgecoSignal');
                         
-                        correlation = max(correlation, curCorrelation);
                     end
+                    
+                    correlation = allShuffledCorrelations;                                  % Just to return the vector
                     
                 else
                     correlation = corr(gcampSignal', jrgecoSignal');
@@ -1549,6 +1534,7 @@ classdef Mouse < handle
         end
         
         function [noLickCorrelationVector, lickCorrelationVector] = getSlidingCorrelationWithAndWithoutLickTask(obj, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Sliding Correlation No Lick
             [gcampNoLickSignal, jrgecoNoLickSignal, gcampLickCutSignal, jrgecoLickCutSignal, fs] = obj.getConcatTaskNoLick(timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor);
             [noLickCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampNoLickSignal, jrgecoNoLickSignal, fs);
 
@@ -1768,8 +1754,8 @@ classdef Mouse < handle
             
         end
         
-        function drawSlidingCorrelationWithMovement(obj, gcampSignal, jrgecoSignal, signalTimeVector, slidingCorrelation, correlationTimeVector, timeWindow, timeShift, signalTitle, smoothFactor, downsampleFactor)
-            % Draws the plots for the plotSlidingCorrelationAll function
+        function drawSlidingCorrelationFreeWithMovement(obj, gcampSignal, jrgecoSignal, signalTimeVector, slidingCorrelation, correlationTimeVector, timeWindow, timeShift, signalTitle, smoothFactor, downsampleFactor)
+            % Draws the plots for the plotSlidingCorrelationFreeWithMovement function
             
             fig = figure("Name", "Sliding window correlation for all sessions of mouse " + obj.Name, "NumberTitle", "off");
             correlationPlot = subplot(2, 1, 1);
@@ -1797,8 +1783,8 @@ classdef Mouse < handle
             
             sgtitle({"Sliding Window Correlation from " + signalTitle + " for mouse " + obj.Name, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor}, 'FontWeight', 'bold')
             
-            % Add movement
-            movementTimes = obj.Info.Free.movement;
+            % Draw movement
+            movementTimes = obj.Info.Free.movement.post;
             
             if obj.Name == "3 from 406"                                    % TODO!!! change it to be pretty and not with if
                 movementTimes.onset = movementTimes.onset - (96639 / obj.Info.Free.general.fs(1));
@@ -2417,8 +2403,8 @@ classdef Mouse < handle
             
             % Get data
             [gcampSignal, jrgecoSignal, ~, fs, ~] = obj.getRawSignals(descriptionVector);
-            startMovement = obj.Info.Free.movement.onset;
-            endMovement = obj.Info.Free.movement.onset;
+            startMovement = obj.Info.Free.movement.post.onset;
+            endMovement = obj.Info.Free.movement.post.onset;
             
             startMovementSample = round(fs * (startMovement - timeToRemoveBefore));
             endMovementSample = round(fs * (endMovement + timeToRemoveAfter));
@@ -2561,6 +2547,23 @@ classdef Mouse < handle
                     %                 otherwise
                     %                     sortedCorrelation = correlation;
             end
+        end
+        
+        function [startTime, endTime] = getStartEndTimeByType(descriptionVector)
+            
+            switch descriptionVector(1)
+                case "Task"
+                    times = [Mouse.CONST_TASK_TRIAL_LIMS{:}];
+                case "Passive"
+                    times = [Mouse.CONST_PASSIVE_TRIAL_LIMS{:}];
+                case "Free"
+                    times = [Mouse.CONST_FREE_TRIAL_LIMS{:}];
+                % otherwise
+                % statements
+            end
+            
+            startTime = times(1);
+            endTime = times(2);
         end
         
     end
