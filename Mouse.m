@@ -37,7 +37,7 @@ classdef Mouse < handle
         SHARED_FILE_LOCATION = "W:"                 % Change for different computers - in my computer it it "W:"
         CONST_MOUSE_SAVE_PATH = Mouse.SHARED_FILE_LOCATION + "\shared\Timna\Gal Projects\Mice";
         CONST_RAW_FILE_PATH = "\\132.64.59.21\Citri_Lab\gala\Phys data\New Rig";
-        TIMES_TO_SHUFFLE = 1000;
+        TIMES_TO_SHUFFLE = 10;
         
         % Task
         CONST_TASK_DATA_BY_CLOUD = "CueInCloud_comb_cloud.mat";
@@ -1607,6 +1607,24 @@ classdef Mouse < handle
             [onsetCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampOnsetSignal, jrgecoOnsetSignal, fs);
         end
         
+        function [noLickCorrelationVector, lickCorrelationVector] = getSlidingCorrelationWithAndWithoutCueTask(obj, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            % Sliding Correlation No Lick
+            [gcampNoLickSignal, jrgecoNoLickSignal, gcampLickCutSignal, jrgecoLickCutSignal, fs] = obj.getConcatTaskNoCue(timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor);
+            [noLickCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampNoLickSignal, jrgecoNoLickSignal, fs);
+
+            % Sliding Correlation Only Lick
+            gcampLickSignal = reshape(gcampLickCutSignal', 1, []);
+            jrgecoLickSignal = reshape(jrgecoLickCutSignal', 1, []);
+            
+            gcampLickSignal=(gcampLickSignal(~isnan(gcampLickSignal)));
+            jrgecoLickSignal=(jrgecoLickSignal(~isnan(jrgecoLickSignal)));
+            
+            gcampLickSignal = downsample(gcampLickSignal, downsampleFactor);
+            jrgecoLickSignal = downsample(jrgecoLickSignal, downsampleFactor);
+            
+            [lickCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampLickSignal, jrgecoLickSignal, fs);
+        end
+        
         % ==== draw ====
         function drawAllSessions(obj, gcampSignal, jrgecoSignal, timeVector, signalTitle, smoothFactor, downsampleFactor)
             % Draws the plot for the plotAllSessions function.
@@ -2285,13 +2303,6 @@ classdef Mouse < handle
         end
         
         function [gcampNoLickSignal, jrgecoNoLickSignal, gcampLickCutSignal, jrgecoLickCutSignal, fs] = getConcatTaskNoLick(obj, timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor)
-            % Returns the signals (according to the description vector)
-            % after first concatenating each one to a continuous signal
-            % then smoothing them and then down sampling them.
-            % It also returns basic data about the signals - their title,
-            % the total time (of the continuous signal) and the sampling
-            % per second (fs).
-            % If there is no such signal, raises an error
             
             % Get data
             [gcampSignal, jrgecoSignal, ~, fs, ~] = obj.getRawSignals(["Task", "onset"]);
@@ -2494,6 +2505,64 @@ classdef Mouse < handle
             
             gcampNoOnsetSignal = downsample(gcampNoOnsetSignal, downsampleFactor);
             jrgecoNoOnsetSignal = downsample(jrgecoNoOnsetSignal, downsampleFactor);
+            
+            fs = fs / downsampleFactor;
+        end
+        
+        function [gcampNoCueSignal, jrgecoNoCueSignal, gcampCueCutSignal, jrgecoCueCutSignal, fs] = getConcatTaskNoCue(obj, timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor)
+            
+            % Get data
+            [gcampSignal, jrgecoSignal, ~, fs, ~] = obj.getRawSignals(["Task", "onset"]);
+            cueTime = obj.Info.Task.onset.delay;
+            amountOfTrials = size(gcampSignal, 1);
+            samplesInTrial = size(gcampSignal, 2);
+            samplesInTimeWindow = round(fs * (timeToRemoveAfter + timeToRemoveBefore));
+            
+            % Concat and get data ready
+            gcampSignal = reshape(gcampSignal', 1, []);
+            jrgecoSignal = reshape(jrgecoSignal', 1, []);
+            
+            gcampSignal = smooth(gcampSignal', smoothFactor)';
+            jrgecoSignal = smooth(jrgecoSignal', smoothFactor)';
+            
+            trialBegSample = 1:samplesInTrial:size(gcampSignal, 2);
+            startCueSample = trialBegSample' + round(fs * (cueTime + 5 - timeToRemoveBefore));
+            endCueSample = startCueSample + samplesInTimeWindow - 1;
+            
+            if startCueSample(size(cueTime, 1)) > size(gcampSignal, 2)   % If last lick starts out of bounds - remove it
+                startCueSample(end) = [];
+                endCueSample(end) = [];
+                amountOfTrials = amountOfTrials - 1;
+            elseif endCueSample(size(cueTime, 1)) > size(gcampSignal, 2) % If last lick ends out of bounds - change it to be the last element
+                endCueSample(end) = size(gcampSignal, 2);
+            end
+            
+            gcampCueCutSignal = zeros(amountOfTrials, samplesInTimeWindow);
+            jrgecoCueCutSignal = zeros(size(gcampCueCutSignal));
+            
+            gcampNoCueSignal = gcampSignal;
+            jrgecoNoCueSignal = jrgecoSignal;
+            
+            for trialIdx = 1:amountOfTrials
+                if ~isnan(cueTime(trialIdx))                               % There was a lick
+                    % Save the lick aside
+                    gcampCueCutSignal(trialIdx, :) = gcampNoCueSignal(1, startCueSample(trialIdx):endCueSample(trialIdx));
+                    jrgecoCueCutSignal(trialIdx, :) = jrgecoNoCueSignal(1, startCueSample(trialIdx):endCueSample(trialIdx));
+                    
+                    % Remove the lick
+                    gcampNoCueSignal(1, startCueSample(trialIdx):endCueSample(trialIdx)) = nan;
+                    jrgecoNoCueSignal(1, startCueSample(trialIdx):endCueSample(trialIdx)) = nan;
+                else
+                    gcampCueCutSignal(trialIdx, :) = nan(1, samplesInTimeWindow);
+                    jrgecoCueCutSignal(trialIdx, :) = nan(1, samplesInTimeWindow);
+                end
+            end
+            
+            gcampNoCueSignal=(gcampNoCueSignal(~isnan(gcampNoCueSignal)));
+            jrgecoNoCueSignal=(jrgecoNoCueSignal(~isnan(jrgecoNoCueSignal)));
+            
+            gcampNoCueSignal = downsample(gcampNoCueSignal, downsampleFactor);
+            jrgecoNoCueSignal = downsample(jrgecoNoCueSignal, downsampleFactor);
             
             fs = fs / downsampleFactor;
         end
