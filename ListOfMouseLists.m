@@ -194,7 +194,7 @@ classdef ListOfMouseLists < handle
         end
         
         % Comaprison Events
-        function plotSlidingBubbleWithAndWithoutLickTask(obj, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
+        function plotSlidingBubbleWithAndWithoutLickTask(obj, condition, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
             AmountOfGroups = 3;
             
             fig = figure('Position', [450,109,961,860]);
@@ -213,7 +213,7 @@ classdef ListOfMouseLists < handle
                 for mouseIndx = 1:amoutOfMiceInGroup
                     mouse = group.LoadedMouseList(mouseIndx);
                     
-                    [noLickCorrelationVector, lickCorrelationVector] = mouse.getSlidingCorrelationWithAndWithoutLickTask(timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    [noLickCorrelationVector, lickCorrelationVector] = mouse.getSlidingCorrelationWithAndWithout("Task", "Lick", condition, [], timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
                     
                     % Sliding Correlation Lick Removed
                     medianNoLickSliding = median(noLickCorrelationVector);
@@ -233,7 +233,7 @@ classdef ListOfMouseLists < handle
             f = get(gca,'Children');
             legend(ax, 'Mice Mean', 'Individuals', 'Location', 'best')
             
-            title(ax, {"Sliding Correlation With and Without Lick", signalTitle, "Time removed before: " + timeToRemoveBefore + ", after: " + timeToRemoveAfter, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            title(ax, {"Sliding Correlation With and Without Lick", signalTitle, "Filtered by - " + condition, "Time removed before: " + timeToRemoveBefore + ", after: " + timeToRemoveAfter, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             xlim(ax, [0.75, AmountOfGroups * 2 + 0.25])
             ax.XTick = [1: AmountOfGroups * 2];
             ax.XTickLabel = labels';
@@ -243,7 +243,7 @@ classdef ListOfMouseLists < handle
             % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\Groups Together\" + signalTitle + " - By Groups")
         end
         
-        function plotSlidingBubbleWithAndWithoutMovementTask(obj, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
+        function plotSlidingBubbleWithAndWithoutMovementTask(obj, condition, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
             AmountOfGroups = 3;
             
             fig = figure('Position', [450,109,961,860]);
@@ -262,26 +262,13 @@ classdef ListOfMouseLists < handle
                 for mouseIndx = 1:amoutOfMiceInGroup
                     mouse = group.LoadedMouseList(mouseIndx);
                     
-                    [noMovementCorrelationVector, movementCorrelationVector] = mouse.getSlidingCorrelationWithAndWithoutMovementTask(timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    [noMovementCorrelationVector, movementCorrelationVector] = mouse.getSlidingCorrelationWithAndWithout("Task", "movement", condition, [], timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    
                     % Sliding Correlation Lick Removed
-                    %[gcampNoMovementSignal, jrgecoNoMovementSignal, gcampMovementCutSignal, jrgecoMovementCutSignal, fs] = mouse.getConcatTaskNoMovement(timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor);
-                    %[noMovementCorrelationVector, ~] = mouse.getSlidingCorrelation(timeWindow, timeShift, gcampNoMovementSignal, jrgecoNoMovementSignal, fs);
                     medianNoMovementSliding = median(noMovementCorrelationVector);
                     miceNoMovementSliding(1, mouseIndx) = medianNoMovementSliding;
                     
                     % Sliding Correlation Only Lick
-                    %gcampMovementCutSignal = gcampMovementCutSignal';
-                    %jrgecoMovementCutSignal = jrgecoMovementCutSignal';
-                    %gcampMovementSignal = horzcat(gcampMovementCutSignal{:});
-                    %jrgecoMovementSignal = horzcat(jrgecoMovementCutSignal{:});
-                    
-                    %gcampMovementSignal=(gcampMovementSignal(~isnan(gcampMovementSignal))); % If the movements fall on each other (with the time crop before and after) there will be Non
-                    %jrgecoMovementSignal=(jrgecoMovementSignal(~isnan(jrgecoMovementSignal)));
-                    
-                    %gcampMovementSignal = downsample(gcampMovementSignal, downsampleFactor);
-                    %jrgecoMovementSignal = downsample(jrgecoMovementSignal, downsampleFactor);
-                    
-                    %[movementCorrelationVector, ~] = mouse.getSlidingCorrelation(timeWindow, timeShift, gcampMovementSignal, jrgecoMovementSignal, fs);
                     medianMovementSliding = median(movementCorrelationVector);
                     miceMovementSliding(1, mouseIndx) = medianMovementSliding;
                 end
@@ -294,7 +281,7 @@ classdef ListOfMouseLists < handle
             % Titles
             legend(ax, 'Individuals', 'Mice Mean', 'Location', 'best')
             
-            title(ax, {"Sliding Correlation With and Without Movement", signalTitle, "Time removed before: " + timeToRemoveBefore + ", after: " + timeToRemoveAfter, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            title(ax, {"Sliding Correlation With and Without Movement", signalTitle, "Filtered by - " + condition, "Time removed before: " + timeToRemoveBefore + ", after: " + timeToRemoveAfter, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             xlim(ax, [0.75, AmountOfGroups * 2 + 0.25])
             ax.XTick = [1: AmountOfGroups * 2];
             ax.XTickLabel = labels';
@@ -323,7 +310,8 @@ classdef ListOfMouseLists < handle
                 for mouseIndx = 1:amoutOfMiceInGroup
                     mouse = group.LoadedMouseList(mouseIndx);
                     
-                    [noMovementCorrelationVector, movementCorrelationVector] = mouse.getSlidingCorrelationWithAndWithoutMovementFree(descriptionVector, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    [noMovementCorrelationVector, movementCorrelationVector] = mouse.getSlidingCorrelationWithAndWithout("Free", "movement", "", descriptionVector, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    
                     medianNoMovementSliding = median(noMovementCorrelationVector);
                     miceNoMovementSliding(1, mouseIndx) = medianNoMovementSliding;
                     
@@ -371,7 +359,7 @@ classdef ListOfMouseLists < handle
                     mouse = group.LoadedMouseList(mouseIndx);
                     
                     if mouse.signalExists(descriptionVector)
-                        [noOnsetCorrelationVector, onsetCorrelationVector] = mouse.getSlidingCorrelationWithAndWithoutOnsetPassive(descriptionVector, condition, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                        [noOnsetCorrelationVector, onsetCorrelationVector] = mouse.getSlidingCorrelationWithAndWithout("Passive", "onset", condition, descriptionVector, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
                         
                         % Sliding Correlation Onset Removed
                         medianNoOnsetSliding = median(noOnsetCorrelationVector);
@@ -954,7 +942,7 @@ classdef ListOfMouseLists < handle
             % savefig(byMouse, savedName)
         end
         
-        % TODO - finish
+        % TODO - finish - make sure cue works + add func for baseline
         function plotSlidingCorrelationDuringEventsVSBaseline(obj, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
             
             AmountOfGroups = 3;
@@ -972,21 +960,24 @@ classdef ListOfMouseLists < handle
                     mouse = group.LoadedMouseList(mouseIndx);
                     
                     % Sliding Correlation Only Lick
-                    [~, lickCorrelationVector] = mouse.getSlidingCorrelationWithAndWithoutLickTask(timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    [~, lickCorrelationVector] = mouse.getSlidingCorrelationWithAndWithout("Task", "lick", "~(tInfo.has_movement)", timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
                     medianLickSliding = median(lickCorrelationVector);
                     miceLickSliding(1, mouseIndx) = medianLickSliding;
                     
                     % Sliding Correlation Only Movement
-                    [~, movementCorrelationVector] = mouse.getSlidingCorrelationWithAndWithoutMovementTask(timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    [~, movementCorrelationVector] = mouse.getSlidingCorrelationWithAndWithout("Task", "movement", "isnan(tInfo.first_lick)", [], timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
                     medianMovementSliding = median(movementCorrelationVector);
                     miceMovementSliding(1, mouseIndx) = medianMovementSliding;
                     
                     % Sliding Correlation Only Cue
+                    [~, cueCorrelationVector] = mouse.getSlidingCorrelationWithAndWithout("Task", "cue", "~(tInfo.has_movement) & isnan(tInfo.first_lick)", [], timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    medianCueSliding = median(cueCorrelationVector);
+                    miceCueSliding(1, mouseIndx) = medianCueSliding;
                     
                     % Sliding Correlation Baseline (trials with no lick, no movement, low cue)
                 end
                 xAxe = [groupIndx * 2 - 1 , groupIndx * 2];
-                labels(1, groupIndx * 2 - 1:groupIndx * 2) = ["No Lick Sliding of " + group.Type + "\fontsize{7}(median)", "Lick Sliding of " + group.Type + "\fontsize{7}(median)"];
+                labels(1, groupIndx * 2 - 1:groupIndx * 2) = ["Lick (trials with no move) sliding of " + group.Type + "\fontsize{7}(median)", "Move (trials no lick) Sliding of " + group.Type + "\fontsize{7}(median)", "Cue (trials no lick & no move) Sliding of " + group.Type + "\fontsize{7}(median)", "Baseline Sliding of " + group.Type + "\fontsize{7}(median)"];
                 
                 obj.drawTwoBubble(miceNoLickSliding, [], miceLickSliding, [], xAxe, ax, true, false)
             end
