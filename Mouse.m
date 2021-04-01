@@ -23,6 +23,8 @@ classdef Mouse < handle
     %   ~(tInfo.has_movement)
     % Correct:
     %   ismember(tInfo.trial_result, 'correct')
+    % Cue:
+    %   tInfo.cue_int == 0.02 | tInfo.cue_int == 0.5
     
     % PASSIVE:
     % Atten=0:
@@ -1100,51 +1102,6 @@ classdef Mouse < handle
             signalTimeVector = linspace(0, totalTime, size(gcampSignal, 2));
         end
         
-        function [histogramMatrix, labels] = dataForPlotSlidingCorrelationHeatmap(obj, timeWindow, timeShift, smoothFactor, downsampleFactor)
-            % Returns a vector of histograms (a matrix) of the sliding
-            % correlation values between the smoothed and down sampled
-            % signals for each possible category.
-            % It also returns a matching vector that holds all the
-            % category names (labels).
-            % This function is a helper for the
-            % plotSlidingCorrelationHeatmap function
-            
-            histogramMatrix = [];
-            labels = [];
-            
-            % Passive
-            for state = obj.CONST_PASSIVE_STATES
-                for soundType = obj.CONST_PASSIVE_SOUND_TYPES
-                    for time = obj.CONST_PASSIVE_TIMES
-                        descriptionVector = ["Passive", (state), (soundType), (time)];
-                        binCount = obj.getWholeSignalSlidingBincount(descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, false);
-                        
-                        histogramMatrix = [histogramMatrix, binCount'];
-                        labels = [labels, (time) + ' ' + (state) + ' ' + (soundType)];
-                    end
-                end
-            end
-            
-            % Task
-            descriptionVector = ["Task", "onset"];
-            binCount = obj.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, false);
-            
-            histogramMatrix = [histogramMatrix, binCount'];
-            labels = [labels, "Task"];
-            
-            % Free
-            descriptionVector = ["Free", "concat", "pre"];
-            binCount = obj.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, false);
-            histogramMatrix = [histogramMatrix, binCount'];
-            labels = [labels, "Free - pre"];
-            
-            descriptionVector = ["Free", "concat", "post"];
-            binCount = obj.getWholeSignalSlidingBincount (descriptionVector, timeWindow, timeShift, smoothFactor, downsampleFactor, false);
-            histogramMatrix = [histogramMatrix, binCount'];
-            labels = [labels, "Free - post"];
-            
-        end
-        
         function [histogramMatrix, labels] = dataForPlotSlidingCorrelationHistogramWithAndWithout(obj, recordingType, cutBy, condition, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
             
             % Bin Init
@@ -1156,19 +1113,19 @@ classdef Mouse < handle
             
             % Task
             if recordingType == "Task" && cutBy == "lick"
-                [withoutCutCorrelationVector, withCutCorrelationVector] = obj.getSlidingCorrelationWithAndWithoutLickTask(timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                [withoutCutCorrelationVector, withCutCorrelationVector] = obj.getSlidingCorrelationWithAndWithout(recordingType, cutBy, condition, [], timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
                 labels = ["No Lick", "Lick"];
             elseif recordingType == "Task" && cutBy == "movement"
-                [withoutCutCorrelationVector, withCutCorrelationVector] = obj.getSlidingCorrelationWithAndWithoutMovementTask(timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                [withoutCutCorrelationVector, withCutCorrelationVector] = obj.getSlidingCorrelationWithAndWithout(recordingType, cutBy, condition, [], timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
                 labels = ["No Movement", "Movement"];
             elseif recordingType == "Passive pre" && cutBy == "onset"
-                [withoutCutCorrelationVector, withCutCorrelationVector] = obj.getSlidingCorrelationWithAndWithoutOnsetPassive(["Passive", "awake", "BBN", "pre"], condition, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                [withoutCutCorrelationVector, withCutCorrelationVector] = obj.getSlidingCorrelationWithAndWithout("Passive", cutBy, condition, ["Passive", "awake", "BBN", "pre"], timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
                 labels = ["No Onset", "Onset"];
             elseif recordingType == "Passive post" && cutBy == "onset"
-                [withoutCutCorrelationVector, withCutCorrelationVector] = obj.getSlidingCorrelationWithAndWithoutOnsetPassive(["Passive", "awake", "BBN", "post"], condition, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                [withoutCutCorrelationVector, withCutCorrelationVector] = obj.getSlidingCorrelationWithAndWithout("Passive", cutBy, condition, ["Passive", "awake", "BBN", "post"], timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
                 labels = ["No Onset", "Onset"];
             elseif recordingType == "Free post" && cutBy == "movement"
-                [withoutCutCorrelationVector, withCutCorrelationVector] = obj.getSlidingCorrelationWithAndWithoutMovementFree(["Free", "concat", "post"], timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                [withoutCutCorrelationVector, withCutCorrelationVector] = obj.getSlidingCorrelationWithAndWithout("Free", cutBy, "", ["Free", "concat", "post"], timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
                 labels = ["No Movement", "Movement"];
             end
             [withoutCutBinCount,~] = histcounts(withoutCutCorrelationVector, histogramEdges, 'Normalization', 'probability');
@@ -1535,7 +1492,7 @@ classdef Mouse < handle
             slidingTimeVector = slidingTimeVector - 5;
         end
         
-        function [withoutCorrelationVector, movementCorrelationVector] = getSlidingCorrelationWithAndWithout(obj, recordingType, cutBy, condition, descriptionVector, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
+        function [withoutCorrelationVector, withCorrelationVector] = getSlidingCorrelationWithAndWithout(obj, recordingType, cutBy, condition, descriptionVector, timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor)
             
             switch lower(cutBy)
                 case "movement"
@@ -1576,7 +1533,7 @@ classdef Mouse < handle
                         case "task"
                             
                             [gcampWithout, jrgecoWithout, gcampWithCutSignal, jrgecoWithCutSignal, fs] = obj.getConcatTaskNoCue(condition, timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor);
-                            [noCueCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampWithout, jrgecoWithout, fs);
+                            [withoutCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampWithout, jrgecoWithout, fs);
                             
                             gcampWith = reshape(gcampWithCutSignal', 1, []);
                             jrgecoWith = reshape(jrgecoWithCutSignal', 1, []);
@@ -1588,7 +1545,7 @@ classdef Mouse < handle
             gcampWith = downsample(gcampWith, downsampleFactor);
             jrgecoWith = downsample(jrgecoWith, downsampleFactor);
             
-            [movementCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampWith, jrgecoWith, fs);
+            [withCorrelationVector, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampWith, jrgecoWith, fs);
         end
         
         % ==== draw ====
@@ -2293,7 +2250,7 @@ classdef Mouse < handle
             if condition ~= ""
                 conditionTable = eval(condition);
             else
-                conditionTable = ones(amountOfTrials, 1);
+                conditionTable = true(size(tInfo, 1), 1);
             end
             
             % Correct out of bounds
@@ -2342,19 +2299,19 @@ classdef Mouse < handle
         function [gcampNoMovementSignal, jrgecoNoMovementSignal, gcampMovementCutSignal, jrgecoMovementCutSignal, fs] = getConcatTaskNoMovement(obj, condition, timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor)
             
             % Create condition vector
-            tInfo = obj.Info.Task.movement;
+            tInfo = obj.Info.Task.movement;    % Needs to be movement ifo to match startMovement
             if condition ~= ""
                 conditionTable = eval(condition);
             else
-                conditionTable = ones(size(tInfo, 1), 1);
+                conditionTable = true(size(tInfo, 1), 1);
             end
             
             % Get data
             [gcampSignal, jrgecoSignal, ~, fs, ~] = obj.getRawSignals(["Task", "onset"]);
             startMovement = obj.Info.Task.movement.distance_from_onset + obj.Info.Task.movement.time_of_onset;
             endMovement = startMovement + obj.Info.Task.movement.movement_duration;
-            startMovement = startMovement(conditionTable);
-            endMovement = endMovement(conditionTable);
+            startMovement = startMovement(conditionTable, :);
+            endMovement = endMovement(conditionTable, :);
             
             startMovementSample = round(fs * (startMovement - timeToRemoveBefore));
             endMovementSample = round(fs * (endMovement + timeToRemoveAfter));
@@ -2407,8 +2364,8 @@ classdef Mouse < handle
             
             % Get data
             [gcampSignal, jrgecoSignal, ~, fs, ~] = obj.getRawSignals(descriptionVector);
-            startMovement = obj.Info.Free.movement.post.onset;
-            endMovement = obj.Info.Free.movement.post.onset;
+            startMovement = obj.Info.Free.movement.onset;
+            endMovement = obj.Info.Free.movement.onset;
             
             startMovementSample = round(fs * (startMovement - timeToRemoveBefore));
             endMovementSample = round(fs * (endMovement + timeToRemoveAfter));
@@ -2502,14 +2459,11 @@ classdef Mouse < handle
             fs = fs / downsampleFactor;
         end
         
-        %%% TODO - finish with condition - do the for loop + make sure that
-        %%% amount of trials is right (maybe change the lick func to be similar)
         function [gcampNoCueSignal, jrgecoNoCueSignal, gcampCueCutSignal, jrgecoCueCutSignal, fs] = getConcatTaskNoCue(obj, condition, timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor)
             
             % Get data
             [gcampSignal, jrgecoSignal, ~, fs, ~] = obj.getRawSignals(["Task", "onset"]);
             cueTime = obj.Info.Task.onset.delay;
-            amountOfTrials = size(gcampSignal, 1);
             samplesInTrial = size(gcampSignal, 2);
             samplesInTimeWindow = round(fs * (timeToRemoveAfter + timeToRemoveBefore));
             
@@ -2524,21 +2478,23 @@ classdef Mouse < handle
             startCueSample = trialBegSample' + round(fs * (cueTime + 5 - timeToRemoveBefore));
             
             % Create condition vector
-            tInfo = obj.Info.Task.movement;
+            trialResult = obj.Info.Task.onset.trial_result;
+            conditionTable = ~(strcmp(trialResult, "premature"));                               % There was a cue
+            
+            tInfo = obj.Info.Task.onset;
             if condition ~= ""
-                conditionTable = eval(condition);
-            else
-                conditionTable = ones(size(tInfo, 1), 1);
+                conditionTable = conditionTable & eval(condition);
             end
             
-            startCueSample = startCueSample((~(strcmp(obj.Info.Task.onset.trial_result, "premature"))) & conditionTable);
+            startCueSample = startCueSample(conditionTable);
             endCueSample = startCueSample + samplesInTimeWindow - 1;
+            amountOfTrials = size(startCueSample, 1);
             
-            if startCueSample(size(cueTime, 1)) > size(gcampSignal, 2)   % If last cue starts out of bounds - remove it
+            if startCueSample(end) > size(gcampSignal, 2)   % If last cue starts out of bounds - remove it
                 startCueSample(end) = [];
                 endCueSample(end) = [];
                 amountOfTrials = amountOfTrials - 1;
-            elseif endCueSample(size(cueTime, 1)) > size(gcampSignal, 2) % If last cue ends out of bounds - change it to be the last element
+            elseif endCueSample(end) > size(gcampSignal, 2) % If last cue ends out of bounds - change it to be the last element
                 endCueSample(end) = size(gcampSignal, 2);
             end
             
@@ -2548,21 +2504,15 @@ classdef Mouse < handle
             gcampNoCueSignal = gcampSignal;
             jrgecoNoCueSignal = jrgecoSignal;
             
-            trialResult = obj.Info.Task.onset.trial_result;
             
             for trialIndx = 1:amountOfTrials
-                if ~(strcmp(trialResult(trialIndx), "premature"))                               % There was a cue
-                    % Save the lick aside
-                    gcampCueCutSignal(trialIndx, :) = gcampNoCueSignal(1, startCueSample(trialIndx):endCueSample(trialIndx));
-                    jrgecoCueCutSignal(trialIndx, :) = jrgecoNoCueSignal(1, startCueSample(trialIndx):endCueSample(trialIndx));
-                    
-                    % Remove the lick
-                    gcampNoCueSignal(1, startCueSample(trialIndx):endCueSample(trialIndx)) = nan;
-                    jrgecoNoCueSignal(1, startCueSample(trialIndx):endCueSample(trialIndx)) = nan;
-                else
-                    gcampCueCutSignal(trialIndx, :) = nan(1, samplesInTimeWindow);
-                    jrgecoCueCutSignal(trialIndx, :) = nan(1, samplesInTimeWindow);
-                end
+                % Save the lick aside
+                gcampCueCutSignal(trialIndx, :) = gcampNoCueSignal(1, startCueSample(trialIndx):endCueSample(trialIndx));
+                jrgecoCueCutSignal(trialIndx, :) = jrgecoNoCueSignal(1, startCueSample(trialIndx):endCueSample(trialIndx));
+                
+                % Remove the lick
+                gcampNoCueSignal(1, startCueSample(trialIndx):endCueSample(trialIndx)) = nan;
+                jrgecoNoCueSignal(1, startCueSample(trialIndx):endCueSample(trialIndx)) = nan;
             end
             
             gcampNoCueSignal=(gcampNoCueSignal(~isnan(gcampNoCueSignal)));
@@ -2574,6 +2524,30 @@ classdef Mouse < handle
             fs = fs / downsampleFactor;
         end
         
+        function [baselineSlidingVec] = getTaskSlidingBaseline(obj, condition, timeWindow, timeShift, smoothFactor, downsampleFactor)
+            
+            % Get data
+            [gcampSignal, jrgecoSignal, ~, fs, ~] = obj.getRawSignals(["Task", "onset"]);
+            tInfo = obj.Info.Task.onset;
+            tasksToLeave = eval(condition);
+            
+            gcampSignal = gcampSignal(tasksToLeave, :);
+            sum(tasksToLeave) % DELETE
+            jrgecoSignal = jrgecoSignal(tasksToLeave, :);
+            
+            % Concat and get data ready            
+            gcampSignal = reshape(gcampSignal', 1, []);
+            jrgecoSignal = reshape(jrgecoSignal', 1, []);
+
+            gcampSignal = smooth(gcampSignal', smoothFactor)';
+            jrgecoSignal = smooth(jrgecoSignal', smoothFactor)';
+
+            gcampSignal = downsample(gcampSignal, downsampleFactor);
+            jrgecoSignal = downsample(jrgecoSignal, downsampleFactor);
+            fs = fs / downsampleFactor;
+            
+            [baselineSlidingVec, ~] = obj.getSlidingCorrelation(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs);
+        end
     end
     
     methods (Static)
@@ -2609,6 +2583,29 @@ classdef Mouse < handle
             timeVector = timeVector + (timeWindow / 2);                    % Correlation will show in the middle of time window and not on beginning
         end
         
+        function [correlationVector, timeVector] = getSlidingCorrelationNew(timeWindow, timeShift, gcampSignal, jrgecoSignal, fs)
+            % Creates a vector that represents the sliding correlation
+            % between the given signals, according to the given time window
+            % and time shift. It returns both a vector that represents the
+            % sliding correlation, and a time vector that corresponds with
+            % it.
+            
+            samplesInTimeWindow = round(fs * timeWindow);
+            samplesInMovement = round(fs * timeShift);
+            
+            startWindowIndexVector = 1:samplesInMovement:size(gcampSignal, 2) - samplesInTimeWindow + 1;  % +1 becuase includes the begining point
+            wantedIndexMatrix = repmat(startWindowIndexVector', 1, samplesInTimeWindow) + repmat([0:samplesInTimeWindow - 1], 1, size(startWindowIndexVector, 1));
+            
+            gcampCut = gcampSignal(wantedIndexMatrix);
+            jrgecoCut = jrgecoSignal(wantedIndexMatrix);
+            
+            correlationVector = diag(corr(gcampCut', jrgecoCut'));
+            endTime = (startWindowIndexVector(end) - 1) / fs;               % Index start from 1, time from 0
+            
+            timeVector = linspace(0, endTime, size(correlationVector, 2));
+            timeVector = timeVector + (timeWindow / 2);                    % Correlation will show in the middle of time window and not on beginning
+        end
+        
         function [sortedCorrelation] = sortCorrelationByStraightenedBy(correlation, fittingTInfo, straightenedBy)
             switch straightenedBy
                 case "cue"
@@ -2634,8 +2631,6 @@ classdef Mouse < handle
                     times = [Mouse.CONST_PASSIVE_TRIAL_LIMS{:}];
                 case "Free"
                     times = [Mouse.CONST_FREE_TRIAL_LIMS{:}];
-                % otherwise
-                % statements
             end
             
             startTime = times(1);
