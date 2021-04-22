@@ -218,12 +218,12 @@ classdef ListOfMouseLists < handle
                     movementSlidingFree(1, mouseIndx) = medianFreeSliding;
                     
                     % Sliding Correlation Task Movement
-                    [~, movementTaskSliding] = mouse.getSlidingCorrelationWithAndWithout("Task", "movement", "", [], timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    [~, movementTaskSliding] = mouse.getSlidingCorrelationWithAndWithout("Task", "movement", "isnan(tInfo.first_lick)", [], timeToRemoveBefore, timeToRemoveAfter, timeWindow, timeShift, smoothFactor, downsampleFactor);
                     medianTaskSliding = median(movementTaskSliding);
                     movementSlidingTask(1, mouseIndx) = medianTaskSliding;
                 end
                 xAxe = [groupIndx * 2 - 1 , groupIndx * 2];
-                labels(1, groupIndx * 2 - 1:groupIndx * 2) = ["Free Movement Sliding of " + group.Type + "\fontsize{7}(median)", "Task Movement Sliding of " + group.Type + "\fontsize{7}(median)"];
+                labels(1, groupIndx * 2 - 1:groupIndx * 2) = ["Free Movement Sliding of " + group.Type + "\fontsize{7} (median)", "Task Movement Sliding of " + group.Type + "\fontsize{7} (median)"];
                 
                 [individualPlot, medianPlot, ~] = obj.drawTwoBubble(movementSlidingFree, [], movementSlidingTask, [], xAxe, ax, true, false);
             end
@@ -231,12 +231,63 @@ classdef ListOfMouseLists < handle
             % Titles
             legend(ax, [individualPlot, medianPlot], 'Individuals', 'Mice Mean', 'Location', 'best')
             
-            title(ax, {"Sliding Correlation Movement in Free Vs Task", signalTitle, "Time removed before: " + timeToRemoveBefore + ", after: " + timeToRemoveAfter, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            title(ax, {"Sliding Correlation Movement in Free Vs Task (no lick trials only)", signalTitle, "Time removed before: " + timeToRemoveBefore + ", after: " + timeToRemoveAfter, "Time Window: " + string(timeWindow) + ", Time Shift: " + string(timeShift), "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             xlim(ax, [0.75, AmountOfGroups * 2 + 0.25])
             ax.XTick = [1: AmountOfGroups * 2];
             ax.XTickLabel = labels';
             xtickangle(45)
             ylabel(ax, "Median of sliding correlation")
+            
+            % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\Groups Together\" + signalTitle + " - By Groups")
+        end
+        
+        function plotCorrMovementFreeVsTask(obj, timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor)
+            % Plots the average correlation of each mouse and the meanof
+            % all mice by group - once the movement inTas
+            
+            AmountOfGroups = 3;
+            
+            fig = figure('Position', [450,109,961,860]);
+            ax = axes;
+            labels = strings(2 * AmountOfGroups);
+            
+            [~, ~, ~, ~, signalTitle] = obj.ListOfLists(1).LoadedMouseList(1).getRawSignals(["Task", "onset"]);
+            
+            for groupIndx = 1:AmountOfGroups
+                group = obj.ListOfLists(groupIndx);
+                amoutOfMiceInGroup = size(group.LoadedMouseList, 2);
+                
+                movementCorrFree = zeros(1, amoutOfMiceInGroup);
+                movementCorrTask = zeros(1, amoutOfMiceInGroup);
+                
+                for mouseIndx = 1:amoutOfMiceInGroup
+                    mouse = group.LoadedMouseList(mouseIndx);
+                    
+                    % Sliding Correlation Free Movement
+                    [~, movementFreeCorrelation] = mouse.getCorrelationWithAndWithout("Free", "movement", "", ["Free", "concat", "post"], timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor);
+                    meanFreeSliding = mean(movementFreeCorrelation);
+                    movementCorrFree(1, mouseIndx) = meanFreeSliding;
+                    
+                    % Sliding Correlation Task Movement
+                    [~, movementTaskSliding] = mouse.getCorrelationWithAndWithout("Task", "movement", "isnan(tInfo.first_lick)", [], timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor);
+                    meanTaskSliding = mean(movementTaskSliding);
+                    movementCorrTask(1, mouseIndx) = meanTaskSliding;
+                end
+                xAxe = [groupIndx * 2 - 1, groupIndx * 2];
+                labels(1, groupIndx * 2 - 1:groupIndx * 2) = ["Free Movement Corr of " + group.Type + "\fontsize{7} (mean)", "Task Movement Corr of " + group.Type + "\fontsize{7} (mean)"];
+                
+                [individualPlot, avrPlot, ~] = obj.drawTwoBubble(movementCorrFree, [], movementCorrTask, [], xAxe, ax, true, false);
+            end
+            
+            % Titles
+            legend(ax, [individualPlot, avrPlot], 'Individuals', 'Mice Mean', 'Location', 'best')
+            
+            title(ax, {"Correlation Movement in Free Vs Task (no lick trials only)", signalTitle, "Time removed before: " + timeToRemoveBefore + ", after: " + timeToRemoveAfter, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            xlim(ax, [0.75, AmountOfGroups * 2 + 0.25])
+            ax.XTick = [1: AmountOfGroups * 2];
+            ax.XTickLabel = labels';
+            xtickangle(45)
+            ylabel(ax, "Mean of correlation")
             
             % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\Groups Together\" + signalTitle + " - By Groups")
         end
@@ -1029,7 +1080,7 @@ classdef ListOfMouseLists < handle
                     miceCueSliding(1, mouseIndx) = medianCueSliding;
                     
                     % Sliding Correlation Baseline (trials with no lick, no movement, low cue)
-                    [baselineSlidingVec] = mouse.getTaskSlidingBaseline("isnan(tInfo.first_lick) & ~(tInfo.has_movement) & tInfo.cue_int == 0.02 ", timeWindow, timeShift, smoothFactor, downsampleFactor);
+                    [baselineSlidingVec] = mouse.getTaskSlidingBaseline("isnan(tInfo.first_lick) & ~(tInfo.has_movement) & tInfo.cue_int == 0.02", timeWindow, timeShift, smoothFactor, downsampleFactor);
                     medianBaselineSliding = median(baselineSlidingVec);
                     miceBaselineSliding(1, mouseIndx) = medianBaselineSliding;
                 end
