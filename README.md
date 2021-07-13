@@ -13,10 +13,21 @@ In order to run the project, and after changing the path in the "ListOfMouseList
 ````matlab
 loml = ListOfMouseLists() % Might take some time! Loads all the the mice and lists into a struct of a ListOfMiceLists
 ````
+Now, all the needed data is loaded, and one can start using the different functions.
 
 ### Basic Structure
 The structure of the project is so:
-1. 
+* **ListOfMouseLists** - The main object, and the only one that needs to be loaded. It is an object that holds all the different mouse lists.
+    * **MouseList** - An Object that holds mice of the same kind (e.g. "OfcAcc", "AccInAccOut").
+        * **Mouse** - This is an abstract class, and isn't used directly. Each mouse type has a different class that inherits from this class (e.g. "OfcAccMouse"). Each mouse is represented with an object of the correct mouse type.
+
+
+
+
+
+***
+
+One can either use this object functions (to run functions that do analysis across all mice groups), or use `ListOfMouseLists.MouseList` to run a functoin 
 
 
 
