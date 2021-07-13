@@ -1,9 +1,28 @@
-# GENERAL
+# Correlation Analysis
+## Table Of Content
+* [General](#general)  
+    * [Brief](#brief)  
+        * [Basic Usage](#basic-usage)
+        * [Basic Structure](#basic-structure)  
 
-## Brief
-The proper way to use this program is first to create the wanted mice (mouse types are subclasses of Mouse, look at Main for examples). By creating them they are automatically updated / added to the relevant mouseList (according to their type). Then, you can either use each mouse separately, or use the mouseList to analyse all the mice (Both are saved in a path saved as a static property).
 
-*NOTICE*: in order to use the mouse list, you need to load the list, and then use the mouseList.loadMice() function to load the mice themselves and not just their paths.
+## GENERAL
+
+### Brief
+#### Basic Usage
+In order to run the project, and after changing the path in the "ListOfMouseLists" and the "Mouse" files, one should run:
+````matlab
+loml = ListOfMouseLists() % Might take some time! Loads all the the mice and lists into a struct of a ListOfMiceLists
+````
+
+#### Basic Structure
+The structure of the project is so:
+1. 
+
+
+The proper way to use this program is first to create the wanted mice (mouse types are sub-classes of Mouse, look at Main for examples). By creating them they are automatically updated / added to the relevant mouseList (according to their type). Then, you can either use each mouse separately, or use the mouseList to analyze all the mice (Both are saved in a path saved as a static property).
+
+**NOTICE**: In order to use the mouse list, you need to load the list, and then use the mouseList.loadMice() function to load the mice themselves and not just their paths.
 
 The relevant functions are under "Plot" title (see elaboration in each section separately)
 
