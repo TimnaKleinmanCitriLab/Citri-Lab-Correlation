@@ -1,9 +1,9 @@
 # Correlation Analysis
 ## Table Of Content
-* [General](#general)  
-    * [Brief](#brief)  
-        * [Basic Usage](#basic-usage)
-        * [Basic Structure](#basic-structure)  
+1. [General](#general)  
+    1.1 [Brief](#brief)  
+        1.1.1. [Basic Usage](#basic-usage)
+    * [Basic Structure](#basic-structure)  
 
 
 ## GENERAL
