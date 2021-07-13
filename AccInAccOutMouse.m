@@ -1,6 +1,5 @@
 classdef AccInAccOutMouse < Mouse
-    %ACCINACCOUTMOUSE Summary of this class goes here
-    %   Detailed explanation goes here
+    % A class for mice of type AccInAccOutMouse
     
     properties (Constant)
         GCAMP = 'Acc in'

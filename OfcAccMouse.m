@@ -1,6 +1,5 @@
 classdef OfcAccMouse < Mouse
-    %ACCOFCMOUSE Summary of this class goes here
-    %   Detailed explanation goes here
+    % A class for mice of type OfcAcc
     
      properties (Constant)
          GCAMP = 'Ofc'

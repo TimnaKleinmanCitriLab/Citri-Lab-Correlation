@@ -1,6 +1,5 @@
 classdef AudAccMouse < Mouse
-    %ACCAUDMOUSE Summary of this class goes here
-    %   Detailed explanation goes here
+    % A class for mice of type AudAccMouse
     
     properties (Constant)
         GCAMP = 'Aud'
