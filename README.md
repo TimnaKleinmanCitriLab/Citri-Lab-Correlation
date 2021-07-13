@@ -2,7 +2,7 @@
 ## Table Of Content
 1. [General](#general)  
     1.1 [Brief](#brief)  
-        1.1.1. [Basic Usage](#basic-usage)
+    * [Basic Usage](#basic-usage)
     * [Basic Structure](#basic-structure)  
 
 
