@@ -6,18 +6,20 @@
     * [Basic Structure](#basic-structure)  
 
 
-## GENERAL
+# GENERAL
 
-### Brief
-#### Basic Usage
+## Brief
+### Basic Usage
 In order to run the project, and after changing the path in the "ListOfMouseLists" and the "Mouse" files, one should run:
 ````matlab
 loml = ListOfMouseLists() % Might take some time! Loads all the the mice and lists into a struct of a ListOfMiceLists
 ````
 
-#### Basic Structure
+### Basic Structure
 The structure of the project is so:
 1. 
+
+
 
 
 The proper way to use this program is first to create the wanted mice (mouse types are sub-classes of Mouse, look at Main for examples). By creating them they are automatically updated / added to the relevant mouseList (according to their type). Then, you can either use each mouse separately, or use the mouseList to analyze all the mice (Both are saved in a path saved as a static property).
