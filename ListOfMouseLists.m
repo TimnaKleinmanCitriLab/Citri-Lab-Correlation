@@ -241,11 +241,11 @@ classdef ListOfMouseLists < handle
             % savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Correlation Vs Sliding Bubbles\Groups Together\" + signalTitle + " - By Groups")
         end
         
-        function plotCorrMovementFreeVsTask(obj, timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor)
+        function plotCorrMovementFreeVsTask(obj, timeOfBaseline, timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor)
             % Plots the average correlation of each mouse and the meanof
             % all mice by group - once the movement inTas
             
-            AmountOfGroups = 3;
+            AmountOfGroups = 2;
             
             fig = figure('Position', [450,109,961,860]);
             ax = axes;
@@ -257,32 +257,32 @@ classdef ListOfMouseLists < handle
                 group = obj.ListOfLists(groupIndx);
                 amoutOfMiceInGroup = size(group.LoadedMouseList, 2);
                 
-                movementCorrFree = zeros(1, amoutOfMiceInGroup);
-                movementCorrTask = zeros(1, amoutOfMiceInGroup);
+                movementCorrMatrixFree = zeros(1, amoutOfMiceInGroup);
+                movementCorrMatrixTask = zeros(1, amoutOfMiceInGroup);
                 
                 for mouseIndx = 1:amoutOfMiceInGroup
                     mouse = group.LoadedMouseList(mouseIndx);
                     
                     % Sliding Correlation Free Movement
-                    [~, movementFreeCorrelation] = mouse.getCorrelationWithAndWithout("Free", "movement", "", ["Free", "concat", "post"], timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor);
-                    meanFreeSliding = mean(movementFreeCorrelation);
-                    movementCorrFree(1, mouseIndx) = meanFreeSliding;
+                    [baselineFreeCorrelation, ~, movementFreeCorrelation] = mouse.getCorrelationWithAndWithout("Free", "movement", "", ["Free", "concat", "post"], timeOfBaseline, timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor);
+                    meanFreeCorrelation = mean(movementFreeCorrelation - baselineFreeCorrelation);
+                    movementCorrMatrixFree(1, mouseIndx) = meanFreeCorrelation;
                     
                     % Sliding Correlation Task Movement
-                    [~, movementTaskSliding] = mouse.getCorrelationWithAndWithout("Task", "movement", "isnan(tInfo.first_lick)", [], timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor);
-                    meanTaskSliding = mean(movementTaskSliding);
-                    movementCorrTask(1, mouseIndx) = meanTaskSliding;
+                    [baselineTaskCorrelation, ~, movementTaskCorrelation] = mouse.getCorrelationWithAndWithout("Task", "movement", "isnan(tInfo.first_lick)", [], timeOfBaseline, timeToRemoveBefore, timeToRemoveAfter, smoothFactor, downsampleFactor);
+                    meanTaskCorrelation = mean(movementTaskCorrelation - baselineTaskCorrelation);
+                    movementCorrMatrixTask(1, mouseIndx) = meanTaskCorrelation;
                 end
                 xAxe = [groupIndx * 2 - 1, groupIndx * 2];
                 labels(1, groupIndx * 2 - 1:groupIndx * 2) = ["Free Movement Corr of " + group.Type + "\fontsize{7} (mean)", "Task Movement Corr of " + group.Type + "\fontsize{7} (mean)"];
                 
-                [individualPlot, avrPlot, ~] = obj.drawTwoBubble(movementCorrFree, [], movementCorrTask, [], xAxe, ax, true, false);
+                [individualPlot, avrPlot, ~] = obj.drawTwoBubble(movementCorrMatrixFree, [], movementCorrMatrixTask, [], xAxe, ax, true, false);
             end
             
             % Titles
             legend(ax, [individualPlot, avrPlot], 'Individuals', 'Mice Mean', 'Location', 'best')
             
-            title(ax, {"Correlation Movement in Free Vs Task (no lick trials only)", signalTitle, "Time removed before: " + timeToRemoveBefore + ", after: " + timeToRemoveAfter, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
+            title(ax, {"Correlation Movement - Baseline in Free Vs Task (no lick trials only)", signalTitle, "Baseline Time: " + timeOfBaseline, "Time removed before: " + timeToRemoveBefore + ", after: " + timeToRemoveAfter, "\fontsize{7}Smoothed by: " + smoothFactor + ", then downsampled by: " + downsampleFactor})
             xlim(ax, [0.75, AmountOfGroups * 2 + 0.25])
             ax.XTick = [1: AmountOfGroups * 2];
             ax.XTickLabel = labels';

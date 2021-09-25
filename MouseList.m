@@ -708,7 +708,7 @@ classdef MouseList < handle
             [~, lagIndex] = max(meanMiceCross);
             
             obj.drawCrossCorrelation([meanMiceCross; meanMiceAutoFirst; meanMiceAutoSecond], [SEMMiceCross; SEMMiceAutoFirst; SEMMiceAutoSecond], timeVector, lim, ["Cross", "Auto - " + first, "Auto - " + second], signalTitle, {"Cross and Auto Correlation Between " + first + " and " + second + ", lag of "+ timeVector(lagIndex), "All Mice Type " + obj.Type}, smoothFactor, downsampleFactor, shouldReshape)
-            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross And Auto Correlation\" + signalTitle + "\Concat - " + shouldReshape + "\" +  obj.Type + "\" + obj.Type + " - average all - " + signalTitle)
+%            savefig("C:\Users\owner\Google Drive\University\ElscLab\Presentations\Graphs\Cross And Auto Correlation\" + signalTitle + "\Concat - " + shouldReshape + "\" +  obj.Type + "\" + obj.Type + " - average all - " + signalTitle)
         end
         
         function plotCrossCorrelationLagBar(obj, descriptionVector, maxLag, smoothFactor, downsampleFactor, shouldReshape)
@@ -1108,7 +1108,7 @@ classdef MouseList < handle
             plots = [];
             
             for idx = 1:size(crossCorrList, 1)
-                plots = [plots, shadedErrorBar(timeVector, crossCorrList(idx,:), SEMList(idx, :), colors(idx)).mainLine];
+                plots = [plots, shadedErrorBar(timeVector, crossCorrList(idx,:), SEMList(idx, :), 'lineProps', colors(idx)).mainLine];
                 % plot(ax, timeVector, crossCorrList(idx,:), 'LineWidth', 1.5);
                 hold on
             end

@@ -1,3 +1,6 @@
+% GENERALY not useful - was used for very specific things
+
+
 % listOfLists = [AccInAccOut, AudAcc, AudInAccOut, AudInAudOut, OfcAcc];
 %     mouseList.plotCrossAndAutoCorrealtionByMouse(["Free", "post"], 0, 20, 300, 10, true)
 %     mouseList.plotCrossAndAutoCorrealtionByMouse(["Task", "onset"], 0, 20, 300, 10, true)
