@@ -18,7 +18,11 @@ The structure of the objects is so:
     * **MouseList** - An Object that holds mice of the same kind (e.g. "OfcAcc", "AccInAccOut").
         * **Mouse** - This is an abstract class, and isn't used directly. Each mouse type has a different class that inherits from this class (e.g. "OfcAccMouse"). Each mouse is represented with an object of the correct mouse type.
 
-
+Things to add:
+- Loading the mice - loml = ListOfMouseLists()
+- Hirrachy of files, מחלקות and objects
+- Discription vector
+- Default values I used for functions
 
 
 

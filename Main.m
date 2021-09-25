@@ -25,7 +25,7 @@ AudInAccOutMouse("3_from440", false);
 
 AudInAudOutMouse("4_from440", false);
 
-%% 2 - LOAD ALL LISTS AND MICE - Not useful if using ListsOfMouseList that does the same
+%% 2 - LOAD ALL LISTS AND MICE - Not useful if using ListsOfMouseList (it does the same thing)
 OfcAcc = load('W:\shared\Timna\Gal Projects\Mouse Lists\OfcAccMice.mat').obj;
 AudAcc = load('W:\shared\Timna\Gal Projects\Mouse Lists\AudAccMice.mat').obj;
 AccInAccOut = load('W:\shared\Timna\Gal Projects\Mouse Lists\AccInAccOutMice.mat').obj;
