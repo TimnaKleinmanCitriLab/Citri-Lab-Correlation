@@ -14,15 +14,18 @@ Now, all the needed data is loaded, and one can start using the different functi
 
 ### Basic Structure
 The structure of the objects is so:
-* **ListOfMouseLists** - The main object, and the only one that needs to be loaded. It is an object that holds all the different mouse lists.
+* **ListOfMouseLists** - The main object, and the only one that needs to be loaded. It holds all the different mouse lists.
     * **MouseList** - An Object that holds mice of the same kind (e.g. "OfcAcc", "AccInAccOut").
-        * **Mouse** - This is an abstract class, and isn't used directly. Each mouse type has a different class that inherits from this class (e.g. "OfcAccMouse"). Each mouse is represented with an object of the correct mouse type.
+        * **Mouse** - An abstract class that isn't used directly. Each mouse type (OfcAcc, AccInAccOut etc.) has it's own class that inherits from this class. Each mouse is represented as an object of the correct mouse type.
+        * **AccInAccOutMouse, AudAccMouse, AudInAccOutMouse, AudInAudOutMose, OfcAccMouse** - As mentioned above, these are the classes for each mouse type.
+
+### Basic Functions Use
+Each class in the hirarchy has functions that help analyze the realtions within that class - Mouse functions allow to see the data about a single mouse. MouseList functions allow to see the data and compare mice from the same type (e.g. running functions on the mouselist of OfcAccMice )
 
 Things to add:
-- Loading the mice - loml = ListOfMouseLists()
-- Hirrachy of files, מחלקות and objects
 - Discription vector
 - Default values I used for functions
+- important functions
 
 
 
