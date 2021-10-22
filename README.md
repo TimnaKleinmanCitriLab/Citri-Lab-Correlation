@@ -24,7 +24,8 @@
 This code was used to create some of statistic analysis figures for the following paper - https://biorxiv.org/cgi/content/short/2021.06.17.448649v1
 
 ### Basic Usage
-In order to run the project, and after changing the path in the "ListOfMouseLists" and the "Mouse" files, one should run:
+The project requires mat files that contain the data about each mouse (and are not included in this repo).
+In order to run the project, and after changing the path in the "ListOfMouseLists" and the "Mouse" files (see explanation in files), one should run:
 ````matlab
 loml = ListOfMouseLists() % Might take some time! Loads all the mice and lists into a struct of a ListOfMiceLists
 ````
