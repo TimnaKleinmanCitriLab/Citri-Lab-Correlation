@@ -6,6 +6,8 @@
     1.3 [Basic Functions Remarks](#basic-functions-remarks)
 
 ## Brief
+This code was used to create some of statistic analysis figures for the following paper - https://biorxiv.org/cgi/content/short/2021.06.17.448649v1
+
 ### Basic Usage
 In order to run the project, and after changing the path in the "ListOfMouseLists" and the "Mouse" files, one should run:
 ````matlab
@@ -27,22 +29,16 @@ Each class in the hierarchy has functions that help analyze the relations within
 ## General Function Use
 ### Description Vector
 Many functions take as input a description vector. This is a vector that describes the type of data to run the function on. 
-There are three types of data - Task, Passive and Free. Each one has sub-options:
-* Task - The vector shape should be ["Task", "divideBy"], where "dividedBy" means the 
-
-
-% TASK - ["Task", "divideBy"],
-    %      for example ["Task", "lick"]
-    % PASSIVE - ["Passive", "state", "soundType", "time"],
-    %         for example ["Passive", "awake", "BBN", "post"]
-    % FREE - ["Free", "divideBy", "time"] where divideBy can be concat / movement
-    %         for example ["Free", "movement", "pre"]
+There are three types of data - Task, Passive and Free. Each one has sub-options one should pass functions via the description vector:
+* Task - The vectors shape should be ["Task", "divideBy"], where "dividedBy" means the type of activity the recording was cut by (lick, movement, onset, etc.). E.g. ["Task", "lick"].
+* Passive - The vectors shape should be ["Passive", "state", "soundType", "time"], where state is whether the mouse was awake or anasthesized, soundType is BBN or other sound options, and time is pre or post training. E.g. ["Passive", "state", "soundType", "time"].
+* Free - The vectors shape should be ["Free", "divideBy", "time"], where divide by can be wither concat (meaning the hole signal without division) or movement, and time means pre or post training. E.g. ["Free", "movement", "pre"].
 
 #### Standard Function Values
-
+After some calibration. we have chosen to work with the following parameters -
+* **
 
 Things to add:
-- Description vector
 - Default values I used for functions
 - important functions
 - 
@@ -50,8 +46,6 @@ Things to add:
 
 
 ***
-
-One can either use this object functions (to run functions that analyze all mice groups) or use `ListOfMouseLists.MouseList` to run a function 
 
 
 
