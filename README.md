@@ -4,6 +4,21 @@
     1.1 [Basic Usage](#basic-usage)  
     1.2 [Basic Structure](#basic-structure)  
     1.3 [Basic Functions Remarks](#basic-functions-remarks)
+2. [General Function Use](#general-function-use)  
+    2.1 [Description Vector](#description-vector)  
+    2.2 [Standard Function Values](#standard-function-values)
+
+### [Old Documentation](#old-documentation)
+1. [Mouse](#mouse)  
+    1.1 [Use](#use)  
+    1.2 [Useful Functions](#useful-functions)  
+    1.3 [Code Structure](#code-structure)  
+2. [Mouse List](#mouse-list)  
+    2.1 [Useful Functions](#useful-functions)  
+    2.2 [Code Structure](#code-structure)  
+3. [Other](#other)  
+    3.1 [General](#general)  
+    3.2 [Saving the Data](#saving-the-data)  
 
 ## Brief
 This code was used to create some of statistic analysis figures for the following paper - https://biorxiv.org/cgi/content/short/2021.06.17.448649v1
@@ -31,50 +46,31 @@ Each class in the hierarchy has functions that help analyze the relations within
 Many functions take as input a description vector. This is a vector that describes the type of data to run the function on. 
 There are three types of data - Task, Passive and Free. Each one has sub-options one should pass functions via the description vector:
 * Task - The vectors shape should be ["Task", "divideBy"], where "dividedBy" means the type of activity the recording was cut by (lick, movement, onset, etc.). E.g. ["Task", "lick"].
-* Passive - The vectors shape should be ["Passive", "state", "soundType", "time"], where state is whether the mouse was awake or anasthesized, soundType is BBN or other sound options, and time is pre or post training. E.g. ["Passive", "state", "soundType", "time"].
+* Passive - The vectors shape should be ["Passive", "state", "soundType", "time"], where state is whether the mouse was awake or anasthesized, soundType is BBN or FS sound options, and time is pre or post training. E.g. ["Passive", "state", "soundType", "time"].
 * Free - The vectors shape should be ["Free", "divideBy", "time"], where divide by can be wither concat (meaning the hole signal without division) or movement, and time means pre or post training. E.g. ["Free", "movement", "pre"].
 
-#### Standard Function Values
-After some calibration. we have chosen to work with the following parameters -
-* **
+### Standard Function Values
+After some calibration we have chosen to work with the following parameters - 
+* Smoothing - 300 samples.
+* Downsample - 10 samples.
+* Time window - 1 seconde.
+* Time window shift - 0.1 seconds.
 
-Things to add:
-- Default values I used for functions
-- important functions
-- 
-
-
-
-***
+*Note:* Before using 1 second time window we used 3 seconds time window. There main things were similar between the two, but taking a smaller time window "smoothed" the correlation less and we felt like it was able to capture small neuances better (although it catches more noise as well).
 
 
+# Old Documentation
 
+## Mouse
 
-The proper way to use this program is first to create the wanted mice (mouse types are sub-classes of Mouse, look at Main for examples). By creating them they are automatically updated/added to the relevant mouseList (according to their type). Then, you can either use each mouse separately or use the mouseList to analyze all the mice (Both are saved in a path saved as a static property).
-
-**NOTICE**: In order to use the mouse list, you need to load the list, and then use the mouseList.loadMice() function to load the mice themselves and not just their paths.
-
-The relevant functions are under "Plot" title (see elaboration in each section separately)
-
-## Saving the data
-When parsed by me, passive has the following categories -
-
- 1. State - awake/anesthetized
- 2. Sound Type - BBN / FS
- 3. Time - pre / post
-these categories are used for the plots, and for the description vector.
-
-
-# Mouse
-
-## Use
+### Use
 Notice that in a lot of function a description vector is needed. It's built as so - 
 - For Task signals ["Task", "divideBy"],
 	- eg. ["Task", "lick"]
 - For Passive signals ["Passive", "state", "soundType", "time"],
 	- eg.  ["Passive", "awake", "BBN", "post"]
 
-## Useful functions
+### Useful Functions
 The most useful functions are the plot functions and are:
 * plotAllSessions
 * plotComparisonCorrelation
@@ -91,7 +87,7 @@ Notice that every plot function has two parts:
  2. draw
 (except scatter plot that has only draw)
 
-## Code structure:
+### Code Structure
 * Methods
 	* Constructor Functions
 		* Main
@@ -109,15 +105,15 @@ Notice that every plot function has two parts:
 	* Plot
 		* Helpers
 
-# Mouse List
+## Mouse List
 
-## Useful functions
+### Useful functions
 The most useful functions are the plot functions and are:
 * plotCorrelationScatterPlot
 * plotCorrelationBar
 * plotSlidingCorrelationBar
 
-## Code structure:
+### Code structure:
 
 * Methods
 	* Constructor and initialization
@@ -127,3 +123,20 @@ The most useful functions are the plot functions and are:
 * Static Methods
 	* Plot
 		* Helpers
+
+## Other
+### General
+The proper way to use this program is first to create the wanted mice (mouse types are sub-classes of Mouse, look at Main for examples). By creating them they are automatically updated/added to the relevant mouseList (according to their type). Then, you can either use each mouse separately or use the mouseList to analyze all the mice (Both are saved in a path saved as a static property).
+
+**NOTICE**: In order to use the mouse list, you need to load the list, and then use the mouseList.loadMice() function to load the mice themselves and not just their paths.
+
+The relevant functions are under "Plot" title (see elaboration in each section separately)
+
+### Saving the Data
+When parsed by me, passive has the following categories -
+
+ 1. State - awake/anesthetized
+ 2. Sound Type - BBN / FS
+ 3. Time - pre / post
+these categories are used for the plots, and for the description vector.
+
