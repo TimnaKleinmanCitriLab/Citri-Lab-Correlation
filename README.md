@@ -27,6 +27,16 @@ Each class in the hierarchy has functions that help analyze the relations within
 ## General Function Use
 ### Description Vector
 Many functions take as input a description vector. This is a vector that describes the type of data to run the function on. 
+There are three types of data - Task, Passive and Free. Each one has sub-options:
+* Task - The vector shape should be ["Task", "divideBy"], where "dividedBy" means the 
+
+
+% TASK - ["Task", "divideBy"],
+    %      for example ["Task", "lick"]
+    % PASSIVE - ["Passive", "state", "soundType", "time"],
+    %         for example ["Passive", "awake", "BBN", "post"]
+    % FREE - ["Free", "divideBy", "time"] where divideBy can be concat / movement
+    %         for example ["Free", "movement", "pre"]
 
 #### Standard Function Values
 
