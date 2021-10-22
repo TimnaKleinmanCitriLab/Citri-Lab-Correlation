@@ -1,3 +1,5 @@
+% Used To Create Mice - one doesn't need to run this, but only to run the load mice function as explained in the README
+
 % SET PARAMETERS
 clear
 close all
