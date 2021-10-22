@@ -1,3 +1,5 @@
+% Was used to check the free the first time the signal was loaded. There is no need to use this code again.
+
 %% Save Free
 save('\\132.64.59.21\Citri_Lab\gala\Phys data\New Rig\####\free\Free_comb.mat', 't_info', 'af_trials', 'all_trials')
 
